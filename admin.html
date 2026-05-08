@@ -3,329 +3,116 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin - EduLogNBS</title>
+    <title>Login - EduLogNBS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
 </head>
-<body class="bg-gray-100">
-    <div class="container mx-auto p-4">
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl font-bold">Panel Admin EduLogNBS</h1>
-                <a href="index.html" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"><i class="fas fa-sign-out-alt"></i> Logout</a>
-            </div>
-            
-            <!-- Tab Navigation -->
-            <div class="border-b mb-6">
-                <ul class="flex flex-wrap -mb-px">
-                    <li class="mr-2"><button class="tab-link inline-block p-3 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active" data-tab="murid">Data Murid</button></li>
-                    <li class="mr-2"><button class="tab-link inline-block p-3 hover:text-gray-600" data-tab="guru">Data Guru</button></li>
-                    <li class="mr-2"><button class="tab-link inline-block p-3 hover:text-gray-600" data-tab="mapel">Data Mapel</button></li>
-                    <li class="mr-2"><button class="tab-link inline-block p-3 hover:text-gray-600" data-tab="penugasan">Penugasan</button></li>
-                </ul>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">EduLogNBS</h1>
+        <p class="text-center text-gray-500 mb-8">Sistem Perangkat Mengajar</p>
+
+        <div class="space-y-4">
+            <div class="flex gap-4 justify-center">
+                <button id="btnAdmin" class="px-6 py-2 rounded-lg font-semibold transition bg-gray-200 hover:bg-gray-300">Admin</button>
+                <button id="btnGuru" class="px-6 py-2 rounded-lg font-semibold transition bg-gray-200 hover:bg-gray-300">Guru</button>
+                <button id="btnSiswa" class="px-6 py-2 rounded-lg font-semibold transition bg-gray-200 hover:bg-gray-300">Siswa</button>
             </div>
 
-            <!-- Tab Content -->
-            <div id="murid" class="tab-content">Loading Data Murid...</div>
-            <div id="guru" class="tab-content hidden">Loading Data Guru...</div>
-            <div id="mapel" class="tab-content hidden">Loading Data Mapel...</div>
-            <div id="penugasan" class="tab-content hidden">Loading Penugasan...</div>
+            <input type="hidden" id="role" value="admin">
+            
+            <div id="usernameLabel" class="text-sm font-medium text-gray-700 mt-4">Username (Admin)</div>
+            <input type="text" id="username" placeholder="Masukkan username" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            
+            <div class="text-sm font-medium text-gray-700">Password</div>
+            <input type="password" id="password" placeholder="Masukkan password" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            
+            <button id="loginBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg transition mt-6">Login</button>
         </div>
+        <p id="errorMsg" class="text-red-500 text-sm text-center mt-4 hidden"></p>
     </div>
 
     <script>
+        // ==================== KONFIGURASI FIREBASE (ASLI) ====================
         const firebaseConfig = {
-            // GANTI DENGAN DATA FIREBASE ANDA
-            apiKey: "AIzaSyDummyExample",
-            authDomain: "edulognbs-dummy.firebaseapp.com",
-            databaseURL: "https://edulognbs-dummy-default-rtdb.firebaseio.com",
-            projectId: "edulognbs-dummy",
-            storageBucket: "edulognbs-dummy.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abc123"
+            apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
+            authDomain: "edulognbs.firebaseapp.com",
+            databaseURL: "https://edulognbs-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "edulognbs",
+            storageBucket: "edulognbs.firebasestorage.app",
+            messagingSenderId: "759345868898",
+            appId: "1:759345868898:web:40487df20ab4f43045213b",
+            measurementId: "G-SV83KDGZTS"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        // =============================================================
 
-        // Utility
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById(tabId).classList.remove('hidden');
-            document.querySelectorAll('.tab-link').forEach(btn => btn.classList.remove('border-blue-600', 'text-blue-600'));
-            document.querySelector(`[data-tab="${tabId}"]`).classList.add('border-blue-600', 'text-blue-600');
-        }
+        let selectedRole = 'admin';
 
-        document.querySelectorAll('.tab-link').forEach(btn => {
-            btn.onclick = () => showTab(btn.dataset.tab);
-        });
+        document.getElementById('btnAdmin').onclick = () => {
+            selectedRole = 'admin';
+            document.getElementById('usernameLabel').innerText = 'Username (Admin)';
+            document.getElementById('username').placeholder = 'admin';
+        };
+        document.getElementById('btnGuru').onclick = () => {
+            selectedRole = 'guru';
+            document.getElementById('usernameLabel').innerText = 'Nama Guru';
+            document.getElementById('username').placeholder = 'Nama Guru';
+        };
+        document.getElementById('btnSiswa').onclick = () => {
+            selectedRole = 'siswa';
+            document.getElementById('usernameLabel').innerText = 'NIS';
+            document.getElementById('username').placeholder = 'NIS';
+        };
 
-        // ===================== DATA MURID (dengan kelas) =====================
-        async function loadMurid() {
-            const container = document.getElementById('murid');
-            container.innerHTML = '<div class="flex justify-between mb-4"><button id="addKelasBtn" class="bg-green-500 text-white px-3 py-1 rounded">+ Tambah Kelas</button></div><div id="kelasContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>';
-            
-            const siswaSnap = await db.ref('siswa').once('value');
-            const siswa = siswaSnap.val() || {};
-            const kelasSet = new Set();
-            for (let nis in siswa) if (siswa[nis].kelas) kelasSet.add(siswa[nis].kelas);
-            const kelasList = Array.from(kelasSet).sort();
-            
-            const kelasContainer = document.getElementById('kelasContainer');
-            if (kelasList.length === 0) kelasContainer.innerHTML = '<p class="text-gray-500">Belum ada kelas. Klik Tambah Kelas.</p>';
-            
-            for (let kelas of kelasList) {
-                const siswaKelas = Object.entries(siswa).filter(([_, s]) => s.kelas === kelas).map(([nis, s]) => ({ nis, ...s }));
-                const card = document.createElement('div');
-                card.className = 'border rounded-lg p-3 shadow-sm bg-white';
-                card.innerHTML = `
-                    <div class="flex justify-between items-center mb-2 border-b pb-2">
-                        <h3 class="font-bold text-lg">Kelas ${kelas}</h3>
-                        <div><button class="hapusKelasBtn text-red-500 hover:text-red-700" data-kelas="${kelas}"><i class="fas fa-trash-alt"></i> Hapus Kelas</button></div>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full text-sm">
-                            <thead><tr><th>NIS</th><th>Nama</th><th>Password</th><th>Kehadiran</th><th>Rata Nilai</th><th>Aksi</th></tr></thead>
-                            <tbody id="tbody-${kelas.replace(/\s/g, '')}">
-                                ${siswaKelas.map(s => `<tr><td>${s.nis}</td><td>${s.nama}</td><td>${s.password}</td><td>${s.kehadiranGlobal || 0}%</td><td>${s.nilaiGlobal || 0}</td><td><button class="editSiswaBtn text-blue-500" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-edit"></i></button> <button class="hapusSiswaBtn text-red-500" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-trash"></i></button></td></tr>`).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div class="mt-3 flex gap-2">
-                        <button class="tambahMuridBtn bg-blue-500 text-white px-2 py-1 rounded text-sm" data-kelas="${kelas}">Tambah Murid</button>
-                        <button class="copypasteBtn bg-gray-500 text-white px-2 py-1 rounded text-sm" data-kelas="${kelas}">Copypaste Excel</button>
-                    </div>
-                `;
-                kelasContainer.appendChild(card);
+        document.getElementById('loginBtn').onclick = async () => {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorEl = document.getElementById('errorMsg');
+            errorEl.classList.add('hidden');
+
+            if (!username || !password) {
+                errorEl.innerText = 'Isi semua field!';
+                errorEl.classList.remove('hidden');
+                return;
             }
-            
-            // Event listeners untuk kelas
-            document.querySelectorAll('.tambahMuridBtn').forEach(btn => {
-                btn.onclick = () => {
-                    const kelas = btn.dataset.kelas;
-                    const nama = prompt('Nama Siswa:');
-                    const nis = prompt('NIS:');
-                    const pass = prompt('Password:');
-                    if (nama && nis && pass) {
-                        db.ref(`siswa/${nis}`).set({ nama, password: pass, kelas, kehadiranGlobal: 0, nilaiGlobal: 0 });
-                        alert('Murid ditambahkan'); loadMurid();
-                    }
-                };
-            });
-            document.querySelectorAll('.hapusSiswaBtn').forEach(btn => {
-                btn.onclick = async () => {
-                    if(confirm('Hapus siswa?')) {
-                        const nis = btn.dataset.nis;
-                        await db.ref(`siswa/${nis}`).remove();
-                        loadMurid();
-                    }
-                };
-            });
-            document.querySelectorAll('.editSiswaBtn').forEach(btn => {
-                btn.onclick = async () => {
-                    const nis = btn.dataset.nis;
-                    const snap = await db.ref(`siswa/${nis}`).once('value');
-                    const data = snap.val();
-                    const newNama = prompt('Nama baru:', data.nama);
-                    const newPass = prompt('Password baru:', data.password);
-                    if(newNama) await db.ref(`siswa/${nis}/nama`).set(newNama);
-                    if(newPass) await db.ref(`siswa/${nis}/password`).set(newPass);
-                    loadMurid();
-                };
-            });
-            document.querySelectorAll('.hapusKelasBtn').forEach(async btn => {
-                btn.onclick = async () => {
-                    if(confirm('Hapus semua siswa di kelas ini?')) {
-                        const kelas = btn.dataset.kelas;
-                        const siswaSnap = await db.ref('siswa').once('value');
-                        const siswa = siswaSnap.val();
-                        for(let nis in siswa) if(siswa[nis].kelas === kelas) await db.ref(`siswa/${nis}`).remove();
-                        loadMurid();
-                    }
-                };
-            });
-            document.querySelectorAll('.copypasteBtn').forEach(btn => {
-                btn.onclick = () => {
-                    const kelas = btn.dataset.kelas;
-                    const dataRaw = prompt('Tempel data (format: NIS,Nama,Password per baris):');
-                    if(dataRaw) {
-                        const lines = dataRaw.split('\n');
-                        lines.forEach(line => {
-                            const [nis, nama, password] = line.split(',');
-                            if(nis && nama && password) {
-                                db.ref(`siswa/${nis.trim()}`).set({ nama: nama.trim(), password: password.trim(), kelas, kehadiranGlobal: 0, nilaiGlobal: 0 });
-                            }
-                        });
-                        loadMurid();
-                    }
-                };
-            });
-            document.getElementById('addKelasBtn').onclick = () => {
-                const newKelas = prompt('Nama kelas baru:');
-                if(newKelas) loadMurid(); // reload, kelas belum ada siswa, tapi tampil card kosong nanti
-            };
-        }
 
-        // ===================== DATA GURU =====================
-        async function loadGuru() {
-            const container = document.getElementById('guru');
-            const snap = await db.ref('guru').once('value');
-            const guru = snap.val() || {};
-            let html = `<div class="mb-4"><button id="tambahGuruBtn" class="bg-green-500 text-white px-3 py-1 rounded">+ Tambah Guru</button> <button id="copypasteGuruBtn" class="bg-gray-500 text-white px-3 py-1 rounded">Copypaste Excel</button></div>
-                        <table class="min-w-full border"><thead><tr><th>Nama</th><th>Password</th><th>Aksi</th></tr></thead><tbody>`;
-            for(let [nama, val] of Object.entries(guru)) {
-                html += `<tr><td>${nama}</td><td>${val.password}</td><td><button class="editGuruBtn" data-nama="${nama}">Edit</button> <button class="hapusGuruBtn" data-nama="${nama}">Hapus</button></td></tr>`;
-            }
-            html += `</tbody></table>`;
-            container.innerHTML = html;
-            document.getElementById('tambahGuruBtn').onclick = () => {
-                const nama = prompt('Nama Guru:');
-                const pass = prompt('Password:');
-                if(nama && pass) db.ref(`guru/${nama}`).set({ password: pass });
-                loadGuru();
-            };
-            document.getElementById('copypasteGuruBtn').onclick = () => {
-                const raw = prompt('Tempel data (Nama,Password per baris):');
-                if(raw) {
-                    raw.split('\n').forEach(line => {
-                        let [nama, pass] = line.split(',');
-                        if(nama && pass) db.ref(`guru/${nama.trim()}`).set({ password: pass.trim() });
-                    });
-                    loadGuru();
-                }
-            };
-            document.querySelectorAll('.editGuruBtn').forEach(btn => {
-                btn.onclick = async () => {
-                    const nama = btn.dataset.nama;
-                    const newPass = prompt('Password baru:');
-                    if(newPass) await db.ref(`guru/${nama}/password`).set(newPass);
-                    loadGuru();
-                };
-            });
-            document.querySelectorAll('.hapusGuruBtn').forEach(btn => {
-                btn.onclick = async () => {
-                    if(confirm('Hapus guru?')) await db.ref(`guru/${btn.dataset.nama}`).remove();
-                    loadGuru();
-                };
-            });
-        }
-
-        // ===================== DATA MAPEL =====================
-        async function loadMapel() {
-            const container = document.getElementById('mapel');
-            const snap = await db.ref('mapel').once('value');
-            const mapel = snap.val() || {};
-            let html = `<div class="mb-4"><button id="tambahMapelBtn" class="bg-green-500 text-white px-3 py-1 rounded">+ Tambah Mapel</button></div>
-                        <table class="min-w-full border"><thead><tr><th>Mata Pelajaran</th><th>Jenis</th><th>Aksi</th></tr></thead><tbody>`;
-            for(let [id, val] of Object.entries(mapel)) {
-                html += `<tr><td>${val.nama}</td><td>${val.jenis}</td><td><button class="editMapelBtn" data-id="${id}">Edit</button> <button class="hapusMapelBtn" data-id="${id}">Hapus</button></td></tr>`;
-            }
-            html += `</tbody></table>`;
-            container.innerHTML = html;
-            document.getElementById('tambahMapelBtn').onclick = () => {
-                const nama = prompt('Nama Mapel:');
-                const jenis = prompt('Jenis (inkul/eskul/pesantren):');
-                if(nama && jenis) db.ref(`mapel/${Date.now()}`).set({ nama, jenis });
-                loadMapel();
-            };
-            document.querySelectorAll('.editMapelBtn').forEach(btn => {
-                btn.onclick = async () => {
-                    const id = btn.dataset.id;
-                    const newNama = prompt('Nama baru:');
-                    const newJenis = prompt('Jenis baru:');
-                    if(newNama) await db.ref(`mapel/${id}/nama`).set(newNama);
-                    if(newJenis) await db.ref(`mapel/${id}/jenis`).set(newJenis);
-                    loadMapel();
-                };
-            });
-            document.querySelectorAll('.hapusMapelBtn').forEach(btn => {
-                btn.onclick = async () => {
-                    if(confirm('Hapus mapel?')) await db.ref(`mapel/${btn.dataset.id}`).remove();
-                    loadMapel();
-                };
-            });
-        }
-
-        // ===================== PENUGASAN =====================
-        async function loadPenugasan() {
-            const container = document.getElementById('penugasan');
-            const [mapelSnap, guruSnap, siswaSnap, penugasanSnap] = await Promise.all([
-                db.ref('mapel').once('value'), db.ref('guru').once('value'), db.ref('siswa').once('value'), db.ref('penugasan').once('value')
-            ]);
-            const mapel = mapelSnap.val() || {};
-            const guru = guruSnap.val() || {};
-            const siswa = siswaSnap.val() || {};
-            const penugasan = penugasanSnap.val() || {};
-
-            let formHtml = `<div class="border p-4 rounded mb-6 bg-gray-50">
-                <h3 class="font-bold mb-2">Tambah Penugasan Baru</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <select id="pilihMapel" class="border p-1 rounded"><option value="">-- Mapel --</option>${Object.entries(mapel).map(([id, m]) => `<option value="${id}" data-jenis="${m.jenis}">${m.nama} (${m.jenis})</option>`).join('')}</select>
-                    <select id="pilihGuru" class="border p-1 rounded"><option value="">-- Guru --</option>${Object.keys(guru).map(g => `<option>${g}</option>`).join('')}</select>
-                    <div id="kelasSiswaContainer">
-                        <select id="pilihKelasInkul" class="border p-1 rounded hidden"><option value="">Pilih Kelas (inkul)</option></select>
-                        <select id="pilihSiswaEskul" multiple class="border p-1 rounded hidden w-full"><option value="">Pilih Siswa (multi)</option></select>
-                    </div>
-                </div>
-                <button id="simpanPenugasanBtn" class="mt-3 bg-blue-600 text-white px-4 py-1 rounded">Simpan Penugasan</button>
-            </div>`;
-
-            let listHtml = `<h3 class="font-bold mt-4">Daftar Penugasan</h3><table class="min-w-full border mt-2"><thead><tr><th>Mapel</th><th>Guru</th><th>Siswa Terlibat</th><th>Aksi</th></tr></thead><tbody>`;
-            for(let [id, pg] of Object.entries(penugasan)) {
-                const namaMapel = mapel[pg.mapelId]?.nama || 'deleted';
-                listHtml += `<tr><td>${namaMapel}</td><td>${pg.guruName}</td><td>${pg.siswaList?.length || 0} siswa</td><td><button class="hapusPenugasanBtn text-red-500" data-id="${id}">Hapus</button></td></tr>`;
-            }
-            listHtml += `</tbody></table>`;
-            container.innerHTML = formHtml + listHtml;
-
-            const mapelSelect = document.getElementById('pilihMapel');
-            const kelasSelect = document.getElementById('pilihKelasInkul');
-            const siswaSelect = document.getElementById('pilihSiswaEskul');
-            const updateForm = () => {
-                const selected = mapelSelect.options[mapelSelect.selectedIndex];
-                const jenis = selected?.dataset?.jenis;
-                kelasSelect.classList.add('hidden');
-                siswaSelect.classList.add('hidden');
-                if(jenis === 'inkul') {
-                    kelasSelect.classList.remove('hidden');
-                    const kelasSet = new Set();
-                    for(let s of Object.values(siswa)) if(s.kelas) kelasSet.add(s.kelas);
-                    kelasSelect.innerHTML = '<option value="">-- Pilih Kelas --</option>' + Array.from(kelasSet).map(k => `<option value="${k}">${k}</option>`).join('');
-                } else if(jenis === 'eskul' || jenis === 'pesantren') {
-                    siswaSelect.classList.remove('hidden');
-                    siswaSelect.innerHTML = Object.entries(siswa).map(([nis, s]) => `<option value="${nis}">${nis} - ${s.nama} (${s.kelas})</option>`).join('');
-                    siswaSelect.size = 5;
-                }
-            };
-            mapelSelect.onchange = updateForm;
-            document.getElementById('simpanPenugasanBtn').onclick = async () => {
-                const mapelId = mapelSelect.value;
-                const guruName = document.getElementById('pilihGuru').value;
-                if(!mapelId || !guruName) return alert('Lengkapi mapel dan guru');
-                const jenis = mapelSelect.options[mapelSelect.selectedIndex].dataset.jenis;
-                let siswaList = [];
-                if(jenis === 'inkul') {
-                    const kelas = kelasSelect.value;
-                    if(!kelas) return alert('Pilih kelas');
-                    siswaList = Object.entries(siswa).filter(([_, s]) => s.kelas === kelas).map(([nis]) => nis);
+            if (selectedRole === 'admin') {
+                if (username === 'admin' && password === 'admin123') {
+                    window.location.href = 'admin.html';
                 } else {
-                    siswaList = Array.from(siswaSelect.selectedOptions).map(opt => opt.value);
-                    if(siswaList.length === 0) return alert('Pilih minimal satu siswa');
+                    errorEl.innerText = 'Username atau password admin salah!';
+                    errorEl.classList.remove('hidden');
                 }
-                await db.ref('penugasan').push({ mapelId, guruName, siswaList });
-                loadPenugasan();
-            };
-            document.querySelectorAll('.hapusPenugasanBtn').forEach(btn => {
-                btn.onclick = async () => { if(confirm('Hapus penugasan?')) await db.ref(`penugasan/${btn.dataset.id}`).remove(); loadPenugasan(); };
-            });
-        }
-
-        // Initial load semua tab
-        loadMurid();
-        loadGuru();
-        loadMapel();
-        loadPenugasan();
+            } 
+            else if (selectedRole === 'guru') {
+                const snapshot = await db.ref(`guru/${username}`).once('value');
+                const guru = snapshot.val();
+                if (guru && guru.password === password) {
+                    localStorage.setItem('guruLogin', username);
+                    window.location.href = 'guru.html';
+                } else {
+                    errorEl.innerText = 'Nama Guru atau password salah!';
+                    errorEl.classList.remove('hidden');
+                }
+            }
+            else if (selectedRole === 'siswa') {
+                const snapshot = await db.ref(`siswa/${username}`).once('value');
+                const siswa = snapshot.val();
+                if (siswa && siswa.password === password) {
+                    localStorage.setItem('siswaLogin', username);
+                    window.location.href = 'murid.html';
+                } else {
+                    errorEl.innerText = 'NIS atau password salah!';
+                    errorEl.classList.remove('hidden');
+                }
+            }
+        };
     </script>
 </body>
 </html>
