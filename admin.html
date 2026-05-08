@@ -2,74 +2,46 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Admin Panel - EduLogNBS</title>
-    <!-- Tailwind CSS + Font Awesome + Google Fonts -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - EduLogNBS</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        * { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
-        .tab-transition { transition: all 0.2s ease; }
-        .card-hover { transition: transform 0.1s ease, box-shadow 0.2s ease; }
-        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 12px 20px -12px rgba(0,0,0,0.15); }
-        button:disabled { opacity: 0.6; cursor: not-allowed; }
-        .table-wrapper { overflow-x: auto; border-radius: 0.75rem; scrollbar-width: thin; }
-        .custom-scroll::-webkit-scrollbar { height: 6px; width: 6px; }
-        .custom-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .fade-in { animation: fadeIn 0.2s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-        select[size] { overflow-y: auto; background: white; }
-        input, select, textarea { transition: all 0.15s; }
-        input:focus, select:focus, textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.2); }
+        .tab-content { transition: all 0.2s; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .table-wrapper { overflow-x: auto; border-radius: 0.75rem; }
     </style>
 </head>
-<body class="bg-gradient-to-br from-slate-50 to-gray-100 antialiased">
-    <div class="container mx-auto px-4 py-6 max-w-7xl">
-        <!-- KARTU UTAMA -->
-        <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/30 overflow-hidden">
-            <!-- HEADER MODERN -->
-            <div class="bg-gradient-to-r from-indigo-700 to-blue-700 px-6 py-5 flex justify-between items-center">
-                <div class="flex items-center gap-3">
-                    <div class="bg-white/20 p-2 rounded-xl">
-                        <i class="fas fa-chalkboard-user text-white text-2xl"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-2xl font-bold text-white tracking-tight">Panel Admin <span class="font-light">EduLogNBS</span></h1>
-                        <p class="text-indigo-100 text-sm mt-0.5">Manajemen data, penugasan & evaluasi</p>
-                    </div>
-                </div>
-                <a href="index.html" class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white font-semibold px-5 py-2 rounded-xl transition-all flex items-center gap-2 shadow-md hover:shadow-lg">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </a>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold">Panel Admin EduLogNBS</h1>
+                <a href="index.html" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
             
-            <!-- TAB NAVIGASI (DIPERINDAH) -->
-            <div class="border-b border-gray-200 bg-white/50 px-4 pt-3">
-                <ul class="flex flex-wrap gap-1 -mb-px">
-                    <li><button class="tab-link inline-flex items-center gap-2 px-5 py-3 text-gray-600 border-b-2 border-transparent rounded-t-lg hover:text-indigo-600 hover:border-indigo-300 transition-all font-medium" data-tab="murid"><i class="fas fa-users text-sm"></i> Data Murid</button></li>
-                    <li><button class="tab-link inline-flex items-center gap-2 px-5 py-3 text-gray-600 border-b-2 border-transparent rounded-t-lg hover:text-indigo-600 hover:border-indigo-300 transition-all font-medium" data-tab="guru"><i class="fas fa-chalkboard-user text-sm"></i> Data Guru</button></li>
-                    <li><button class="tab-link inline-flex items-center gap-2 px-5 py-3 text-gray-600 border-b-2 border-transparent rounded-t-lg hover:text-indigo-600 hover:border-indigo-300 transition-all font-medium" data-tab="mapel"><i class="fas fa-book-open text-sm"></i> Mata Pelajaran</button></li>
-                    <li><button class="tab-link inline-flex items-center gap-2 px-5 py-3 text-gray-600 border-b-2 border-transparent rounded-t-lg hover:text-indigo-600 hover:border-indigo-300 transition-all font-medium" data-tab="penugasan"><i class="fas fa-tasks text-sm"></i> Penugasan</button></li>
+            <!-- Tab Navigation -->
+            <div class="border-b mb-6">
+                <ul class="flex flex-wrap -mb-px">
+                    <li class="mr-2"><button class="tab-link inline-block p-3 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active" data-tab="murid">Data Murid</button></li>
+                    <li class="mr-2"><button class="tab-link inline-block p-3 hover:text-gray-600" data-tab="guru">Data Guru</button></li>
+                    <li class="mr-2"><button class="tab-link inline-block p-3 hover:text-gray-600" data-tab="mapel">Data Mapel</button></li>
+                    <li class="mr-2"><button class="tab-link inline-block p-3 hover:text-gray-600" data-tab="penugasan">Penugasan</button></li>
                 </ul>
             </div>
 
-            <!-- KONTEN TAB (LOADING AWAL) -->
-            <div class="p-5 md:p-6 bg-white">
-                <div id="murid" class="tab-content fade-in">Memuat data murid...</div>
-                <div id="guru" class="tab-content hidden fade-in">Memuat data guru...</div>
-                <div id="mapel" class="tab-content hidden fade-in">Memuat mata pelajaran...</div>
-                <div id="penugasan" class="tab-content hidden fade-in">Memuat penugasan...</div>
-            </div>
+            <!-- Tab Content -->
+            <div id="murid" class="tab-content">Loading Data Murid...</div>
+            <div id="guru" class="tab-content hidden">Loading Data Guru...</div>
+            <div id="mapel" class="tab-content hidden">Loading Data Mapel...</div>
+            <div id="penugasan" class="tab-content hidden">Loading Penugasan...</div>
         </div>
     </div>
 
     <script>
-        // ---------- KONFIGURASI FIREBASE (TIDAK BERUBAH) ----------
+        // Konfigurasi Firebase (tetap)
         const firebaseConfig = {
             apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
             authDomain: "edulognbs.firebaseapp.com",
@@ -80,171 +52,546 @@
             appId: "1:759345868898:web:40487df20ab4f43045213b",
             measurementId: "G-SV83KDGZTS"
         };
-        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const db = firebase.database();
-
-        // Helper
-        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m])); }
-        function showError(msg) { console.error(msg); alert(`⚠️ Terjadi kesalahan:\n${msg}`); }
-
-        // TAB SYSTEM
+        
+        function showError(msg) {
+            console.error(msg);
+            alert("Error: " + msg);
+        }
+        
+        // Tab switching
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(tabId).classList.remove('hidden');
             document.querySelectorAll('.tab-link').forEach(btn => {
-                btn.classList.remove('text-indigo-600', 'border-indigo-600', 'font-semibold');
-                btn.classList.add('text-gray-600', 'border-transparent');
+                btn.classList.remove('border-blue-600', 'text-blue-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
             });
-            const activeBtn = document.querySelector(`.tab-link[data-tab="${tabId}"]`);
-            activeBtn.classList.add('text-indigo-600', 'border-indigo-600', 'font-semibold');
-            activeBtn.classList.remove('text-gray-600', 'border-transparent');
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('border-blue-600', 'text-blue-600');
             if (tabId === 'murid') loadMurid();
             else if (tabId === 'guru') loadGuru();
             else if (tabId === 'mapel') loadMapel();
             else if (tabId === 'penugasan') loadPenugasan();
         }
-        document.querySelectorAll('.tab-link').forEach(btn => btn.onclick = () => showTab(btn.dataset.tab));
-
-        // ========================= DATA MURID (TAMPILAN DIPERINDAH) =========================
+        
+        document.querySelectorAll('.tab-link').forEach(btn => {
+            btn.onclick = () => showTab(btn.dataset.tab);
+        });
+        
+        // ===================== DATA MURID =====================
         async function loadMurid() {
             const container = document.getElementById('murid');
-            container.innerHTML = `<div class="flex justify-between items-center mb-5 flex-wrap gap-3"><button id="addKelasBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl shadow-sm transition flex items-center gap-2"><i class="fas fa-plus-circle"></i> Tambah Kelas Baru</button><span class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full"><i class="fas fa-graduation-cap"></i> Kelas & Siswa</span></div><div id="kelasContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-6"></div>`;
+            container.innerHTML = `
+                <div class="flex justify-between mb-4">
+                    <button id="addKelasBtn" class="bg-green-500 text-white px-3 py-1 rounded"><i class="fas fa-plus"></i> Tambah Kelas</button>
+                </div>
+                <div id="kelasContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            `;
+            
             try {
                 const kelasSnap = await db.ref('kelas').once('value');
                 const daftarKelas = Object.keys(kelasSnap.val() || {}).sort();
                 const siswaSnap = await db.ref('siswa').once('value');
                 const semuaSiswa = siswaSnap.val() || {};
                 const kelasContainer = document.getElementById('kelasContainer');
-                if (daftarKelas.length === 0) { kelasContainer.innerHTML = '<div class="col-span-full text-center py-12 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300"><i class="fas fa-school-circle-exclamation text-4xl text-gray-400 mb-2"></i><p class="text-gray-500">Belum ada kelas. Klik "Tambah Kelas Baru" untuk memulai.</p></div>'; }
+                if (daftarKelas.length === 0) {
+                    kelasContainer.innerHTML = '<p class="text-gray-500 col-span-full">Belum ada kelas. Klik "Tambah Kelas".</p>';
+                }
+                
                 for (let kelas of daftarKelas) {
-                    const siswaKelas = Object.entries(semuaSiswa).filter(([_, s]) => s.kelas === kelas).map(([nis, s]) => ({ nis, ...s }));
+                    const siswaKelas = Object.entries(semuaSiswa)
+                        .filter(([_, s]) => s.kelas === kelas)
+                        .map(([nis, s]) => ({ nis, ...s }));
+                    
                     const card = document.createElement('div');
-                    card.className = 'bg-white border border-gray-200 rounded-2xl shadow-sm card-hover overflow-hidden';
+                    card.className = 'border rounded-lg p-3 shadow-sm bg-white';
                     card.innerHTML = `
-                        <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b flex justify-between items-center flex-wrap gap-2">
-                            <div class="flex items-center gap-2"><i class="fas fa-layer-group text-indigo-500"></i><h3 class="font-bold text-xl text-gray-800">Kelas ${escapeHtml(kelas)}</h3><span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full">${siswaKelas.length} siswa</span></div>
-                            <div class="flex gap-2">
-                                <button class="editKelasBtn text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg text-sm font-medium flex items-center gap-1" data-kelas="${kelas}"><i class="fas fa-edit"></i> Edit</button>
-                                <button class="hapusKelasBtn text-red-600 hover:bg-red-50 px-2 py-1 rounded-lg text-sm font-medium flex items-center gap-1" data-kelas="${kelas}"><i class="fas fa-trash-alt"></i> Hapus</button>
+                        <div class="flex justify-between items-center mb-2 border-b pb-2">
+                            <h3 class="font-bold text-lg">Kelas ${kelas}</h3>
+                            <div>
+                                <button class="hapusKelasBtn text-red-500 hover:text-red-700 mr-2" data-kelas="${kelas}"><i class="fas fa-trash-alt"></i> Hapus Kelas</button>
+                                <button class="editKelasBtn text-blue-500 hover:text-blue-700" data-kelas="${kelas}"><i class="fas fa-edit"></i> Edit</button>
                             </div>
                         </div>
-                        <div class="p-3">
-                            <div class="table-wrapper custom-scroll">
-                                <table class="min-w-full text-sm border-separate border-spacing-0">
-                                    <thead class="bg-gray-50 text-gray-700"><tr><th class="px-3 py-2 text-left rounded-l-lg">NIS</th><th class="px-3 py-2 text-left">Nama</th><th class="px-3 py-2 text-left">Password</th><th class="px-3 py-2 text-center">Kehadiran</th><th class="px-3 py-2 text-center">Rata Nilai</th><th class="px-3 py-2 text-center rounded-r-lg">Aksi</th></tr></thead>
-                                    <tbody>${siswaKelas.map(s => `<tr class="border-b border-gray-100 hover:bg-gray-50"><td class="px-3 py-2 font-mono text-xs">${escapeHtml(s.nis)}</td><td class="px-3 py-2 font-medium">${escapeHtml(s.nama)}</td><td class="px-3 py-2 text-gray-500">•••••</td><td class="px-3 py-2 text-center"><span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-semibold">${s.kehadiranGlobal || 0}%</span></td><td class="px-3 py-2 text-center"><span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-semibold">${s.nilaiGlobal || 0}</span></td><td class="px-3 py-2 text-center"><div class="flex justify-center gap-2"><button class="editSiswaBtn text-indigo-500 hover:text-indigo-700" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-pen"></i></button><button class="hapusSiswaBtn text-red-500 hover:text-red-700" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-trash-can"></i></button></div></td></tr>`).join('')}</tbody>
-                                </table>
-                            </div>
-                            <div class="mt-4 flex flex-wrap gap-3 pt-1">
-                                <button class="tambahMuridBtn bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1.5 rounded-xl text-sm font-medium transition flex items-center gap-1" data-kelas="${kelas}"><i class="fas fa-user-plus"></i> Tambah Murid</button>
-                                <button class="copypasteBtn bg-emerald-50 hover:bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-xl text-sm font-medium transition flex items-center gap-1" data-kelas="${kelas}"><i class="fas fa-table-cells-large"></i> Import Excel (CSV)</button>
-                            </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full text-sm border">
+                                <thead class="bg-gray-100">
+                                    <tr><th class="p-1">NIS</th><th>Nama</th><th>Password</th><th>Kehadiran</th><th>Rata Nilai</th><th>Aksi</th></tr>
+                                </thead>
+                                <tbody id="tbody-${kelas.replace(/\s/g, '')}">
+                                    ${siswaKelas.map(s => `
+                                        <tr>
+                                            <td class="p-1">${escapeHtml(s.nis)}</td>
+                                            <td>${escapeHtml(s.nama)}</td>
+                                            <td>${escapeHtml(s.password)}</td>
+                                            <td>${s.kehadiranGlobal || 0}%</td>
+                                            <td>${s.nilaiGlobal || 0}</td>
+                                            <td>
+                                                <button class="editSiswaBtn text-blue-500" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-edit"></i></button>
+                                                <button class="hapusSiswaBtn text-red-500" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-3 flex gap-2">
+                            <button class="tambahMuridBtn bg-blue-500 text-white px-2 py-1 rounded text-sm" data-kelas="${kelas}"><i class="fas fa-user-plus"></i> Tambah Murid</button>
+                            <button class="copypasteBtn bg-gray-500 text-white px-2 py-1 rounded text-sm" data-kelas="${kelas}"><i class="fas fa-paste"></i> Import Multi Siswa</button>
                         </div>
                     `;
                     kelasContainer.appendChild(card);
                 }
                 attachMuridEvents();
-            } catch(err) { container.innerHTML = `<div class="text-red-500 bg-red-50 p-4 rounded-xl"><i class="fas fa-circle-exclamation mr-2"></i> Gagal: ${err.message}</div>`; }
+            } catch (err) {
+                console.error(err);
+                container.innerHTML = `<p class="text-red-500">Gagal memuat data murid: ${err.message}</p>`;
+            }
         }
-
+        
         function attachMuridEvents() {
-            document.getElementById('addKelasBtn')?.addEventListener('click', () => { let k = prompt('📚 Nama kelas baru:'); if(k?.trim()) db.ref(`kelas/${k.trim()}`).set({ nama: k.trim() }).then(()=>loadMurid()).catch(showError); });
-            document.querySelectorAll('.hapusKelasBtn').forEach(btn => btn.onclick = async () => { if(confirm(`⚠️ Hapus kelas "${btn.dataset.kelas}" dan semua siswanya?`)) { let updates={}; (await db.ref('siswa').once('value')).forEach(snap=>{ if(snap.val().kelas===btn.dataset.kelas) updates[`siswa/${snap.key}`]=null; }); updates[`kelas/${btn.dataset.kelas}`]=null; await db.ref().update(updates); loadMurid(); } });
-            document.querySelectorAll('.editKelasBtn').forEach(btn => btn.onclick = async () => { let newN=prompt('Nama kelas baru:', btn.dataset.kelas); if(newN && newN!==btn.dataset.kelas) { let updates={}; (await db.ref('siswa').once('value')).forEach(snap=>{ if(snap.val().kelas===btn.dataset.kelas) updates[`siswa/${snap.key}/kelas`]=newN; }); updates[`kelas/${newN}`]={nama:newN}; updates[`kelas/${btn.dataset.kelas}`]=null; await db.ref().update(updates); loadMurid(); } });
-            document.querySelectorAll('.tambahMuridBtn').forEach(btn => btn.onclick = () => { let nis=prompt('NIS:'), nama=prompt('Nama lengkap:'), pass=prompt('Password:'); if(nis && nama && pass) db.ref(`siswa/${nis}`).set({ nama, password: pass, kelas: btn.dataset.kelas, kehadiranGlobal:0, nilaiGlobal:0 }).then(()=>loadMurid()); });
-            document.querySelectorAll('.hapusSiswaBtn').forEach(btn => btn.onclick = async () => { if(confirm('Hapus siswa ini?')) { await db.ref(`siswa/${btn.dataset.nis}`).remove(); loadMurid(); } });
-            document.querySelectorAll('.editSiswaBtn').forEach(btn => btn.onclick = async () => { let snap=await db.ref(`siswa/${btn.dataset.nis}`).once('value'), d=snap.val(); let nm=prompt('Nama baru:', d.nama), ps=prompt('Password baru:', d.password); if(nm) await db.ref(`siswa/${btn.dataset.nis}/nama`).set(nm); if(ps) await db.ref(`siswa/${btn.dataset.nis}/password`).set(ps); loadMurid(); });
-            document.querySelectorAll('.copypasteBtn').forEach(btn => btn.onclick = () => { let kelas=btn.dataset.kelas; let raw=prompt('📋 Format CSV: NIS,Nama,Password (per baris)\nContoh:\n12345,Andi,pass123\n12346,Budi,budi456'); if(raw){ let lines=raw.split('\n'), promises=[]; lines.forEach(line=>{ let parts=line.split(','); if(parts.length>=3){ let nis=parts[0].trim(), nama=parts[1].trim(), pass=parts[2].trim(); if(nis&&nama&&pass) promises.push(db.ref(`siswa/${nis}`).set({nama,password:pass,kelas,kehadiranGlobal:0,nilaiGlobal:0})); } }); Promise.all(promises).then(()=>{ alert(`✅ ${promises.length} siswa diimpor ke kelas ${kelas}`); loadMurid(); }).catch(showError); } });
+            // Tambah Kelas
+            const addBtn = document.getElementById('addKelasBtn');
+            if (addBtn) addBtn.onclick = () => {
+                const newKelas = prompt('Masukkan nama kelas baru:');
+                if (newKelas && newKelas.trim()) {
+                    db.ref(`kelas/${newKelas.trim()}`).set({ nama: newKelas.trim() })
+                        .then(() => loadMurid())
+                        .catch(err => showError(err.message));
+                }
+            };
+            
+            // Hapus Kelas
+            document.querySelectorAll('.hapusKelasBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    const kelas = btn.dataset.kelas;
+                    if (confirm(`Hapus kelas ${kelas} dan semua siswanya?`)) {
+                        try {
+                            const siswaSnap = await db.ref('siswa').once('value');
+                            const siswa = siswaSnap.val() || {};
+                            const updates = {};
+                            for (let nis in siswa) {
+                                if (siswa[nis].kelas === kelas) {
+                                    updates[`siswa/${nis}`] = null;
+                                }
+                            }
+                            updates[`kelas/${kelas}`] = null;
+                            await db.ref().update(updates);
+                            loadMurid();
+                        } catch (err) { showError(err.message); }
+                    }
+                };
+            });
+            
+            // Edit Kelas
+            document.querySelectorAll('.editKelasBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    const oldKelas = btn.dataset.kelas;
+                    const newKelas = prompt('Masukkan nama kelas baru:', oldKelas);
+                    if (newKelas && newKelas.trim() && newKelas !== oldKelas) {
+                        try {
+                            const siswaSnap = await db.ref('siswa').once('value');
+                            const siswa = siswaSnap.val() || {};
+                            const updates = {};
+                            for (let nis in siswa) {
+                                if (siswa[nis].kelas === oldKelas) {
+                                    updates[`siswa/${nis}/kelas`] = newKelas;
+                                }
+                            }
+                            updates[`kelas/${newKelas}`] = { nama: newKelas };
+                            updates[`kelas/${oldKelas}`] = null;
+                            await db.ref().update(updates);
+                            loadMurid();
+                        } catch (err) { showError(err.message); }
+                    }
+                };
+            });
+            
+            // Tambah Murid (satu per satu)
+            document.querySelectorAll('.tambahMuridBtn').forEach(btn => {
+                btn.onclick = () => {
+                    const kelas = btn.dataset.kelas;
+                    const nis = prompt('NIS:');
+                    const nama = prompt('Nama:');
+                    const pass = prompt('Password:');
+                    if (nis && nama && pass) {
+                        db.ref(`siswa/${nis}`).set({
+                            nama, password: pass, kelas,
+                            kehadiranGlobal: 0, nilaiGlobal: 0
+                        }).then(() => loadMurid())
+                          .catch(err => showError(err.message));
+                    }
+                };
+            });
+            
+            // Hapus Siswa
+            document.querySelectorAll('.hapusSiswaBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    if (confirm('Hapus siswa ini?')) {
+                        const nis = btn.dataset.nis;
+                        try {
+                            await db.ref(`siswa/${nis}`).remove();
+                            loadMurid();
+                        } catch (err) { showError(err.message); }
+                    }
+                };
+            });
+            
+            // Edit Siswa
+            document.querySelectorAll('.editSiswaBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    const nis = btn.dataset.nis;
+                    try {
+                        const snap = await db.ref(`siswa/${nis}`).once('value');
+                        const data = snap.val();
+                        const newNama = prompt('Nama baru:', data.nama);
+                        const newPass = prompt('Password baru:', data.password);
+                        if (newNama) await db.ref(`siswa/${nis}/nama`).set(newNama);
+                        if (newPass) await db.ref(`siswa/${nis}/password`).set(newPass);
+                        loadMurid();
+                    } catch (err) { showError(err.message); }
+                };
+            });
+            
+            // ========== FITUR IMPORT MULTI SISWA (DIPERBAIKI) ==========
+            document.querySelectorAll('.copypasteBtn').forEach(btn => {
+                btn.onclick = () => {
+                    // Tampilkan prompt dengan instruksi
+                    const rawData = prompt(
+                        "Impor banyak siswa sekaligus.\n\nFormat: NIS, NAMA, KELAS, PASSWORD\nPemisah bisa: spasi, tab, atau koma.\n\nContoh:\n2526001\tAHMAD YUSUF\t7\t1234\n2526002\tAINUN ANUGRAH\t7\t1234\n\nAtau dengan koma:\n2526003,ANDI BIDA,7,1234\n\nCatatan: Jika kelas belum ada, akan dibuat otomatis."
+                    );
+                    if (!rawData) return;
+                    
+                    const lines = rawData.split(/\r?\n/);
+                    let successCount = 0;
+                    let errorCount = 0;
+                    let kelasBaru = new Set(); // untuk menambah kelas otomatis
+                    const promises = [];
+                    
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (line === "") continue;
+                        
+                        // Deteksi pemisah: coba tab, lalu koma, lalu spasi
+                        let parts;
+                        if (line.includes('\t')) {
+                            parts = line.split('\t');
+                        } else if (line.includes(',')) {
+                            parts = line.split(',');
+                        } else {
+                            parts = line.split(/\s+/);
+                        }
+                        
+                        // Bersihkan spasi di setiap part
+                        parts = parts.map(p => p.trim());
+                        if (parts.length < 4) {
+                            errorCount++;
+                            console.warn(`Baris tidak valid (kurang dari 4 kolom): ${line}`);
+                            continue;
+                        }
+                        
+                        const nis = parts[0];
+                        const nama = parts[1];
+                        const kelas = parts[2];
+                        const password = parts[3];
+                        
+                        if (!nis || !nama || !kelas || !password) {
+                            errorCount++;
+                            continue;
+                        }
+                        
+                        // Simpan kelas untuk ditambahkan ke ref 'kelas' nanti
+                        kelasBaru.add(kelas);
+                        
+                        // Simpan siswa
+                        const promise = db.ref(`siswa/${nis}`).set({
+                            nama: nama,
+                            password: password,
+                            kelas: kelas,
+                            kehadiranGlobal: 0,
+                            nilaiGlobal: 0
+                        }).catch(err => {
+                            console.error(err);
+                            errorCount++;
+                        });
+                        promises.push(promise);
+                        successCount++;
+                    }
+                    
+                    // Tambahkan kelas-kelas baru ke database (jika belum ada)
+                    const kelasPromises = [];
+                    for (let k of kelasBaru) {
+                        const checkKelas = db.ref(`kelas/${k}`).once('value').then(snap => {
+                            if (!snap.exists()) {
+                                return db.ref(`kelas/${k}`).set({ nama: k });
+                            }
+                        });
+                        kelasPromises.push(checkKelas);
+                    }
+                    
+                    Promise.all([...promises, ...kelasPromises])
+                        .then(() => {
+                            alert(`✅ Impor selesai!\nBerhasil: ${successCount} siswa\nGagal: ${errorCount}\nKelas baru yang ditambahkan: ${kelasBaru.size ? Array.from(kelasBaru).join(', ') : 'tidak ada'}`);
+                            loadMurid(); // refresh tampilan
+                        })
+                        .catch(err => {
+                            showError("Gagal menyimpan data: " + err.message);
+                        });
+                };
+            });
         }
-
-        // ========================= DATA GURU (DIPERINDAH) =========================
+        
+        // ===================== DATA GURU =====================
         async function loadGuru() {
             const container = document.getElementById('guru');
             try {
                 const snap = await db.ref('guru').once('value');
                 const guru = snap.val() || {};
-                let html = `<div class="flex flex-wrap gap-3 mb-6"><button id="tambahGuruBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl shadow flex items-center gap-2"><i class="fas fa-plus-circle"></i> Tambah Guru</button><button id="copypasteGuruBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl shadow flex items-center gap-2"><i class="fas fa-paste"></i> Import Excel Guru</button></div><div class="table-wrapper rounded-xl border border-gray-200"><table class="min-w-full bg-white"><thead class="bg-gray-50 text-gray-700"><tr><th class="px-5 py-3 text-left">Nama Guru</th><th class="px-5 py-3 text-left">Password</th><th class="px-5 py-3 text-center">Aksi</th></tr></thead><tbody>`;
-                for (let [nama, val] of Object.entries(guru)) html += `<tr class="border-b border-gray-100 hover:bg-gray-50"><td class="px-5 py-3 font-medium">${escapeHtml(nama)}</td><td class="px-5 py-3 text-gray-500">•••••</td><td class="px-5 py-3 text-center"><button class="editGuruBtn text-indigo-500 hover:text-indigo-700 mx-1" data-nama="${escapeHtml(nama)}"><i class="fas fa-edit"></i> Edit</button><button class="hapusGuruBtn text-red-500 hover:text-red-700 mx-1" data-nama="${escapeHtml(nama)}"><i class="fas fa-trash-can"></i> Hapus</button></td></tr>`;
-                html += `</tbody></table></div>${Object.keys(guru).length===0?'<div class="text-center py-12 bg-gray-50 rounded-xl mt-4"><i class="fas fa-chalkboard-user text-gray-400 text-4xl mb-2"></i><p class="text-gray-500">Belum ada guru. Silakan tambah.</p></div>':''}`;
+                let html = `
+                    <div class="mb-4">
+                        <button id="tambahGuruBtn" class="bg-green-500 text-white px-3 py-1 rounded"><i class="fas fa-plus"></i> Tambah Guru</button>
+                        <button id="copypasteGuruBtn" class="bg-gray-500 text-white px-3 py-1 rounded ml-2"><i class="fas fa-paste"></i> Copypaste Excel</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full border">
+                            <thead class="bg-gray-100"><tr><th class="p-2">Nama</th><th>Password</th><th>Aksi</th></tr></thead>
+                            <tbody>
+                `;
+                for (let [nama, val] of Object.entries(guru)) {
+                    html += `
+                        <tr>
+                            <td class="p-2">${escapeHtml(nama)}</td>
+                            <td>${escapeHtml(val.password)}</td>
+                            <td>
+                                <button class="editGuruBtn text-blue-500" data-nama="${escapeHtml(nama)}"><i class="fas fa-edit"></i></button>
+                                <button class="hapusGuruBtn text-red-500 ml-2" data-nama="${escapeHtml(nama)}"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                }
+                html += `</tbody></td></div>`;
                 container.innerHTML = html;
-                document.getElementById('tambahGuruBtn').onclick = () => { let n=prompt('Nama Guru:'), p=prompt('Password:'); if(n&&p) db.ref(`guru/${n}`).set({password:p}).then(()=>loadGuru()); };
-                document.getElementById('copypasteGuruBtn').onclick = () => { let r=prompt('Format: Nama,Password per baris\nContoh:\nUstad Ahmad,pass123\nBu Sarah,sarah456'); if(r){ let promises=[]; r.split('\n').forEach(l=>{ let [nm,pw]=l.split(','); if(nm&&pw) promises.push(db.ref(`guru/${nm.trim()}`).set({password:pw.trim()})); }); Promise.all(promises).then(()=>{ alert(`${promises.length} guru ditambahkan`); loadGuru(); }); } };
-                document.querySelectorAll('.editGuruBtn').forEach(btn=>btn.onclick=async()=>{ let p=prompt('Password Baru:'); if(p) await db.ref(`guru/${btn.dataset.nama}/password`).set(p); loadGuru(); });
-                document.querySelectorAll('.hapusGuruBtn').forEach(btn=>btn.onclick=async()=>{ if(confirm('Hapus guru?')) await db.ref(`guru/${btn.dataset.nama}`).remove(); loadGuru(); });
-            } catch(e) { container.innerHTML = `<div class="text-red-500 bg-red-50 p-4 rounded-xl">Error: ${e.message}</div>`; }
+                
+                document.getElementById('tambahGuruBtn').onclick = () => {
+                    const nama = prompt('Nama Guru:');
+                    const pass = prompt('Password:');
+                    if (nama && pass) {
+                        db.ref(`guru/${nama}`).set({ password: pass }).then(() => loadGuru()).catch(err => showError(err.message));
+                    }
+                };
+                document.getElementById('copypasteGuruBtn').onclick = () => {
+                    const raw = prompt('Tempel data guru (format: Nama,Password per baris):');
+                    if (raw) {
+                        const lines = raw.split('\n');
+                        const promises = [];
+                        lines.forEach(line => {
+                            let [nama, pass] = line.split(',');
+                            if (nama && pass) {
+                                promises.push(db.ref(`guru/${nama.trim()}`).set({ password: pass.trim() }));
+                            }
+                        });
+                        Promise.all(promises).then(() => loadGuru()).catch(err => showError(err.message));
+                    }
+                };
+                document.querySelectorAll('.editGuruBtn').forEach(btn => {
+                    btn.onclick = async () => {
+                        const nama = btn.dataset.nama;
+                        const newPass = prompt('Password baru:', '');
+                        if (newPass) {
+                            await db.ref(`guru/${nama}/password`).set(newPass);
+                            loadGuru();
+                        }
+                    };
+                });
+                document.querySelectorAll('.hapusGuruBtn').forEach(btn => {
+                    btn.onclick = async () => {
+                        if (confirm('Hapus guru ini?')) {
+                            await db.ref(`guru/${btn.dataset.nama}`).remove();
+                            loadGuru();
+                        }
+                    };
+                });
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-500">Error: ${err.message}</p>`;
+            }
         }
-
-        // ========================= DATA MAPEL (MODERN) =========================
+        
+        // ===================== DATA MAPEL =====================
         async function loadMapel() {
             const container = document.getElementById('mapel');
             try {
                 const snap = await db.ref('mapel').once('value');
                 const mapel = snap.val() || {};
-                let html = `<div class="mb-6"><button id="tambahMapelBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl shadow flex items-center gap-2"><i class="fas fa-plus-circle"></i> Tambah Mata Pelajaran</button></div><div class="table-wrapper rounded-xl border border-gray-200"><table class="min-w-full bg-white"><thead class="bg-gray-50"><tr><th class="px-5 py-3 text-left">Mata Pelajaran</th><th class="px-5 py-3 text-left">Jenis</th><th class="px-5 py-3 text-center">Aksi</th></tr></thead><tbody>`;
-                for (let [id, val] of Object.entries(mapel)) html += `<tr class="border-b border-gray-100 hover:bg-gray-50"><td class="px-5 py-3 font-medium">${escapeHtml(val.nama)}</td><td class="px-5 py-3"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${val.jenis==='inkul'?'bg-blue-100 text-blue-800':val.jenis==='eskul'?'bg-purple-100 text-purple-800':'bg-amber-100 text-amber-800'}">${escapeHtml(val.jenis)}</span></td><td class="px-5 py-3 text-center"><button class="editMapelBtn text-indigo-500 hover:text-indigo-700 mx-1" data-id="${id}"><i class="fas fa-edit"></i> Edit</button><button class="hapusMapelBtn text-red-500 hover:text-red-700 mx-1" data-id="${id}"><i class="fas fa-trash-can"></i> Hapus</button></td></tr>`;
-                html += `</tbody></table></div>${Object.keys(mapel).length===0?'<div class="text-center py-12 mt-3 bg-gray-50 rounded-xl"><i class="fas fa-book text-gray-400 text-4xl"></i><p class="text-gray-500 mt-1">Belum ada mapel</p></div>':''}`;
+                let html = `
+                    <div class="mb-4"><button id="tambahMapelBtn" class="bg-green-500 text-white px-3 py-1 rounded"><i class="fas fa-plus"></i> Tambah Mapel</button></div>
+                    <div class="overflow-x-auto"><table class="min-w-full border"><thead class="bg-gray-100"><tr><th>Mata Pelajaran</th><th>Jenis</th><th>Aksi</th></tr></thead><tbody>
+                `;
+                for (let [id, val] of Object.entries(mapel)) {
+                    html += `<tr><td class="p-2">${escapeHtml(val.nama)}</td><td>${escapeHtml(val.jenis)}</td><td><button class="editMapelBtn text-blue-500" data-id="${id}"><i class="fas fa-edit"></i></button> <button class="hapusMapelBtn text-red-500 ml-2" data-id="${id}"><i class="fas fa-trash"></i></button></td></tr>`;
+                }
+                html += `</tbody></table></div>`;
                 container.innerHTML = html;
-                document.getElementById('tambahMapelBtn').onclick = () => { let n=prompt('Nama Mata Pelajaran:'), j=prompt('Jenis (inkul / eskul / pesantren):'); if(n && j && ['inkul','eskul','pesantren'].includes(j.toLowerCase())) db.ref(`mapel/${Date.now()}`).set({nama:n,jenis:j.toLowerCase()}).then(()=>loadMapel()); else alert('Jenis harus inkul, eskul, atau pesantren'); };
-                document.querySelectorAll('.editMapelBtn').forEach(btn=>btn.onclick=async()=>{ let snap=await db.ref(`mapel/${btn.dataset.id}`).once('value'), d=snap.val(); let nn=prompt('Nama baru:', d.nama), nj=prompt('Jenis baru (inkul/eskul/pesantren):', d.jenis); if(nn) await db.ref(`mapel/${btn.dataset.id}/nama`).set(nn); if(nj && ['inkul','eskul','pesantren'].includes(nj.toLowerCase())) await db.ref(`mapel/${btn.dataset.id}/jenis`).set(nj.toLowerCase()); loadMapel(); });
-                document.querySelectorAll('.hapusMapelBtn').forEach(btn=>btn.onclick=async()=>{ if(confirm('Hapus mapel ini?')) await db.ref(`mapel/${btn.dataset.id}`).remove(); loadMapel(); });
-            } catch(e) { container.innerHTML = `<div class="text-red-500">Error: ${e.message}</div>`; }
+                
+                document.getElementById('tambahMapelBtn').onclick = () => {
+                    const nama = prompt('Nama Mata Pelajaran:');
+                    const jenis = prompt('Jenis (inkul / eskul / pesantren):');
+                    if (nama && jenis && ['inkul', 'eskul', 'pesantren'].includes(jenis.toLowerCase())) {
+                        db.ref(`mapel/${Date.now()}`).set({ nama, jenis: jenis.toLowerCase() }).then(() => loadMapel()).catch(err => showError(err.message));
+                    } else alert('Jenis harus inkul, eskul, atau pesantren');
+                };
+                document.querySelectorAll('.editMapelBtn').forEach(btn => {
+                    btn.onclick = async () => {
+                        const id = btn.dataset.id;
+                        const snap = await db.ref(`mapel/${id}`).once('value');
+                        const data = snap.val();
+                        const newNama = prompt('Nama baru:', data.nama);
+                        const newJenis = prompt('Jenis baru (inkul/eskul/pesantren):', data.jenis);
+                        if (newNama) await db.ref(`mapel/${id}/nama`).set(newNama);
+                        if (newJenis && ['inkul', 'eskul', 'pesantren'].includes(newJenis.toLowerCase())) await db.ref(`mapel/${id}/jenis`).set(newJenis.toLowerCase());
+                        loadMapel();
+                    };
+                });
+                document.querySelectorAll('.hapusMapelBtn').forEach(btn => {
+                    btn.onclick = async () => {
+                        if (confirm('Hapus mata pelajaran?')) {
+                            await db.ref(`mapel/${btn.dataset.id}`).remove();
+                            loadMapel();
+                        }
+                    };
+                });
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-500">Error: ${err.message}</p>`;
+            }
         }
-
-        // ========================= PENUGASAN (MODERN & RESPONSIF) =========================
+        
+        // ===================== PENUGASAN =====================
         async function loadPenugasan() {
             const container = document.getElementById('penugasan');
             try {
-                const [mapelSnap, guruSnap, siswaSnap, kelasSnap, penugasanSnap] = await Promise.all([db.ref('mapel').once('value'), db.ref('guru').once('value'), db.ref('siswa').once('value'), db.ref('kelas').once('value'), db.ref('penugasan').once('value')]);
-                const mapel = mapelSnap.val() || {}, guru = guruSnap.val() || {}, semuaSiswa = siswaSnap.val() || {}, kelasData = kelasSnap.val() || {}, penugasan = penugasanSnap.val() || {};
+                const [mapelSnap, guruSnap, siswaSnap, kelasSnap, penugasanSnap] = await Promise.all([
+                    db.ref('mapel').once('value'),
+                    db.ref('guru').once('value'),
+                    db.ref('siswa').once('value'),
+                    db.ref('kelas').once('value'),
+                    db.ref('penugasan').once('value')
+                ]);
+                const mapel = mapelSnap.val() || {};
+                const guru = guruSnap.val() || {};
+                const semuaSiswa = siswaSnap.val() || {};
+                const kelasData = kelasSnap.val() || {};
                 const daftarKelas = Object.keys(kelasData);
-                let formHtml = `<div class="bg-gradient-to-br from-slate-50 to-gray-50 border border-gray-200 rounded-2xl p-5 mb-8 shadow-sm"><h3 class="font-bold text-xl text-gray-800 flex items-center gap-2 mb-4"><i class="fas fa-plus-circle text-indigo-500"></i> Buat Penugasan Baru</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-5"><div><label class="block text-sm font-semibold text-gray-700 mb-1">📘 Mata Pelajaran</label><select id="pilihMapel" class="w-full border border-gray-300 rounded-xl px-3 py-2 bg-white"><option value="">-- Pilih Mapel --</option>${Object.entries(mapel).map(([id,m])=>`<option value="${id}" data-jenis="${m.jenis}">${escapeHtml(m.nama)} (${m.jenis})</option>`).join('')}</select></div><div><label class="block text-sm font-semibold text-gray-700 mb-1">👨‍🏫 Guru Pengampu</label><select id="pilihGuru" class="w-full border border-gray-300 rounded-xl px-3 py-2 bg-white"><option value="">-- Pilih Guru --</option>${Object.keys(guru).map(g=>`<option value="${g}">${escapeHtml(g)}</option>`).join('')}</select></div><div class="md:col-span-2"><label id="targetLabel" class="block text-sm font-semibold text-gray-700 mb-1">🎯 Target</label><div id="targetInput" class="bg-white rounded-xl border border-gray-200 p-2"></div></div></div><div class="mt-6"><button id="simpanPenugasanBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl shadow-md transition flex items-center gap-2"><i class="fas fa-save"></i> Simpan Penugasan</button></div></div><div class="mt-4"><h3 class="font-bold text-lg text-gray-800 mb-3"><i class="fas fa-list-check text-indigo-500 mr-2"></i> Penugasan Aktif</h3><div class="table-wrapper rounded-xl border border-gray-200">${Object.keys(penugasan).length===0?'<div class="text-center py-12 bg-gray-50"><i class="fas fa-inbox text-gray-300 text-5xl mb-2"></i><p class="text-gray-500">Belum ada penugasan</p></div>':`<table class="min-w-full bg-white"><thead class="bg-gray-50"><tr><th class="px-5 py-3 text-left">Mata Pelajaran</th><th class="px-5 py-3 text-left">Guru</th><th class="px-5 py-3 text-center">Siswa Terlibat</th><th class="px-5 py-3 text-center">Aksi</th></tr></thead><tbody>${Object.entries(penugasan).map(([id,pg])=>`<tr class="border-b border-gray-100"><td class="px-5 py-3 font-medium">${escapeHtml(mapel[pg.mapelId]?.nama || '❌ Mapel dihapus')}</td><td class="px-5 py-3">${escapeHtml(pg.guruName)}</td><td class="px-5 py-3 text-center"><span class="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs">${pg.siswaList?.length || 0} siswa</span></td><td class="px-5 py-3 text-center"><button class="hapusPenugasanBtn text-red-500 hover:text-red-700 transition" data-id="${id}"><i class="fas fa-trash-can mr-1"></i> Hapus</button></td></tr>`).join('')}</tbody></table>`}</div></div>`;
-                container.innerHTML = formHtml;
-                const mapelSelect = document.getElementById('pilihMapel'), targetDiv = document.getElementById('targetInput'), targetLabel = document.getElementById('targetLabel');
+                const penugasan = penugasanSnap.val() || {};
+                
+                let formHtml = `
+                    <div class="border p-4 rounded mb-6 bg-gray-50">
+                        <h3 class="font-bold mb-2"><i class="fas fa-tasks"></i> Tambah Penugasan Baru</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                            <div><label class="block text-sm font-medium">Mata Pelajaran</label><select id="pilihMapel" class="border p-1 rounded w-full"><option value="">-- Pilih Mapel --</option>${Object.entries(mapel).map(([id, m]) => `<option value="${id}" data-jenis="${m.jenis}">${escapeHtml(m.nama)} (${m.jenis})</option>`).join('')}</select></div>
+                            <div><label class="block text-sm font-medium">Guru Pengampu</label><select id="pilihGuru" class="border p-1 rounded w-full"><option value="">-- Pilih Guru --</option>${Object.keys(guru).map(g => `<option value="${g}">${escapeHtml(g)}</option>`).join('')}</select></div>
+                            <div id="targetContainer"><label class="block text-sm font-medium" id="targetLabel">Target</label><div id="targetInput"></div></div>
+                        </div>
+                        <button id="simpanPenugasanBtn" class="bg-blue-600 text-white px-4 py-1 rounded"><i class="fas fa-save"></i> Simpan Penugasan</button>
+                    </div>
+                `;
+                let listHtml = `<h3 class="font-bold mt-4">Daftar Penugasan Aktif</h3><div class="overflow-x-auto"><table class="min-w-full border mt-2"><thead class="bg-gray-100"><tr><th>Mapel</th><th>Guru</th><th>Siswa Terlibat</th><th>Aksi</th></tr></thead><tbody>`;
+                for (let [id, pg] of Object.entries(penugasan)) {
+                    const namaMapel = mapel[pg.mapelId]?.nama || '❌ Mapel dihapus';
+                    const jumlahSiswa = pg.siswaList?.length || 0;
+                    listHtml += `<tr><td class="p-2">${escapeHtml(namaMapel)}</td><td>${escapeHtml(pg.guruName)}</td><td>${jumlahSiswa} siswa</td><td><button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i> Hapus</button></td></tr>`;
+                }
+                listHtml += `</tbody></table></div>`;
+                container.innerHTML = formHtml + listHtml;
+                
+                const mapelSelect = document.getElementById('pilihMapel');
+                const targetDiv = document.getElementById('targetInput');
+                const targetLabel = document.getElementById('targetLabel');
+                
                 const updateTargetInput = () => {
-                    let opt = mapelSelect.options[mapelSelect.selectedIndex], jenis = opt?.dataset?.jenis;
+                    const selectedOpt = mapelSelect.options[mapelSelect.selectedIndex];
+                    const jenis = selectedOpt?.dataset?.jenis;
                     targetDiv.innerHTML = '';
                     if (jenis === 'inkul') {
-                        targetLabel.innerText = '🏫 Pilih Kelas (bisa lebih dari satu)';
-                        let sel = document.createElement('select'); sel.multiple = true; sel.className = 'w-full border rounded-xl p-2 bg-white'; sel.size = 5;
-                        sel.innerHTML = daftarKelas.map(k=>`<option value="${k}">📌 Kelas ${escapeHtml(k)}</option>`).join('');
-                        targetDiv.appendChild(sel);
+                        targetLabel.innerText = 'Pilih Kelas (bisa lebih dari satu)';
+                        const selectKelas = document.createElement('select');
+                        selectKelas.multiple = true;
+                        selectKelas.className = 'border p-1 rounded w-full';
+                        selectKelas.size = 4;
+                        selectKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>' + daftarKelas.map(k => `<option value="${k}">${escapeHtml(k)}</option>`).join('');
+                        targetDiv.appendChild(selectKelas);
                     } else if (jenis === 'eskul' || jenis === 'pesantren') {
-                        targetLabel.innerText = '👥 Pilih Siswa (bisa lebih dari satu)';
-                        let sel = document.createElement('select'); sel.multiple = true; sel.className = 'w-full border rounded-xl p-2 bg-white'; sel.size = 6;
-                        sel.innerHTML = Object.entries(semuaSiswa).map(([nis,s])=>`<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(s.nama)} (${s.kelas})</option>`).join('');
-                        targetDiv.appendChild(sel);
-                    } else { targetLabel.innerText = '🎯 Target'; targetDiv.innerHTML = '<div class="text-gray-400 text-sm p-2">Pilih mapel terlebih dahulu</div>'; }
+                        targetLabel.innerText = 'Pilih Siswa (bisa lebih dari satu, gabungan kelas)';
+                        const selectSiswa = document.createElement('select');
+                        selectSiswa.multiple = true;
+                        selectSiswa.className = 'border p-1 rounded w-full';
+                        selectSiswa.size = 6;
+                        selectSiswa.innerHTML = Object.entries(semuaSiswa).map(([nis, s]) => `<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(s.nama)} (${s.kelas})</option>`).join('');
+                        targetDiv.appendChild(selectSiswa);
+                    } else {
+                        targetLabel.innerText = 'Target';
+                        targetDiv.innerHTML = '<p class="text-gray-500 text-sm">Pilih mapel terlebih dahulu</p>';
+                    }
                 };
                 mapelSelect.onchange = updateTargetInput;
+                
                 document.getElementById('simpanPenugasanBtn').onclick = async () => {
-                    let mapelId = mapelSelect.value, guruName = document.getElementById('pilihGuru').value;
-                    if (!mapelId || !guruName) return alert('Pilih mapel dan guru terlebih dahulu');
-                    let jenis = mapelSelect.options[mapelSelect.selectedIndex].dataset.jenis, siswaList = [];
+                    const mapelId = mapelSelect.value;
+                    const guruName = document.getElementById('pilihGuru').value;
+                    if (!mapelId || !guruName) { alert('Pilih mapel dan guru'); return; }
+                    const jenis = mapelSelect.options[mapelSelect.selectedIndex].dataset.jenis;
+                    let siswaList = [];
                     if (jenis === 'inkul') {
-                        let sel = targetDiv.querySelector('select'); let selectedKelas = Array.from(sel.selectedOptions).map(o=>o.value);
-                        if (!selectedKelas.length) return alert('Pilih minimal satu kelas');
-                        for (let k of selectedKelas) siswaList.push(...Object.entries(semuaSiswa).filter(([_,s])=> s.kelas === k).map(([nis])=>nis));
+                        const selectKelas = document.querySelector('#targetInput select');
+                        const selectedKelas = Array.from(selectKelas.selectedOptions).map(opt => opt.value);
+                        if (selectedKelas.length === 0) { alert('Pilih minimal satu kelas'); return; }
+                        for (let k of selectedKelas) {
+                            const siswaDiKelas = Object.entries(semuaSiswa).filter(([_, s]) => s.kelas === k).map(([nis]) => nis);
+                            siswaList.push(...siswaDiKelas);
+                        }
                         siswaList = [...new Set(siswaList)];
                     } else {
-                        let sel = targetDiv.querySelector('select'); siswaList = Array.from(sel.selectedOptions).map(o=>o.value);
-                        if (!siswaList.length) return alert('Pilih minimal satu siswa');
+                        const selectSiswa = document.querySelector('#targetInput select');
+                        siswaList = Array.from(selectSiswa.selectedOptions).map(opt => opt.value);
+                        if (siswaList.length === 0) { alert('Pilih minimal satu siswa'); return; }
                     }
-                    if (!siswaList.length) return alert('Tidak ada siswa yang dipilih');
+                    if (siswaList.length === 0) { alert('Tidak ada siswa yang dipilih'); return; }
                     await db.ref('penugasan').push({ mapelId, guruName, siswaList });
-                    alert('✅ Penugasan berhasil disimpan');
+                    alert('Penugasan berhasil disimpan');
                     loadPenugasan();
                 };
-                document.querySelectorAll('.hapusPenugasanBtn').forEach(btn=>btn.onclick=async()=>{ if(confirm('Hapus penugasan ini? Data nilai & kehadiran juga akan dihapus')) { await db.ref(`penugasan/${btn.dataset.id}`).remove(); await db.ref(`nilai_kehadiran/${btn.dataset.id}`).remove(); loadPenugasan(); } });
-            } catch(err) { container.innerHTML = `<div class="text-red-500 bg-red-50 p-4 rounded-xl">Gagal memuat penugasan: ${err.message}</div>`; }
+                
+                document.querySelectorAll('.hapusPenugasanBtn').forEach(btn => {
+                    btn.onclick = async () => {
+                        if (confirm('Hapus penugasan ini?')) {
+                            await db.ref(`penugasan/${btn.dataset.id}`).remove();
+                            await db.ref(`nilai_kehadiran/${btn.dataset.id}`).remove();
+                            loadPenugasan();
+                        }
+                    };
+                });
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-500">Error: ${err.message}</p>`;
+            }
         }
-
-        // Load awal (tab murid default)
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        // Load all tabs
         loadMurid();
         loadGuru();
         loadMapel();
         loadPenugasan();
-        // Pastikan tab aktif tampil sesuai data
-        showTab('murid');
     </script>
 </body>
 </html>
