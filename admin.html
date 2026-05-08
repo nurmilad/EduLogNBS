@@ -36,16 +36,16 @@
     </div>
 
     <script>
-        // ==================== KONFIGURASI FIREBASE ====================
+        // ==================== KONFIGURASI FIREBASE (ASLI) ====================
         const firebaseConfig = {
-            // GANTI DENGAN DATA FIREBASE ASLI ANDA
-            apiKey: "AIzaSyDummyExample",
-            authDomain: "edulognbs-dummy.firebaseapp.com",
-            databaseURL: "https://edulognbs-dummy-default-rtdb.firebaseio.com",
-            projectId: "edulognbs-dummy",
-            storageBucket: "edulognbs-dummy.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abc123"
+            apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
+            authDomain: "edulognbs.firebaseapp.com",
+            databaseURL: "https://edulognbs-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "edulognbs",
+            storageBucket: "edulognbs.firebasestorage.app",
+            messagingSenderId: "759345868898",
+            appId: "1:759345868898:web:40487df20ab4f43045213b",
+            measurementId: "G-SV83KDGZTS"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -71,7 +71,6 @@
                 <div id="kelasContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             `;
             
-            // Ambil daftar kelas dari node 'kelas'
             const kelasSnap = await db.ref('kelas').once('value');
             const daftarKelas = kelasSnap.val() || {};
             const kelasList = Object.keys(daftarKelas).sort();
@@ -85,7 +84,6 @@
             }
             
             for (let kelas of kelasList) {
-                // Filter siswa berdasarkan kelas
                 const siswaKelas = Object.entries(semuaSiswa)
                     .filter(([_, s]) => s.kelas === kelas)
                     .map(([nis, s]) => ({ nis, ...s }));
@@ -130,7 +128,6 @@
                 kelasContainer.appendChild(card);
             }
             
-            // Event handler: Tambah Kelas
             document.getElementById('addKelasBtn').onclick = () => {
                 const newKelas = prompt('Masukkan nama kelas baru:');
                 if (newKelas && newKelas.trim()) {
@@ -139,12 +136,10 @@
                 }
             };
             
-            // Hapus Kelas (hapus juga semua siswa di kelas tersebut)
             document.querySelectorAll('.hapusKelasBtn').forEach(btn => {
                 btn.onclick = async () => {
                     const kelas = btn.dataset.kelas;
                     if (confirm(`Hapus kelas ${kelas} dan semua siswanya?`)) {
-                        // Hapus semua siswa dengan kelas ini
                         const siswaSnap = await db.ref('siswa').once('value');
                         const siswa = siswaSnap.val() || {};
                         for (let nis in siswa) {
@@ -152,20 +147,17 @@
                                 await db.ref(`siswa/${nis}`).remove();
                             }
                         }
-                        // Hapus node kelas
                         await db.ref(`kelas/${kelas}`).remove();
                         loadMurid();
                     }
                 };
             });
             
-            // Edit nama kelas
             document.querySelectorAll('.editKelasBtn').forEach(btn => {
                 btn.onclick = async () => {
                     const oldKelas = btn.dataset.kelas;
                     const newKelas = prompt('Masukkan nama kelas baru:', oldKelas);
                     if (newKelas && newKelas.trim() && newKelas !== oldKelas) {
-                        // Update semua siswa yang memiliki kelas = oldKelas
                         const siswaSnap = await db.ref('siswa').once('value');
                         const siswa = siswaSnap.val() || {};
                         const updates = {};
@@ -175,14 +167,13 @@
                             }
                         }
                         updates[`kelas/${newKelas}`] = { nama: newKelas };
-                        updates[`kelas/${oldKelas}`] = null; // hapus kelas lama
+                        updates[`kelas/${oldKelas}`] = null;
                         await db.ref().update(updates);
                         loadMurid();
                     }
                 };
             });
             
-            // Tambah murid per kelas
             document.querySelectorAll('.tambahMuridBtn').forEach(btn => {
                 btn.onclick = () => {
                     const kelas = btn.dataset.kelas;
@@ -198,7 +189,6 @@
                 };
             });
             
-            // Hapus siswa
             document.querySelectorAll('.hapusSiswaBtn').forEach(btn => {
                 btn.onclick = async () => {
                     if (confirm('Hapus siswa ini?')) {
@@ -209,7 +199,6 @@
                 };
             });
             
-            // Edit siswa
             document.querySelectorAll('.editSiswaBtn').forEach(btn => {
                 btn.onclick = async () => {
                     const nis = btn.dataset.nis;
@@ -223,7 +212,6 @@
                 };
             });
             
-            // Copypaste Excel (format: NIS,Nama,Password per baris)
             document.querySelectorAll('.copypasteBtn').forEach(btn => {
                 btn.onclick = () => {
                     const kelas = btn.dataset.kelas;
@@ -462,7 +450,6 @@
             listHtml += `</tbody></table></div>`;
             container.innerHTML = formHtml + listHtml;
             
-            // Event handler untuk mapel -> tampilkan input sesuai jenis
             const mapelSelect = document.getElementById('pilihMapel');
             const targetDiv = document.getElementById('targetInput');
             const targetLabel = document.getElementById('targetLabel');
@@ -473,7 +460,6 @@
                 targetDiv.innerHTML = '';
                 if (jenis === 'inkul') {
                     targetLabel.innerText = 'Pilih Kelas (bisa lebih dari satu)';
-                    // Multi-select kelas
                     const selectKelas = document.createElement('select');
                     selectKelas.multiple = true;
                     selectKelas.className = 'border p-1 rounded w-full';
@@ -483,7 +469,6 @@
                     targetDiv.appendChild(selectKelas);
                 } else if (jenis === 'eskul' || jenis === 'pesantren') {
                     targetLabel.innerText = 'Pilih Siswa (bisa lebih dari satu, gabungan kelas)';
-                    // Multi-select siswa dari semua kelas
                     const selectSiswa = document.createElement('select');
                     selectSiswa.multiple = true;
                     selectSiswa.className = 'border p-1 rounded w-full';
@@ -499,7 +484,6 @@
             };
             mapelSelect.onchange = updateTargetInput;
             
-            // Simpan penugasan
             document.getElementById('simpanPenugasanBtn').onclick = async () => {
                 const mapelId = mapelSelect.value;
                 const guruName = document.getElementById('pilihGuru').value;
@@ -516,14 +500,12 @@
                         alert('Pilih minimal satu kelas');
                         return;
                     }
-                    // Ambil semua siswa dari kelas yang dipilih
                     for (let k of selectedKelas) {
                         const siswaDiKelas = Object.entries(semuaSiswa)
                             .filter(([_, s]) => s.kelas === k)
                             .map(([nis]) => nis);
                         siswaList.push(...siswaDiKelas);
                     }
-                    // Hapus duplikat
                     siswaList = [...new Set(siswaList)];
                 } else if (jenis === 'eskul' || jenis === 'pesantren') {
                     const selectSiswa = document.querySelector('#targetInput select');
@@ -545,19 +527,17 @@
                 loadPenugasan();
             };
             
-            // Hapus penugasan
             document.querySelectorAll('.hapusPenugasanBtn').forEach(btn => {
                 btn.onclick = async () => {
                     if (confirm('Hapus penugasan ini? Data nilai & kehadiran yang terkait akan hilang.')) {
                         await db.ref(`penugasan/${btn.dataset.id}`).remove();
-                        await db.ref(`nilai_kehadiran/${btn.dataset.id}`).remove(); // hapus juga catatan nilai
+                        await db.ref(`nilai_kehadiran/${btn.dataset.id}`).remove();
                         loadPenugasan();
                     }
                 };
             });
         }
 
-        // Panggil semua fungsi saat halaman dimuat
         loadMurid();
         loadGuru();
         loadMapel();
