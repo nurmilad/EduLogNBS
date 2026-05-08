@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - EduLogNBS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">EduLogNBS</h1>
+        <p class="text-center text-gray-500 mb-8">Sistem Perangkat Mengajar</p>
+
+        <div class="space-y-4">
+            <div class="flex gap-4 justify-center">
+                <button id="btnAdmin" class="px-6 py-2 rounded-lg font-semibold transition bg-gray-200 hover:bg-gray-300">Admin</button>
+                <button id="btnGuru" class="px-6 py-2 rounded-lg font-semibold transition bg-gray-200 hover:bg-gray-300">Guru</button>
+                <button id="btnSiswa" class="px-6 py-2 rounded-lg font-semibold transition bg-gray-200 hover:bg-gray-300">Siswa</button>
+            </div>
+
+            <input type="hidden" id="role" value="admin">
+            
+            <div id="usernameLabel" class="text-sm font-medium text-gray-700 mt-4">Username (Admin)</div>
+            <input type="text" id="username" placeholder="Masukkan username" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            
+            <div class="text-sm font-medium text-gray-700">Password</div>
+            <input type="password" id="password" placeholder="Masukkan password" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+            
+            <button id="loginBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg transition mt-6">Login</button>
+        </div>
+        <p id="errorMsg" class="text-red-500 text-sm text-center mt-4 hidden"></p>
+    </div>
+
+    <script>
+        // ==================== KONFIGURASI FIREBASE ====================
+        const firebaseConfig = {
+            // GANTI DENGAN DATA DARI FIREBASE ANDA
+            apiKey: "AIzaSyDummyExample",
+            authDomain: "edulognbs-dummy.firebaseapp.com",
+            databaseURL: "https://edulognbs-dummy-default-rtdb.firebaseio.com",
+            projectId: "edulognbs-dummy",
+            storageBucket: "edulognbs-dummy.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abc123"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        // =============================================================
+
+        let selectedRole = 'admin';
+
+        document.getElementById('btnAdmin').onclick = () => {
+            selectedRole = 'admin';
+            document.getElementById('usernameLabel').innerText = 'Username (Admin)';
+            document.getElementById('username').placeholder = 'admin';
+        };
+        document.getElementById('btnGuru').onclick = () => {
+            selectedRole = 'guru';
+            document.getElementById('usernameLabel').innerText = 'Nama Guru';
+            document.getElementById('username').placeholder = 'Nama Guru';
+        };
+        document.getElementById('btnSiswa').onclick = () => {
+            selectedRole = 'siswa';
+            document.getElementById('usernameLabel').innerText = 'NIS';
+            document.getElementById('username').placeholder = 'NIS';
+        };
+
+        document.getElementById('loginBtn').onclick = async () => {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorEl = document.getElementById('errorMsg');
+            errorEl.classList.add('hidden');
+
+            if (!username || !password) {
+                errorEl.innerText = 'Isi semua field!';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            if (selectedRole === 'admin') {
+                if (username === 'admin' && password === 'admin123') {
+                    window.location.href = 'admin.html';
+                } else {
+                    errorEl.innerText = 'Username atau password admin salah!';
+                    errorEl.classList.remove('hidden');
+                }
+            } 
+            else if (selectedRole === 'guru') {
+                const snapshot = await db.ref(`guru/${username}`).once('value');
+                const guru = snapshot.val();
+                if (guru && guru.password === password) {
+                    localStorage.setItem('guruLogin', username);
+                    window.location.href = 'guru.html';
+                } else {
+                    errorEl.innerText = 'Nama Guru atau password salah!';
+                    errorEl.classList.remove('hidden');
+                }
+            }
+            else if (selectedRole === 'siswa') {
+                const snapshot = await db.ref(`siswa/${username}`).once('value');
+                const siswa = snapshot.val();
+                if (siswa && siswa.password === password) {
+                    localStorage.setItem('siswaLogin', username);
+                    window.location.href = 'murid.html';
+                } else {
+                    errorEl.innerText = 'NIS atau password salah!';
+                    errorEl.classList.remove('hidden');
+                }
+            }
+        };
+    </script>
+</body>
+</html>
