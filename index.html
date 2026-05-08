@@ -4,32 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>EduLogNBS — Sistem Perangkat Mengajar</title>
-    <!-- Tailwind CSS + Font Awesome + Google Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        * { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        * { font-family: 'Inter', system-ui, sans-serif; }
         body {
             background: linear-gradient(145deg, #0f172a 0%, #1e1b4b 50%, #2e1065 100%);
             background-attachment: fixed;
         }
         .glass-card {
-            background: rgba(255, 255, 255, 0.97);
+            background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(0px);
             border-radius: 2rem;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-            transition: transform 0.2s ease;
         }
         .role-btn {
-            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: all 0.2s;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
         .role-btn.active {
             background: linear-gradient(105deg, #4f46e5 0%, #7c3aed 100%);
             color: white;
             box-shadow: 0 8px 20px -6px #4f46e5;
-            border-color: transparent;
         }
         .input-focus:focus {
             box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
@@ -51,25 +50,11 @@
             50% { transform: translateY(-8px); }
             100% { transform: translateY(0px); }
         }
-        .decor-blur {
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            background: rgba(139, 92, 246, 0.3);
-            filter: blur(80px);
-            border-radius: 50%;
-            z-index: 0;
-            pointer-events: none;
-        }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-5 relative overflow-x-hidden">
-    <!-- Elemen dekorasi blur -->
-    <div class="decor-blur top-20 -left-32"></div>
-    <div class="decor-blur bottom-20 -right-32" style="background: rgba(59,130,246,0.3);"></div>
-    
+<body class="flex items-center justify-center min-h-screen p-5">
     <div class="relative z-10 w-full max-w-md">
-        <!-- Logo / Brand -->
+        <!-- Header -->
         <div class="text-center mb-6 animate-float">
             <div class="inline-flex items-center justify-center bg-white/10 backdrop-blur-sm p-4 rounded-3xl shadow-lg border border-white/20 mb-2">
                 <i class="fas fa-chalkboard-user text-5xl text-white drop-shadow-md"></i>
@@ -79,16 +64,16 @@
         </div>
 
         <!-- Kartu Login -->
-        <div class="glass-card p-6 md:p-8 w-full backdrop-blur-sm border border-white/40">
+        <div class="glass-card p-6 md:p-8 w-full border border-white/40">
             <div class="text-center mb-5">
-                <span class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold tracking-wide"><i class="fas fa-lock mr-1"></i> PORTAL AKSES</span>
+                <span class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold"><i class="fas fa-lock mr-1"></i> PORTAL AKSES</span>
                 <h2 class="text-2xl font-bold text-gray-800 mt-3">Masuk ke Akun</h2>
                 <p class="text-gray-500 text-sm mt-1">Pilih peran dan masukkan kredensial</p>
             </div>
 
-            <!-- Role Switcher (Design Lebih Menarik) -->
+            <!-- Role Switcher -->
             <div class="flex bg-gray-100/80 p-1.5 rounded-2xl gap-1.5 mb-6">
-                <button id="btnAdmin" class="role-btn flex-1 py-2.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 bg-white text-gray-700 shadow-sm">
+                <button id="btnAdmin" class="role-btn flex-1 py-2.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 bg-white text-gray-700">
                     <i class="fas fa-user-shield"></i> Admin
                 </button>
                 <button id="btnGuru" class="role-btn flex-1 py-2.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 bg-white text-gray-700">
@@ -99,7 +84,7 @@
                 </button>
             </div>
 
-            <!-- Field Input Dinamis -->
+            <!-- Form -->
             <div class="space-y-4">
                 <div>
                     <label id="usernameLabel" class="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
@@ -129,7 +114,6 @@
                 <p id="errorMsg" class="text-red-600 text-sm text-center mt-3 hidden bg-red-50 py-2 rounded-lg border border-red-100"></p>
             </div>
             
-            <!-- footer info -->
             <div class="mt-6 text-center text-xs text-gray-400 border-t pt-4">
                 <i class="far fa-shield-alt mr-1"></i> Sistem aman & terenkripsi
             </div>
@@ -137,7 +121,7 @@
     </div>
 
     <script>
-        // ==================== KONFIGURASI FIREBASE (TIDAK BERUBAH SAMA SEKALI) ====================
+        // ========== KONFIGURASI FIREBASE (SAMA PERSIS DENGAN ASLI) ==========
         const firebaseConfig = {
             apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
             authDomain: "edulognbs.firebaseapp.com",
@@ -148,121 +132,125 @@
             appId: "1:759345868898:web:40487df20ab4f43045213b",
             measurementId: "G-SV83KDGZTS"
         };
-        // Inisialisasi hanya jika belum
+        // Pastikan inisialisasi hanya sekali
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.database();
         // ====================================================================
 
+        // Variabel role
         let selectedRole = 'admin';
         
-        // Ambil elemen
-        const btnAdmin = document.getElementById('btnAdmin');
-        const btnGuru = document.getElementById('btnGuru');
-        const btnSiswa = document.getElementById('btnSiswa');
-        const usernameLabel = document.getElementById('usernameLabel');
-        const usernameInput = document.getElementById('username');
-        const passwordInput = document.getElementById('password');
-        const loginBtn = document.getElementById('loginBtn');
-        const errorMsg = document.getElementById('errorMsg');
+        // Ambil elemen setelah DOM siap
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnAdmin = document.getElementById('btnAdmin');
+            const btnGuru = document.getElementById('btnGuru');
+            const btnSiswa = document.getElementById('btnSiswa');
+            const usernameLabel = document.getElementById('usernameLabel');
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMsg = document.getElementById('errorMsg');
 
-        // Fungsi update UI role aktif
-        function setActiveRole(role) {
-            selectedRole = role;
-            // Reset class active semua
-            [btnAdmin, btnGuru, btnSiswa].forEach(btn => btn.classList.remove('active'));
-            if (role === 'admin') {
-                btnAdmin.classList.add('active');
-                usernameLabel.innerHTML = '<i class="fas fa-user-cog text-indigo-500"></i> Username (Admin)';
-                usernameInput.placeholder = 'admin';
-                usernameInput.value = '';
-            } else if (role === 'guru') {
-                btnGuru.classList.add('active');
-                usernameLabel.innerHTML = '<i class="fas fa-chalkboard-user text-indigo-500"></i> Nama Guru';
-                usernameInput.placeholder = 'Contoh: Bu Susi';
-                usernameInput.value = '';
-            } else {
-                btnSiswa.classList.add('active');
-                usernameLabel.innerHTML = '<i class="fas fa-id-card text-indigo-500"></i> NIS (Nomor Induk Siswa)';
-                usernameInput.placeholder = 'Masukkan NIS';
-                usernameInput.value = '';
-            }
-            // sembunyikan error saat ganti role
-            errorMsg.classList.add('hidden');
-            passwordInput.value = '';
-        }
-
-        btnAdmin.onclick = () => setActiveRole('admin');
-        btnGuru.onclick = () => setActiveRole('guru');
-        btnSiswa.onclick = () => setActiveRole('siswa');
-        
-        // Fungsi login (PERSIS SAMA DENGAN LOGIKA ASLI, TIDAK ADA PERUBAHAN)
-        loginBtn.onclick = async () => {
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value.trim();
-            errorMsg.classList.add('hidden');
-            
-            if (!username || !password) {
-                errorMsg.innerText = '❌ Semua field harus diisi!';
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-            
-            if (selectedRole === 'admin') {
-                // Kredensial admin static (sesuai asli)
-                if (username === 'admin' && password === 'admin123') {
-                    window.location.href = 'admin.html';
+            // Fungsi update UI role
+            function setActiveRole(role) {
+                selectedRole = role;
+                // Reset class active
+                [btnAdmin, btnGuru, btnSiswa].forEach(btn => btn.classList.remove('active'));
+                if (role === 'admin') {
+                    btnAdmin.classList.add('active');
+                    usernameLabel.innerHTML = '<i class="fas fa-user-cog text-indigo-500"></i> Username (Admin)';
+                    usernameInput.placeholder = 'admin';
+                    usernameInput.value = '';
+                } else if (role === 'guru') {
+                    btnGuru.classList.add('active');
+                    usernameLabel.innerHTML = '<i class="fas fa-chalkboard-user text-indigo-500"></i> Nama Guru';
+                    usernameInput.placeholder = 'Nama Guru (contoh: Bu Susi)';
+                    usernameInput.value = '';
                 } else {
-                    errorMsg.innerText = '❌ Username atau password admin salah!';
-                    errorMsg.classList.remove('hidden');
+                    btnSiswa.classList.add('active');
+                    usernameLabel.innerHTML = '<i class="fas fa-id-card text-indigo-500"></i> NIS (Nomor Induk Siswa)';
+                    usernameInput.placeholder = 'Masukkan NIS';
+                    usernameInput.value = '';
                 }
-            } 
-            else if (selectedRole === 'guru') {
-                try {
-                    const snapshot = await db.ref(`guru/${username}`).once('value');
-                    const guru = snapshot.val();
-                    if (guru && guru.password === password) {
-                        localStorage.setItem('guruLogin', username);
-                        window.location.href = 'guru.html';
+                errorMsg.classList.add('hidden');
+                passwordInput.value = '';
+            }
+
+            // Event listener role
+            btnAdmin.onclick = () => setActiveRole('admin');
+            btnGuru.onclick = () => setActiveRole('guru');
+            btnSiswa.onclick = () => setActiveRole('siswa');
+
+            // Fungsi login (logika asli, tidak diubah)
+            async function handleLogin() {
+                const username = usernameInput.value.trim();
+                const password = passwordInput.value.trim();
+                errorMsg.classList.add('hidden');
+                
+                if (!username || !password) {
+                    errorMsg.innerText = '❌ Semua field harus diisi!';
+                    errorMsg.classList.remove('hidden');
+                    return;
+                }
+                
+                if (selectedRole === 'admin') {
+                    // Admin static
+                    if (username === 'admin' && password === 'admin123') {
+                        window.location.href = 'admin.html';
                     } else {
-                        errorMsg.innerText = '❌ Nama Guru atau password tidak cocok!';
+                        errorMsg.innerText = '❌ Username atau password admin salah!';
                         errorMsg.classList.remove('hidden');
                     }
-                } catch (err) {
-                    console.error(err);
-                    errorMsg.innerText = '⚠️ Gagal koneksi database. Coba lagi.';
-                    errorMsg.classList.remove('hidden');
-                }
-            }
-            else if (selectedRole === 'siswa') {
-                try {
-                    const snapshot = await db.ref(`siswa/${username}`).once('value');
-                    const siswa = snapshot.val();
-                    if (siswa && siswa.password === password) {
-                        localStorage.setItem('siswaLogin', username);
-                        window.location.href = 'murid.html';
-                    } else {
-                        errorMsg.innerText = '❌ NIS atau password salah!';
+                } 
+                else if (selectedRole === 'guru') {
+                    try {
+                        const snapshot = await db.ref(`guru/${username}`).once('value');
+                        const guru = snapshot.val();
+                        if (guru && guru.password === password) {
+                            localStorage.setItem('guruLogin', username);
+                            window.location.href = 'guru.html';
+                        } else {
+                            errorMsg.innerText = '❌ Nama Guru atau password tidak cocok!';
+                            errorMsg.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        errorMsg.innerText = '⚠️ Gagal koneksi database. Coba lagi.';
                         errorMsg.classList.remove('hidden');
                     }
-                } catch (err) {
-                    errorMsg.innerText = '⚠️ Gagal memverifikasi data siswa.';
-                    errorMsg.classList.remove('hidden');
+                }
+                else if (selectedRole === 'siswa') {
+                    try {
+                        const snapshot = await db.ref(`siswa/${username}`).once('value');
+                        const siswa = snapshot.val();
+                        if (siswa && siswa.password === password) {
+                            localStorage.setItem('siswaLogin', username);
+                            window.location.href = 'murid.html';
+                        } else {
+                            errorMsg.innerText = '❌ NIS atau password salah!';
+                            errorMsg.classList.remove('hidden');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        errorMsg.innerText = '⚠️ Gagal memverifikasi data siswa.';
+                        errorMsg.classList.remove('hidden');
+                    }
                 }
             }
-        };
-        
-        // Trigger tombol enter pada input
-        const handleEnter = (e) => { if (e.key === 'Enter') loginBtn.click(); };
-        usernameInput.addEventListener('keypress', handleEnter);
-        passwordInput.addEventListener('keypress', handleEnter);
-        
-        // Set default active (admin)
-        setActiveRole('admin');
-        
-        // Efek tambahan: fokus pada field pertama
-        usernameInput.focus();
+
+            loginBtn.onclick = handleLogin;
+            
+            // Enter key event
+            const enterHandler = (e) => { if (e.key === 'Enter') handleLogin(); };
+            usernameInput.addEventListener('keypress', enterHandler);
+            passwordInput.addEventListener('keypress', enterHandler);
+            
+            // Set default role admin
+            setActiveRole('admin');
+            usernameInput.focus();
+        });
     </script>
 </body>
 </html>
