@@ -3,116 +3,565 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - EduLogNBS</title>
+    <title>Admin - EduLogNBS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-    <style>
-        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body class="flex items-center justify-center min-h-screen p-4">
-    <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">EduLogNBS</h1>
-        <p class="text-center text-gray-500 mb-8">Sistem Perangkat Mengajar</p>
-
-        <div class="space-y-4">
-            <div class="flex gap-4 justify-center">
-                <button id="btnAdmin" class="px-6 py-2 rounded-lg font-semibold transition bg-gray-200 hover:bg-gray-300">Admin</button>
-                <button id="btnGuru" class="px-6 py-2 rounded-lg font-semibold transition bg-gray-200 hover:bg-gray-300">Guru</button>
-                <button id="btnSiswa" class="px-6 py-2 rounded-lg font-semibold transition bg-gray-200 hover:bg-gray-300">Siswa</button>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold">Panel Admin EduLogNBS</h1>
+                <a href="index.html" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            </div>
+            
+            <!-- Tab Navigation -->
+            <div class="border-b mb-6">
+                <ul class="flex flex-wrap -mb-px">
+                    <li class="mr-2"><button class="tab-link inline-block p-3 text-blue-600 border-b-2 border-blue-600 rounded-t-lg active" data-tab="murid">Data Murid</button></li>
+                    <li class="mr-2"><button class="tab-link inline-block p-3 hover:text-gray-600" data-tab="guru">Data Guru</button></li>
+                    <li class="mr-2"><button class="tab-link inline-block p-3 hover:text-gray-600" data-tab="mapel">Data Mapel</button></li>
+                    <li class="mr-2"><button class="tab-link inline-block p-3 hover:text-gray-600" data-tab="penugasan">Penugasan</button></li>
+                </ul>
             </div>
 
-            <input type="hidden" id="role" value="admin">
-            
-            <div id="usernameLabel" class="text-sm font-medium text-gray-700 mt-4">Username (Admin)</div>
-            <input type="text" id="username" placeholder="Masukkan username" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-            
-            <div class="text-sm font-medium text-gray-700">Password</div>
-            <input type="password" id="password" placeholder="Masukkan password" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
-            
-            <button id="loginBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg transition mt-6">Login</button>
+            <!-- Tab Content -->
+            <div id="murid" class="tab-content">Loading Data Murid...</div>
+            <div id="guru" class="tab-content hidden">Loading Data Guru...</div>
+            <div id="mapel" class="tab-content hidden">Loading Data Mapel...</div>
+            <div id="penugasan" class="tab-content hidden">Loading Penugasan...</div>
         </div>
-        <p id="errorMsg" class="text-red-500 text-sm text-center mt-4 hidden"></p>
     </div>
 
     <script>
-        // ==================== KONFIGURASI FIREBASE (ASLI) ====================
+        // ==================== KONFIGURASI FIREBASE ====================
         const firebaseConfig = {
-            apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
-            authDomain: "edulognbs.firebaseapp.com",
-            databaseURL: "https://edulognbs-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "edulognbs",
-            storageBucket: "edulognbs.firebasestorage.app",
-            messagingSenderId: "759345868898",
-            appId: "1:759345868898:web:40487df20ab4f43045213b",
-            measurementId: "G-SV83KDGZTS"
+            // GANTI DENGAN DATA FIREBASE ASLI ANDA
+            apiKey: "AIzaSyDummyExample",
+            authDomain: "edulognbs-dummy.firebaseapp.com",
+            databaseURL: "https://edulognbs-dummy-default-rtdb.firebaseio.com",
+            projectId: "edulognbs-dummy",
+            storageBucket: "edulognbs-dummy.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abc123"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
         // =============================================================
 
-        let selectedRole = 'admin';
+        function showTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            document.querySelectorAll('.tab-link').forEach(btn => btn.classList.remove('border-blue-600', 'text-blue-600'));
+            document.querySelector(`[data-tab="${tabId}"]`).classList.add('border-blue-600', 'text-blue-600');
+        }
+        document.querySelectorAll('.tab-link').forEach(btn => {
+            btn.onclick = () => showTab(btn.dataset.tab);
+        });
 
-        document.getElementById('btnAdmin').onclick = () => {
-            selectedRole = 'admin';
-            document.getElementById('usernameLabel').innerText = 'Username (Admin)';
-            document.getElementById('username').placeholder = 'admin';
-        };
-        document.getElementById('btnGuru').onclick = () => {
-            selectedRole = 'guru';
-            document.getElementById('usernameLabel').innerText = 'Nama Guru';
-            document.getElementById('username').placeholder = 'Nama Guru';
-        };
-        document.getElementById('btnSiswa').onclick = () => {
-            selectedRole = 'siswa';
-            document.getElementById('usernameLabel').innerText = 'NIS';
-            document.getElementById('username').placeholder = 'NIS';
-        };
-
-        document.getElementById('loginBtn').onclick = async () => {
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value.trim();
-            const errorEl = document.getElementById('errorMsg');
-            errorEl.classList.add('hidden');
-
-            if (!username || !password) {
-                errorEl.innerText = 'Isi semua field!';
-                errorEl.classList.remove('hidden');
-                return;
+        // ===================== DATA MURID (dengan manajemen kelas) =====================
+        async function loadMurid() {
+            const container = document.getElementById('murid');
+            container.innerHTML = `
+                <div class="flex justify-between mb-4">
+                    <button id="addKelasBtn" class="bg-green-500 text-white px-3 py-1 rounded"><i class="fas fa-plus"></i> Tambah Kelas</button>
+                </div>
+                <div id="kelasContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            `;
+            
+            // Ambil daftar kelas dari node 'kelas'
+            const kelasSnap = await db.ref('kelas').once('value');
+            const daftarKelas = kelasSnap.val() || {};
+            const kelasList = Object.keys(daftarKelas).sort();
+            
+            const siswaSnap = await db.ref('siswa').once('value');
+            const semuaSiswa = siswaSnap.val() || {};
+            
+            const kelasContainer = document.getElementById('kelasContainer');
+            if (kelasList.length === 0) {
+                kelasContainer.innerHTML = '<p class="text-gray-500 col-span-full">Belum ada kelas. Klik "Tambah Kelas".</p>';
             }
+            
+            for (let kelas of kelasList) {
+                // Filter siswa berdasarkan kelas
+                const siswaKelas = Object.entries(semuaSiswa)
+                    .filter(([_, s]) => s.kelas === kelas)
+                    .map(([nis, s]) => ({ nis, ...s }));
+                
+                const card = document.createElement('div');
+                card.className = 'border rounded-lg p-3 shadow-sm bg-white';
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-2 border-b pb-2">
+                        <h3 class="font-bold text-lg">Kelas ${kelas}</h3>
+                        <div>
+                            <button class="hapusKelasBtn text-red-500 hover:text-red-700 mr-2" data-kelas="${kelas}"><i class="fas fa-trash-alt"></i> Hapus Kelas</button>
+                            <button class="editKelasBtn text-blue-500 hover:text-blue-700" data-kelas="${kelas}"><i class="fas fa-edit"></i> Edit</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full text-sm border">
+                            <thead class="bg-gray-100">
+                                <tr><th class="p-1">NIS</th><th>Nama</th><th>Password</th><th>Kehadiran</th><th>Rata Nilai</th><th>Aksi</th></tr>
+                            </thead>
+                            <tbody id="tbody-${kelas.replace(/\s/g, '')}">
+                                ${siswaKelas.map(s => `
+                                    <tr>
+                                        <td class="p-1">${s.nis}</td>
+                                        <td>${s.nama}</td>
+                                        <td>${s.password}</td>
+                                        <td>${s.kehadiranGlobal || 0}%</td>
+                                        <td>${s.nilaiGlobal || 0}</td>
+                                        <td>
+                                            <button class="editSiswaBtn text-blue-500" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-edit"></i></button>
+                                            <button class="hapusSiswaBtn text-red-500" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-3 flex gap-2">
+                        <button class="tambahMuridBtn bg-blue-500 text-white px-2 py-1 rounded text-sm" data-kelas="${kelas}"><i class="fas fa-user-plus"></i> Tambah Murid</button>
+                        <button class="copypasteBtn bg-gray-500 text-white px-2 py-1 rounded text-sm" data-kelas="${kelas}"><i class="fas fa-paste"></i> Copypaste Excel</button>
+                    </div>
+                `;
+                kelasContainer.appendChild(card);
+            }
+            
+            // Event handler: Tambah Kelas
+            document.getElementById('addKelasBtn').onclick = () => {
+                const newKelas = prompt('Masukkan nama kelas baru:');
+                if (newKelas && newKelas.trim()) {
+                    db.ref(`kelas/${newKelas.trim()}`).set({ nama: newKelas.trim() })
+                        .then(() => loadMurid());
+                }
+            };
+            
+            // Hapus Kelas (hapus juga semua siswa di kelas tersebut)
+            document.querySelectorAll('.hapusKelasBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    const kelas = btn.dataset.kelas;
+                    if (confirm(`Hapus kelas ${kelas} dan semua siswanya?`)) {
+                        // Hapus semua siswa dengan kelas ini
+                        const siswaSnap = await db.ref('siswa').once('value');
+                        const siswa = siswaSnap.val() || {};
+                        for (let nis in siswa) {
+                            if (siswa[nis].kelas === kelas) {
+                                await db.ref(`siswa/${nis}`).remove();
+                            }
+                        }
+                        // Hapus node kelas
+                        await db.ref(`kelas/${kelas}`).remove();
+                        loadMurid();
+                    }
+                };
+            });
+            
+            // Edit nama kelas
+            document.querySelectorAll('.editKelasBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    const oldKelas = btn.dataset.kelas;
+                    const newKelas = prompt('Masukkan nama kelas baru:', oldKelas);
+                    if (newKelas && newKelas.trim() && newKelas !== oldKelas) {
+                        // Update semua siswa yang memiliki kelas = oldKelas
+                        const siswaSnap = await db.ref('siswa').once('value');
+                        const siswa = siswaSnap.val() || {};
+                        const updates = {};
+                        for (let nis in siswa) {
+                            if (siswa[nis].kelas === oldKelas) {
+                                updates[`siswa/${nis}/kelas`] = newKelas;
+                            }
+                        }
+                        updates[`kelas/${newKelas}`] = { nama: newKelas };
+                        updates[`kelas/${oldKelas}`] = null; // hapus kelas lama
+                        await db.ref().update(updates);
+                        loadMurid();
+                    }
+                };
+            });
+            
+            // Tambah murid per kelas
+            document.querySelectorAll('.tambahMuridBtn').forEach(btn => {
+                btn.onclick = () => {
+                    const kelas = btn.dataset.kelas;
+                    const nis = prompt('NIS:');
+                    const nama = prompt('Nama:');
+                    const pass = prompt('Password:');
+                    if (nis && nama && pass) {
+                        db.ref(`siswa/${nis}`).set({
+                            nama, password: pass, kelas,
+                            kehadiranGlobal: 0, nilaiGlobal: 0
+                        }).then(() => loadMurid());
+                    }
+                };
+            });
+            
+            // Hapus siswa
+            document.querySelectorAll('.hapusSiswaBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    if (confirm('Hapus siswa ini?')) {
+                        const nis = btn.dataset.nis;
+                        await db.ref(`siswa/${nis}`).remove();
+                        loadMurid();
+                    }
+                };
+            });
+            
+            // Edit siswa
+            document.querySelectorAll('.editSiswaBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    const nis = btn.dataset.nis;
+                    const snap = await db.ref(`siswa/${nis}`).once('value');
+                    const data = snap.val();
+                    const newNama = prompt('Nama baru:', data.nama);
+                    const newPass = prompt('Password baru:', data.password);
+                    if (newNama) await db.ref(`siswa/${nis}/nama`).set(newNama);
+                    if (newPass) await db.ref(`siswa/${nis}/password`).set(newPass);
+                    loadMurid();
+                };
+            });
+            
+            // Copypaste Excel (format: NIS,Nama,Password per baris)
+            document.querySelectorAll('.copypasteBtn').forEach(btn => {
+                btn.onclick = () => {
+                    const kelas = btn.dataset.kelas;
+                    const dataRaw = prompt('Tempel data siswa (format: NIS,Nama,Password per baris):\nContoh:\n12345,Andi,pass123\n12346,Budi,budi456');
+                    if (dataRaw) {
+                        const lines = dataRaw.split('\n');
+                        let count = 0;
+                        lines.forEach(line => {
+                            const parts = line.split(',');
+                            if (parts.length >= 3) {
+                                const nis = parts[0].trim();
+                                const nama = parts[1].trim();
+                                const password = parts[2].trim();
+                                if (nis && nama && password) {
+                                    db.ref(`siswa/${nis}`).set({
+                                        nama, password, kelas,
+                                        kehadiranGlobal: 0, nilaiGlobal: 0
+                                    });
+                                    count++;
+                                }
+                            }
+                        });
+                        alert(`${count} siswa berhasil ditambahkan ke kelas ${kelas}`);
+                        loadMurid();
+                    }
+                };
+            });
+        }
 
-            if (selectedRole === 'admin') {
-                if (username === 'admin' && password === 'admin123') {
-                    window.location.href = 'admin.html';
-                } else {
-                    errorEl.innerText = 'Username atau password admin salah!';
-                    errorEl.classList.remove('hidden');
-                }
-            } 
-            else if (selectedRole === 'guru') {
-                const snapshot = await db.ref(`guru/${username}`).once('value');
-                const guru = snapshot.val();
-                if (guru && guru.password === password) {
-                    localStorage.setItem('guruLogin', username);
-                    window.location.href = 'guru.html';
-                } else {
-                    errorEl.innerText = 'Nama Guru atau password salah!';
-                    errorEl.classList.remove('hidden');
-                }
+        // ===================== DATA GURU =====================
+        async function loadGuru() {
+            const container = document.getElementById('guru');
+            const snap = await db.ref('guru').once('value');
+            const guru = snap.val() || {};
+            let html = `
+                <div class="mb-4">
+                    <button id="tambahGuruBtn" class="bg-green-500 text-white px-3 py-1 rounded"><i class="fas fa-plus"></i> Tambah Guru</button>
+                    <button id="copypasteGuruBtn" class="bg-gray-500 text-white px-3 py-1 rounded ml-2"><i class="fas fa-paste"></i> Copypaste Excel</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border">
+                        <thead class="bg-gray-100">
+                            <tr><th class="p-2">Nama</th><th>Password</th><th>Aksi</th></tr>
+                        </thead>
+                        <tbody>
+            `;
+            for (let [nama, val] of Object.entries(guru)) {
+                html += `
+                    <tr>
+                        <td class="p-2">${nama}</td>
+                        <td>${val.password}</td>
+                        <td>
+                            <button class="editGuruBtn text-blue-500" data-nama="${nama}"><i class="fas fa-edit"></i></button>
+                            <button class="hapusGuruBtn text-red-500 ml-2" data-nama="${nama}"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
             }
-            else if (selectedRole === 'siswa') {
-                const snapshot = await db.ref(`siswa/${username}`).once('value');
-                const siswa = snapshot.val();
-                if (siswa && siswa.password === password) {
-                    localStorage.setItem('siswaLogin', username);
-                    window.location.href = 'murid.html';
-                } else {
-                    errorEl.innerText = 'NIS atau password salah!';
-                    errorEl.classList.remove('hidden');
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+            
+            document.getElementById('tambahGuruBtn').onclick = () => {
+                const nama = prompt('Nama Guru:');
+                const pass = prompt('Password:');
+                if (nama && pass) {
+                    db.ref(`guru/${nama}`).set({ password: pass }).then(() => loadGuru());
                 }
+            };
+            
+            document.getElementById('copypasteGuruBtn').onclick = () => {
+                const raw = prompt('Tempel data guru (format: Nama,Password per baris):\nContoh:\nBudi,pass123\nSiti,siti456');
+                if (raw) {
+                    const lines = raw.split('\n');
+                    lines.forEach(line => {
+                        let [nama, pass] = line.split(',');
+                        if (nama && pass) {
+                            db.ref(`guru/${nama.trim()}`).set({ password: pass.trim() });
+                        }
+                    });
+                    loadGuru();
+                }
+            };
+            
+            document.querySelectorAll('.editGuruBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    const nama = btn.dataset.nama;
+                    const newPass = prompt('Password baru:', '');
+                    if (newPass) {
+                        await db.ref(`guru/${nama}/password`).set(newPass);
+                        loadGuru();
+                    }
+                };
+            });
+            
+            document.querySelectorAll('.hapusGuruBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    if (confirm('Hapus guru ini?')) {
+                        await db.ref(`guru/${btn.dataset.nama}`).remove();
+                        loadGuru();
+                    }
+                };
+            });
+        }
+
+        // ===================== DATA MAPEL =====================
+        async function loadMapel() {
+            const container = document.getElementById('mapel');
+            const snap = await db.ref('mapel').once('value');
+            const mapel = snap.val() || {};
+            let html = `
+                <div class="mb-4">
+                    <button id="tambahMapelBtn" class="bg-green-500 text-white px-3 py-1 rounded"><i class="fas fa-plus"></i> Tambah Mapel</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full border">
+                        <thead class="bg-gray-100">
+                            <tr><th>Mata Pelajaran</th><th>Jenis</th><th>Aksi</th></tr>
+                        </thead>
+                        <tbody>
+            `;
+            for (let [id, val] of Object.entries(mapel)) {
+                html += `
+                    <tr>
+                        <td class="p-2">${val.nama}</td>
+                        <td>${val.jenis}</td>
+                        <td>
+                            <button class="editMapelBtn text-blue-500" data-id="${id}"><i class="fas fa-edit"></i></button>
+                            <button class="hapusMapelBtn text-red-500 ml-2" data-id="${id}"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
             }
-        };
+            html += `</tbody></table></div>`;
+            container.innerHTML = html;
+            
+            document.getElementById('tambahMapelBtn').onclick = () => {
+                const nama = prompt('Nama Mata Pelajaran:');
+                const jenis = prompt('Jenis (inkul / eskul / pesantren):');
+                if (nama && jenis && ['inkul', 'eskul', 'pesantren'].includes(jenis.toLowerCase())) {
+                    db.ref(`mapel/${Date.now()}`).set({ nama, jenis: jenis.toLowerCase() }).then(() => loadMapel());
+                } else {
+                    alert('Jenis harus inkul, eskul, atau pesantren');
+                }
+            };
+            
+            document.querySelectorAll('.editMapelBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    const id = btn.dataset.id;
+                    const snap = await db.ref(`mapel/${id}`).once('value');
+                    const data = snap.val();
+                    const newNama = prompt('Nama baru:', data.nama);
+                    const newJenis = prompt('Jenis baru (inkul/eskul/pesantren):', data.jenis);
+                    if (newNama) await db.ref(`mapel/${id}/nama`).set(newNama);
+                    if (newJenis && ['inkul', 'eskul', 'pesantren'].includes(newJenis.toLowerCase())) {
+                        await db.ref(`mapel/${id}/jenis`).set(newJenis.toLowerCase());
+                    }
+                    loadMapel();
+                };
+            });
+            
+            document.querySelectorAll('.hapusMapelBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    if (confirm('Hapus mata pelajaran? Data penugasan yang terkait akan kehilangan referensi.')) {
+                        await db.ref(`mapel/${btn.dataset.id}`).remove();
+                        loadMapel();
+                    }
+                };
+            });
+        }
+
+        // ===================== PENUGASAN =====================
+        async function loadPenugasan() {
+            const container = document.getElementById('penugasan');
+            const [mapelSnap, guruSnap, siswaSnap, kelasSnap, penugasanSnap] = await Promise.all([
+                db.ref('mapel').once('value'),
+                db.ref('guru').once('value'),
+                db.ref('siswa').once('value'),
+                db.ref('kelas').once('value'),
+                db.ref('penugasan').once('value')
+            ]);
+            const mapel = mapelSnap.val() || {};
+            const guru = guruSnap.val() || {};
+            const semuaSiswa = siswaSnap.val() || {};
+            const kelasData = kelasSnap.val() || {};
+            const daftarKelas = Object.keys(kelasData);
+            const penugasan = penugasanSnap.val() || {};
+            
+            // Form tambah penugasan
+            let formHtml = `
+                <div class="border p-4 rounded mb-6 bg-gray-50">
+                    <h3 class="font-bold mb-2"><i class="fas fa-tasks"></i> Tambah Penugasan Baru</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                        <div>
+                            <label class="block text-sm font-medium">Mata Pelajaran</label>
+                            <select id="pilihMapel" class="border p-1 rounded w-full">
+                                <option value="">-- Pilih Mapel --</option>
+                                ${Object.entries(mapel).map(([id, m]) => `<option value="${id}" data-jenis="${m.jenis}">${m.nama} (${m.jenis})</option>`).join('')}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium">Guru Pengampu</label>
+                            <select id="pilihGuru" class="border p-1 rounded w-full">
+                                <option value="">-- Pilih Guru --</option>
+                                ${Object.keys(guru).map(g => `<option value="${g}">${g}</option>`).join('')}
+                            </select>
+                        </div>
+                        <div id="targetContainer">
+                            <label class="block text-sm font-medium" id="targetLabel">Target</label>
+                            <div id="targetInput"></div>
+                        </div>
+                    </div>
+                    <button id="simpanPenugasanBtn" class="bg-blue-600 text-white px-4 py-1 rounded"><i class="fas fa-save"></i> Simpan Penugasan</button>
+                </div>
+            `;
+            
+            // Daftar penugasan yang sudah ada
+            let listHtml = `<h3 class="font-bold mt-4"><i class="fas fa-list"></i> Daftar Penugasan Aktif</h3>
+                            <div class="overflow-x-auto">
+                            <table class="min-w-full border mt-2">
+                                <thead class="bg-gray-100">
+                                    <tr><th>Mapel</th><th>Guru</th><th>Siswa Terlibat</th><th>Aksi</th></tr>
+                                </thead>
+                                <tbody>`;
+            for (let [id, pg] of Object.entries(penugasan)) {
+                const namaMapel = mapel[pg.mapelId]?.nama || '❌ Mapel dihapus';
+                const jumlahSiswa = pg.siswaList?.length || 0;
+                listHtml += `
+                    <tr>
+                        <td class="p-2">${namaMapel}</td>
+                        <td>${pg.guruName}</td>
+                        <td>${jumlahSiswa} siswa</td>
+                        <td><button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i> Hapus</button></td>
+                    </tr>
+                `;
+            }
+            listHtml += `</tbody></table></div>`;
+            container.innerHTML = formHtml + listHtml;
+            
+            // Event handler untuk mapel -> tampilkan input sesuai jenis
+            const mapelSelect = document.getElementById('pilihMapel');
+            const targetDiv = document.getElementById('targetInput');
+            const targetLabel = document.getElementById('targetLabel');
+            
+            const updateTargetInput = () => {
+                const selectedOpt = mapelSelect.options[mapelSelect.selectedIndex];
+                const jenis = selectedOpt?.dataset?.jenis;
+                targetDiv.innerHTML = '';
+                if (jenis === 'inkul') {
+                    targetLabel.innerText = 'Pilih Kelas (bisa lebih dari satu)';
+                    // Multi-select kelas
+                    const selectKelas = document.createElement('select');
+                    selectKelas.multiple = true;
+                    selectKelas.className = 'border p-1 rounded w-full';
+                    selectKelas.size = 4;
+                    selectKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>' + 
+                        daftarKelas.map(k => `<option value="${k}">${k}</option>`).join('');
+                    targetDiv.appendChild(selectKelas);
+                } else if (jenis === 'eskul' || jenis === 'pesantren') {
+                    targetLabel.innerText = 'Pilih Siswa (bisa lebih dari satu, gabungan kelas)';
+                    // Multi-select siswa dari semua kelas
+                    const selectSiswa = document.createElement('select');
+                    selectSiswa.multiple = true;
+                    selectSiswa.className = 'border p-1 rounded w-full';
+                    selectSiswa.size = 6;
+                    selectSiswa.innerHTML = Object.entries(semuaSiswa)
+                        .map(([nis, s]) => `<option value="${nis}">${nis} - ${s.nama} (${s.kelas})</option>`)
+                        .join('');
+                    targetDiv.appendChild(selectSiswa);
+                } else {
+                    targetLabel.innerText = 'Target';
+                    targetDiv.innerHTML = '<p class="text-gray-500 text-sm">Pilih mapel terlebih dahulu</p>';
+                }
+            };
+            mapelSelect.onchange = updateTargetInput;
+            
+            // Simpan penugasan
+            document.getElementById('simpanPenugasanBtn').onclick = async () => {
+                const mapelId = mapelSelect.value;
+                const guruName = document.getElementById('pilihGuru').value;
+                if (!mapelId || !guruName) {
+                    alert('Pilih mapel dan guru terlebih dahulu');
+                    return;
+                }
+                const jenis = mapelSelect.options[mapelSelect.selectedIndex].dataset.jenis;
+                let siswaList = [];
+                if (jenis === 'inkul') {
+                    const selectKelas = document.querySelector('#targetInput select');
+                    const selectedKelas = Array.from(selectKelas.selectedOptions).map(opt => opt.value);
+                    if (selectedKelas.length === 0) {
+                        alert('Pilih minimal satu kelas');
+                        return;
+                    }
+                    // Ambil semua siswa dari kelas yang dipilih
+                    for (let k of selectedKelas) {
+                        const siswaDiKelas = Object.entries(semuaSiswa)
+                            .filter(([_, s]) => s.kelas === k)
+                            .map(([nis]) => nis);
+                        siswaList.push(...siswaDiKelas);
+                    }
+                    // Hapus duplikat
+                    siswaList = [...new Set(siswaList)];
+                } else if (jenis === 'eskul' || jenis === 'pesantren') {
+                    const selectSiswa = document.querySelector('#targetInput select');
+                    siswaList = Array.from(selectSiswa.selectedOptions).map(opt => opt.value);
+                    if (siswaList.length === 0) {
+                        alert('Pilih minimal satu siswa');
+                        return;
+                    }
+                } else {
+                    alert('Jenis mapel tidak valid');
+                    return;
+                }
+                if (siswaList.length === 0) {
+                    alert('Tidak ada siswa yang dipilih');
+                    return;
+                }
+                await db.ref('penugasan').push({ mapelId, guruName, siswaList });
+                alert('Penugasan berhasil disimpan');
+                loadPenugasan();
+            };
+            
+            // Hapus penugasan
+            document.querySelectorAll('.hapusPenugasanBtn').forEach(btn => {
+                btn.onclick = async () => {
+                    if (confirm('Hapus penugasan ini? Data nilai & kehadiran yang terkait akan hilang.')) {
+                        await db.ref(`penugasan/${btn.dataset.id}`).remove();
+                        await db.ref(`nilai_kehadiran/${btn.dataset.id}`).remove(); // hapus juga catatan nilai
+                        loadPenugasan();
+                    }
+                };
+            });
+        }
+
+        // Panggil semua fungsi saat halaman dimuat
+        loadMurid();
+        loadGuru();
+        loadMapel();
+        loadPenugasan();
     </script>
 </body>
 </html>
