@@ -110,14 +110,13 @@
             btn.onclick = () => showTab(btn.dataset.tab);
         });
         
-        // ===================== DATA MURID dengan sinkronisasi kehadiran & nilai (diperbaiki) =====================
+        // ===================== DATA MURID dengan sinkronisasi kehadiran & nilai =====================
         let currentClassDetail = null;
         
         // Fungsi untuk menghitung statistik semua siswa:
-        // - Kehadiran: hanya sesi yang memiliki record (default tidak dianggap hadir)
-        // - Nilai: setiap assessment yang ada di penugasan, jika tidak ada record nilai maka dianggap 0
+        // - Kehadiran: setiap sesi, jika tidak ada record maka dianggap H (hadir)
+        // - Nilai: setiap assessment, jika tidak ada record nilai maka dianggap 0
         async function hitungSemuaStatistikSiswa() {
-            // Ambil semua data yang diperlukan hanya sekali
             const [penugasanSnap, attendanceSnap, penilaianSnap] = await Promise.all([
                 db.ref('penugasan').once('value'),
                 db.ref('attendance').once('value'),
@@ -127,8 +126,8 @@
             const attendanceAll = attendanceSnap.val() || {};
             const penilaianAll = penilaianSnap.val() || {};
             
-            // Bangun mapping siswa ke daftar penugasan yang diikutinya
-            const penugasanPerSiswa = {}; // { nis: [idPenugasan] }
+            // Mapping siswa ke penugasan
+            const penugasanPerSiswa = {};
             for (let [idPen, pg] of Object.entries(penugasan)) {
                 if (pg.siswaList && Array.isArray(pg.siswaList)) {
                     for (let nis of pg.siswaList) {
@@ -138,8 +137,8 @@
                 }
             }
             
-            // Untuk setiap penugasan, kumpulkan daftar assessment (id assessment)
-            const assessmentPerPenugasan = {}; // { idPenugasan: [idAssessment] }
+            // Mapping assessment per penugasan
+            const assessmentPerPenugasan = {};
             for (let [idPen, assessments] of Object.entries(penilaianAll)) {
                 if (!assessmentPerPenugasan[idPen]) assessmentPerPenugasan[idPen] = [];
                 for (let idAss of Object.keys(assessments)) {
@@ -149,19 +148,21 @@
             
             const hasil = {};
             for (let [nis, listPen] of Object.entries(penugasanPerSiswa)) {
-                // HITUNG KEHADIRAN
                 let totalSesi = 0;
                 let totalHadir = 0;
+                // Hitung kehadiran
                 for (let idPen of listPen) {
                     const sessions = attendanceAll[idPen] || {};
                     for (let ses of Object.values(sessions)) {
                         totalSesi++;
-                        if (ses.records && ses.records[nis] === 'H') totalHadir++;
+                        const status = ses.records?.[nis];
+                        // Jika tidak ada record, anggap H (hadir) karena default form guru adalah H
+                        if (status === undefined || status === 'H') totalHadir++;
                     }
                 }
                 const kehadiranPersen = totalSesi === 0 ? 0 : Math.round((totalHadir / totalSesi) * 100);
                 
-                // HITUNG RATA-RATA NILAI (setiap assessment di setiap penugasan, nilai 0 jika tidak ada)
+                // Hitung nilai rata-rata (setiap assessment, nilai 0 jika tidak ada)
                 let totalNilai = 0;
                 let jumlahAssessment = 0;
                 for (let idPen of listPen) {
@@ -174,7 +175,6 @@
                     }
                 }
                 const nilaiRata = jumlahAssessment === 0 ? 0 : Math.round(totalNilai / jumlahAssessment);
-                
                 hasil[nis] = { kehadiranPersen, nilaiRata };
             }
             return hasil;
@@ -285,7 +285,6 @@
         
         async function openClassDetail(kelas) {
             currentClassDetail = kelas;
-            const container = document.getElementById('murid');
             const gridDiv = document.getElementById('kelasListGrid');
             const detailDiv = document.getElementById('kelasDetailPanel');
             if (gridDiv) gridDiv.classList.add('hidden');
@@ -592,7 +591,7 @@
             }
         }
         
-        // ===================== PENUGASAN =====================
+        // ===================== PENUGASAN dengan kolom "Kelas / Murid Terlibat" =====================
         async function loadPenugasan() {
             const container = document.getElementById('penugasan');
             try {
@@ -615,10 +614,34 @@
                     </div>
                     <button id="simpanPenugasanBtn" class="bg-blue-600 text-white px-4 py-1 rounded">Simpan</button>
                 </div>`;
-                let listHtml = `<h3 class="font-bold mt-4">Daftar Penugasan</h3><div class="overflow-x-auto"><table class="min-w-full border mt-2"><thead class="bg-gray-100"><tr><th>Mapel</th><th>Guru</th><th>Murid Terlibat</th><th>Aksi</th></tr></thead><tbody>`;
+                
+                // Buat list penugasan dengan informasi kelas/murid
+                let listHtml = `<h3 class="font-bold mt-4">Daftar Penugasan</h3><div class="overflow-x-auto"><table class="min-w-full border mt-2"><thead class="bg-gray-100"><tr><th>Mapel</th><th>Guru</th><th>Kelas / Murid Terlibat</th><th>Aksi</th></tr></thead><tbody>`;
                 for (let [id, pg] of Object.entries(penugasan)) {
-                    const namaMapel = mapel[pg.mapelId]?.nama || '❌';
-                    listHtml += `<tr><td class="p-2">${escapeHtml(namaMapel)}</td><td class="p-2">${escapeHtml(pg.guruName)}</td><td class="p-2">${pg.siswaList?.length||0} murid</td><td class="p-2"><button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i> Hapus</button></td></tr>`;
+                    const mapelData = mapel[pg.mapelId];
+                    const namaMapel = mapelData?.nama || '❌';
+                    const jenisMapel = mapelData?.jenis || 'inkul';
+                    let infoTerlibat = '';
+                    if (jenisMapel === 'inkul') {
+                        // Tampilkan daftar kelas unik
+                        const kelasSet = new Set();
+                        for (let nis of (pg.siswaList || [])) {
+                            if (semuaMurid[nis]) kelasSet.add(semuaMurid[nis].kelas);
+                        }
+                        infoTerlibat = Array.from(kelasSet).map(k => `Kelas ${k}`).join(', ');
+                        if (!infoTerlibat) infoTerlibat = '(Tidak ada kelas)';
+                    } else {
+                        // Tampilkan daftar nama siswa (atau NIS - Nama)
+                        const siswaList = (pg.siswaList || []).slice(0, 3); // batasi 3 untuk ringkas
+                        const total = (pg.siswaList || []).length;
+                        let daftar = siswaList.map(nis => {
+                            const s = semuaMurid[nis];
+                            return s ? `${s.nama} (${nis})` : nis;
+                        }).join(', ');
+                        if (total > 3) daftar += `, +${total-3} lainnya`;
+                        infoTerlibat = daftar || '(Tidak ada murid)';
+                    }
+                    listHtml += `<tr><td class="p-2">${escapeHtml(namaMapel)}</td><td class="p-2">${escapeHtml(pg.guruName)}</td><td class="p-2">${escapeHtml(infoTerlibat)}</td><td class="p-2"><button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i> Hapus</button></td></tr>`;
                 }
                 listHtml += `</tbody></table></div>`;
                 container.innerHTML = formHtml + listHtml;
