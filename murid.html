@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Murid - EduLogNBS | Portofolio Belajar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', system-ui, sans-serif; }
+        body { background: #f1f5f9; }
+        .card-mapel {
+            background: white;
+            border-radius: 1.5rem;
+            border-left: 6px solid #4f46e5;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .badge-hadir { background: #dcfce7; color: #166534; }
+        .badge-alpha { background: #fee2e2; color: #991b1b; }
+        .badge-izin { background: #fed7aa; color: #9a3412; }
+        .badge-sakit { background: #fef9c3; color: #854d0e; }
+        .table-wrapper { overflow-x: auto; border-radius: 0.75rem; }
+        @media (max-width: 640px) {
+            .container { padding-left: 0.75rem; padding-right: 0.75rem; }
+            .table-wrapper table { font-size: 0.75rem; }
+            .card-mapel { padding: 0.75rem; }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6">
+
+<div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-graduation-cap text-indigo-600"></i> Dashboard Murid</h1>
+            <p id="infoSiswa" class="text-slate-500 text-sm">Memuat data...</p>
+        </div>
+        <a href="index.html" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl shadow-md transition flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <!-- Ringkasan -->
+    <div id="ringkasan" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Total Mapel</p><p id="totalMapel" class="text-2xl font-bold text-indigo-600">-</p></div>
+        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Total Kehadiran</p><p id="totalKehadiran" class="text-2xl font-bold text-green-600">-</p></div>
+        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Rata-rata Nilai</p><p id="rataNilai" class="text-2xl font-bold text-blue-600">-</p></div>
+        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Keseluruhan Sesi</p><p id="totalSesi" class="text-2xl font-bold text-gray-700">-</p></div>
+    </div>
+
+    <!-- Daftar Mapel (Card) -->
+    <div id="mapelContainer" class="space-y-4">
+        <div class="text-center py-10 text-slate-400"><i class="fas fa-spinner fa-pulse"></i> Memuat data pembelajaran...</div>
+    </div>
+</div>
+
+<script>
+    // Firebase Config (sama persis)
+    const firebaseConfig = {
+        apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
+        authDomain: "edulognbs.firebaseapp.com",
+        databaseURL: "https://edulognbs-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "edulognbs",
+        storageBucket: "edulognbs.firebasestorage.app",
+        messagingSenderId: "759345868898",
+        appId: "1:759345868898:web:40487df20ab4f43045213b"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let nisSiswa = null;
+    let namaSiswa = "", kelasSiswa = "";
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+    
+    // Helper format tanggal dd/mm/yyyy ke object Date
+    function parseDMY(dateStr) {
+        if (!dateStr) return null;
+        let parts = dateStr.split('/');
+        if (parts.length === 3) {
+            let d = parseInt(parts[0]), m = parseInt(parts[1])-1, y = parseInt(parts[2]);
+            return new Date(y, m, d);
+        }
+        return null;
+    }
+
+    // Ambil semua data yang diperlukan
+    async function loadMuridData() {
+        try {
+            // 1. Ambil data siswa
+            const siswaSnap = await db.ref(`siswa/${nisSiswa}`).once('value');
+            const siswa = siswaSnap.val();
+            if (!siswa) throw new Error("Data siswa tidak ditemukan");
+            namaSiswa = siswa.nama;
+            kelasSiswa = siswa.kelas;
+            document.getElementById('infoSiswa').innerHTML = `<i class="fas fa-id-card"></i> ${escapeHtml(namaSiswa)} · Kelas ${escapeHtml(kelasSiswa)} · NIS ${escapeHtml(nisSiswa)}`;
+
+            // 2. Ambil semua penugasan, mapel, attendance, penilaian
+            const [penugasanSnap, mapelSnap, attendanceSnap, penilaianSnap] = await Promise.all([
+                db.ref('penugasan').once('value'),
+                db.ref('mapel').once('value'),
+                db.ref('attendance').once('value'),
+                db.ref('penilaian').once('value')
+            ]);
+
+            const allPenugasan = penugasanSnap.val() || {};
+            const allMapel = mapelSnap.val() || {};
+            const allAttendance = attendanceSnap.val() || {};
+            const allPenilaian = penilaianSnap.val() || {};
+
+            // 3. Filter penugasan yang melibatkan siswa ini
+            const myPenugasan = [];
+            for (let [idPen, pg] of Object.entries(allPenugasan)) {
+                if (pg.siswaList && pg.siswaList.includes(nisSiswa)) {
+                    const mapelData = allMapel[pg.mapelId] || { nama: "Mapel Dihapus", jenis: "inkul" };
+                    myPenugasan.push({
+                        id: idPen,
+                        mapelId: pg.mapelId,
+                        mapelNama: mapelData.nama,
+                        mapelJenis: mapelData.jenis,
+                        guru: pg.guruName,
+                        siswaList: pg.siswaList,
+                        attendance: allAttendance[idPen] || {},
+                        penilaian: allPenilaian[idPen] || {}
+                    });
+                }
+            }
+
+            // 4. Hitung ringkasan global
+            let totalMapel = myPenugasan.length;
+            let totalSesiGlobal = 0;
+            let totalHadirGlobal = 0;
+            let totalNilaiGlobal = 0;
+            let totalPenilaianGlobal = 0;
+
+            for (let task of myPenugasan) {
+                // hitung kehadiran
+                const sessions = Object.values(task.attendance);
+                for (let ses of sessions) {
+                    totalSesiGlobal++;
+                    const status = ses.records?.[nisSiswa];
+                    if (status === undefined || status === 'H') totalHadirGlobal++;
+                }
+                // hitung nilai
+                const assessments = Object.values(task.penilaian);
+                for (let as of assessments) {
+                    const nilai = as.scores?.[nisSiswa];
+                    if (typeof nilai === 'number') {
+                        totalNilaiGlobal += nilai;
+                        totalPenilaianGlobal++;
+                    }
+                }
+            }
+            const persenKehadiranGlobal = totalSesiGlobal === 0 ? 0 : Math.round((totalHadirGlobal / totalSesiGlobal) * 100);
+            const rataNilaiGlobal = totalPenilaianGlobal === 0 ? 0 : Math.round(totalNilaiGlobal / totalPenilaianGlobal);
+
+            document.getElementById('totalMapel').innerText = totalMapel;
+            document.getElementById('totalKehadiran').innerHTML = `${persenKehadiranGlobal}% <span class="text-xs font-normal">(${totalHadirGlobal}/${totalSesiGlobal})</span>`;
+            document.getElementById('rataNilai').innerText = rataNilaiGlobal;
+            document.getElementById('totalSesi').innerText = totalSesiGlobal;
+
+            // 5. Render kartu per mapel
+            renderMapelCards(myPenugasan);
+        } catch (err) {
+            console.error(err);
+            document.getElementById('mapelContainer').innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-xl text-center">Gagal memuat data: ${err.message}</div>`;
+        }
+    }
+
+    function renderMapelCards(penugasanList) {
+        const container = document.getElementById('mapelContainer');
+        if (!penugasanList.length) {
+            container.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center text-gray-500"><i class="fas fa-folder-open text-4xl mb-2"></i><p>Belum ada penugasan untuk Anda.</p></div>`;
+            return;
+        }
+
+        let cardsHtml = '';
+        for (let task of penugasanList) {
+            // Sesi kehadiran
+            const sessions = Object.values(task.attendance);
+            sessions.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+            // Penilaian
+            const assessments = Object.values(task.penilaian);
+            assessments.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+
+            // Hitung persentase kehadiran mapel ini
+            let totalSesiMapel = 0, totalHadirMapel = 0;
+            for (let ses of sessions) {
+                totalSesiMapel++;
+                const status = ses.records?.[nisSiswa];
+                if (status === undefined || status === 'H') totalHadirMapel++;
+            }
+            const persenMapel = totalSesiMapel === 0 ? 0 : Math.round((totalHadirMapel / totalSesiMapel) * 100);
+            
+            // Hitung rata-rata nilai mapel ini
+            let totalNilaiMapel = 0, totalAssMapel = 0;
+            for (let as of assessments) {
+                const nilai = as.scores?.[nisSiswa];
+                if (typeof nilai === 'number') {
+                    totalNilaiMapel += nilai;
+                    totalAssMapel++;
+                }
+            }
+            const rataMapel = totalAssMapel === 0 ? 0 : Math.round(totalNilaiMapel / totalAssMapel);
+
+            // Build tabel kehadiran
+            let kehadiranTable = `<div class="table-wrapper mt-2"><table class="min-w-full bg-white border text-sm rounded-lg"><thead class="bg-gray-50"><tr>`;
+            kehadiranTable += `<th class="p-2 border">Tanggal</th><th class="p-2 border">Status</th>`;
+            kehadiranTable += `</tr></thead><tbody>`;
+            if (sessions.length === 0) {
+                kehadiranTable += `<tr><td colspan="2" class="p-4 text-center text-gray-400">Belum ada sesi kehadiran</td></tr>`;
+            } else {
+                for (let ses of sessions) {
+                    let status = ses.records?.[nisSiswa];
+                    if (status === undefined) status = 'H';
+                    let badgeClass = '';
+                    let statusText = '';
+                    if (status === 'H') { badgeClass = 'badge-hadir'; statusText = 'Hadir'; }
+                    else if (status === 'I') { badgeClass = 'badge-izin'; statusText = 'Izin'; }
+                    else if (status === 'S') { badgeClass = 'badge-sakit'; statusText = 'Sakit'; }
+                    else { badgeClass = 'badge-alpha'; statusText = 'Alfa'; }
+                    kehadiranTable += `<tr><td class="p-2 border">${escapeHtml(ses.date)}</td>
+                                        <td class="p-2 border"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${badgeClass}">${statusText}</span></td></tr>`;
+                }
+            }
+            kehadiranTable += `</tbody></table></div>`;
+
+            // Build tabel penilaian
+            let penilaianTable = `<div class="table-wrapper mt-2"><table class="min-w-full bg-white border text-sm"><thead class="bg-gray-50"><tr>`;
+            penilaianTable += `<th class="p-2 border">Tanggal</th><th class="p-2 border">Topik</th><th class="p-2 border">Nilai</th>`;
+            penilaianTable += `</tr></thead><tbody>`;
+            if (assessments.length === 0) {
+                penilaianTable += `<tr><td colspan="3" class="p-4 text-center text-gray-400">Belum ada penilaian</td></tr>`;
+            } else {
+                for (let as of assessments) {
+                    let nilai = as.scores?.[nisSiswa];
+                    nilai = (typeof nilai === 'number') ? nilai : 0;
+                    penilaianTable += `<tr><td class="p-2 border">${escapeHtml(as.date)}</td>
+                                        <td class="p-2 border">${escapeHtml(as.topic || '-')}</td>
+                                        <td class="p-2 border font-bold text-center">${nilai}</td></tr>`;
+                }
+            }
+            penilaianTable += `</tbody></table></div>`;
+
+            cardsHtml += `
+                <div class="card-mapel overflow-hidden">
+                    <div class="p-4 md:p-5">
+                        <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
+                            <div>
+                                <h3 class="text-xl font-bold text-indigo-800">${escapeHtml(task.mapelNama)}</h3>
+                                <p class="text-sm text-gray-500"><i class="fas fa-chalkboard-user"></i> Guru: ${escapeHtml(task.guru)}</p>
+                                <p class="text-xs text-gray-400 mt-1">${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <div class="bg-green-50 rounded-xl px-3 py-1 text-center">
+                                    <p class="text-xs text-gray-500">Kehadiran</p>
+                                    <p class="text-lg font-bold text-green-700">${persenMapel}%</p>
+                                </div>
+                                <div class="bg-blue-50 rounded-xl px-3 py-1 text-center">
+                                    <p class="text-xs text-gray-500">Rata Nilai</p>
+                                    <p class="text-lg font-bold text-blue-700">${rataMapel}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tab Kehadiran & Nilai (toggle) -->
+                        <div class="flex gap-2 border-b mt-2">
+                            <button class="tab-kehadiran-btn py-1.5 px-3 text-sm font-semibold text-indigo-700 border-b-2 border-indigo-600">📋 Kehadiran</button>
+                            <button class="tab-penilaian-btn py-1.5 px-3 text-sm font-semibold text-gray-500">📝 Penilaian</button>
+                        </div>
+                        <div class="mt-3 kehadiran-pane">
+                            ${kehadiranTable}
+                        </div>
+                        <div class="mt-3 penilaian-pane hidden">
+                            ${penilaianTable}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        container.innerHTML = cardsHtml;
+
+        // Attach event toggle untuk setiap card
+        document.querySelectorAll('.card-mapel').forEach((card, idx) => {
+            const btnKehadiran = card.querySelector('.tab-kehadiran-btn');
+            const btnPenilaian = card.querySelector('.tab-penilaian-btn');
+            const paneKehadiran = card.querySelector('.kehadiran-pane');
+            const panePenilaian = card.querySelector('.penilaian-pane');
+            if (btnKehadiran && btnPenilaian) {
+                btnKehadiran.onclick = () => {
+                    btnKehadiran.classList.add('text-indigo-700', 'border-indigo-600', 'border-b-2');
+                    btnKehadiran.classList.remove('text-gray-500', 'border-transparent');
+                    btnPenilaian.classList.remove('text-indigo-700', 'border-indigo-600', 'border-b-2');
+                    btnPenilaian.classList.add('text-gray-500');
+                    paneKehadiran.classList.remove('hidden');
+                    panePenilaian.classList.add('hidden');
+                };
+                btnPenilaian.onclick = () => {
+                    btnPenilaian.classList.add('text-indigo-700', 'border-indigo-600', 'border-b-2');
+                    btnPenilaian.classList.remove('text-gray-500');
+                    btnKehadiran.classList.remove('text-indigo-700', 'border-indigo-600', 'border-b-2');
+                    btnKehadiran.classList.add('text-gray-500');
+                    panePenilaian.classList.remove('hidden');
+                    paneKehadiran.classList.add('hidden');
+                };
+            }
+        });
+    }
+
+    // Cek login
+    window.onload = async () => {
+        const siswaLogin = localStorage.getItem('siswaLogin');
+        if (!siswaLogin) {
+            window.location.href = 'index.html';
+            return;
+        }
+        nisSiswa = siswaLogin;
+        await loadMuridData();
+    };
+</script>
+</body>
+</html>
