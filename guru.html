@@ -12,23 +12,14 @@
     <style>
         * { font-family: 'Inter', system-ui, sans-serif; }
         body { background: #f1f5f9; }
-        .card-glass {
+        .card-assignment {
             background: white;
             border-radius: 1.5rem;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.05);
-            transition: all 0.2s;
-        }
-        .assignment-card {
+            border-left: 6px solid #4f46e5;
             transition: all 0.2s ease;
-            border-left: 5px solid #4f46e5;
-            margin-bottom: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
-        .assignment-card.collapsed .expandable-content {
-            display: none;
-        }
-        .assignment-card .expandable-content {
-            display: block;
-        }
+        .card-assignment:active { transform: scale(0.98); }
         .tab-active {
             background-color: #4f46e5;
             color: white;
@@ -67,6 +58,7 @@
         @media (max-width: 640px) {
             .nilai-input { width: 55px; font-size: 0.75rem; }
             .status-select { font-size: 0.7rem; }
+            .card-assignment { padding: 0.75rem; }
         }
     </style>
 </head>
@@ -85,9 +77,20 @@
         </div>
     </div>
 
-    <!-- Daftar Card Penugasan (Accordion) -->
-    <div id="assignmentsContainer" class="space-y-4">
-        <div class="text-center py-10 text-slate-400"><i class="fas fa-spinner fa-pulse"></i> Memuat penugasan...</div>
+    <!-- Daftar Semua Card Penugasan -->
+    <div id="assignmentsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div class="col-span-full text-center py-10 text-slate-400"><i class="fas fa-spinner fa-pulse"></i> Memuat penugasan...</div>
+    </div>
+
+    <!-- Panel Detail Penugasan (awalnya tersembunyi) -->
+    <div id="detailContainer" class="hidden bg-white rounded-2xl shadow-lg p-4">
+        <div class="flex items-center gap-3 mb-4 pb-2 border-b">
+            <button id="backToListBtn" class="bg-gray-200 hover:bg-gray-300 p-2 rounded-full w-10 h-10 flex items-center justify-center"><i class="fas fa-arrow-left"></i></button>
+            <h2 id="detailTitle" class="text-xl font-bold text-indigo-800">Detail Penugasan</h2>
+        </div>
+        <div id="detailContent">
+            <!-- Tab kehadiran & penilaian akan dimuat di sini -->
+        </div>
     </div>
 </div>
 
@@ -176,14 +179,12 @@
 
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
     
-    // Format tanggal ke dd/mm/yyyy
     function formatDateToDMY(dateObj) {
         let d = dateObj.getDate().toString().padStart(2,'0');
         let m = (dateObj.getMonth()+1).toString().padStart(2,'0');
         let y = dateObj.getFullYear();
         return `${d}/${m}/${y}`;
     }
-    // Validasi & parse dd/mm/yyyy ke Date object
     function parseDMY(dateStr) {
         let parts = dateStr.split('/');
         if (parts.length === 3) {
@@ -225,64 +226,59 @@
         } catch(e) { console.error(e); alert('Gagal muat data: '+e.message); }
     }
 
-    // Render daftar card (semua dalam keadaan collapsed kecuali yang sedang aktif)
-    let activeAssignmentId = null;
+    // Render daftar card (semua card terlihat)
     async function renderAllCards() {
         const container = document.getElementById('assignmentsContainer');
         if (!penugasanList.length) { 
-            container.innerHTML = `<div class="bg-white rounded-2xl shadow p-8 text-center"><i class="fas fa-folder-open text-4xl text-gray-300 mb-2"></i><p class="text-gray-500">Belum ada penugasan. Klik "+ Penugasan" untuk memulai.</p></div>`; 
+            container.innerHTML = `<div class="col-span-full bg-white rounded-2xl shadow p-8 text-center"><i class="fas fa-folder-open text-4xl text-gray-300 mb-2"></i><p class="text-gray-500">Belum ada penugasan. Klik "+ Penugasan" untuk memulai.</p></div>`; 
             return; 
         }
         let html = '';
         for (let task of penugasanList) {
-            const isActive = (activeAssignmentId === task.id);
             html += `
-                <div class="assignment-card bg-white rounded-2xl shadow-md overflow-hidden transition-all ${!isActive ? 'collapsed' : ''}" data-id="${task.id}">
-                    <div class="p-5 cursor-pointer flex justify-between items-center card-header">
+                <div class="card-assignment p-5 cursor-pointer hover:shadow-lg transition" data-id="${task.id}">
+                    <div class="flex justify-between items-start">
                         <div>
                             <h3 class="font-bold text-lg text-indigo-800">${escapeHtml(task.mapelNama)}</h3>
-                            <p class="text-sm text-gray-500"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
-                            <p class="text-xs text-gray-400 mt-1"><i class="fas fa-tag"></i> ${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p>
+                            <p class="text-sm text-gray-500 mt-1"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                            <p class="text-xs text-gray-400 mt-2"><i class="fas fa-tag"></i> ${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p>
                         </div>
-                        <i class="fas fa-chevron-down text-gray-400 transition-transform duration-200 ${isActive ? 'rotate-180' : ''} expand-icon"></i>
+                        <i class="fas fa-chevron-right text-indigo-400 text-xl"></i>
                     </div>
-                    <div class="expandable-content border-t bg-gray-50 p-4 ${!isActive ? 'hidden' : ''}"></div>
                 </div>
             `;
         }
         container.innerHTML = html;
-        // attach event listener untuk header setiap card
-        document.querySelectorAll('.assignment-card').forEach(card => {
-            const header = card.querySelector('.card-header');
-            const content = card.querySelector('.expandable-content');
-            const icon = card.querySelector('.expand-icon');
-            const assignId = card.dataset.id;
-            header.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                // jika card yang sama dan sedang terbuka -> tutup
-                if (activeAssignmentId === assignId && !content.classList.contains('hidden')) {
-                    activeAssignmentId = null;
-                    await renderAllCards();
-                } else {
-                    activeAssignmentId = assignId;
-                    await renderAllCards();
-                    // setelah render, load konten untuk card yang aktif
-                    const newCard = document.querySelector(`.assignment-card[data-id="${assignId}"]`);
-                    if (newCard) {
-                        const newContent = newCard.querySelector('.expandable-content');
-                        const task = penugasanList.find(t => t.id === assignId);
-                        if (task) loadTabContent(newContent, task);
-                    }
-                }
+        // Event klik card -> tampilkan detail
+        document.querySelectorAll('.card-assignment').forEach(card => {
+            card.addEventListener('click', () => {
+                const assignId = card.dataset.id;
+                const selectedTask = penugasanList.find(t => t.id === assignId);
+                if (selectedTask) showDetailAssignment(selectedTask);
             });
         });
     }
 
-    async function loadTabContent(container, task) {
+    // Menampilkan panel detail (sembunyikan daftar card)
+    function showDetailAssignment(task) {
+        document.getElementById('assignmentsContainer').classList.add('hidden');
+        document.getElementById('detailContainer').classList.remove('hidden');
+        document.getElementById('detailTitle').innerHTML = `<i class="fas fa-book-open mr-2"></i> ${escapeHtml(task.mapelNama)} · ${escapeHtml(task.kelasDisplay)}`;
+        // Load tab di dalam detailContent
+        loadDetailTabs(task);
+    }
+
+    function backToList() {
+        document.getElementById('detailContainer').classList.add('hidden');
+        document.getElementById('assignmentsContainer').classList.remove('hidden');
+    }
+
+    async function loadDetailTabs(task) {
+        const container = document.getElementById('detailContent');
         container.innerHTML = `
-            <div class="flex gap-2 border-b mb-3">
-                <button class="tab-kehadiran-btn py-2 px-4 rounded-t-lg font-semibold text-indigo-700 border-b-2 border-indigo-600">📋 Kehadiran</button>
-                <button class="tab-penilaian-btn py-2 px-4 rounded-t-lg font-semibold text-gray-600">📝 Penilaian</button>
+            <div class="flex gap-2 border-b mb-4">
+                <button class="tab-kehadiran-btn py-2 px-5 rounded-t-xl font-semibold bg-indigo-600 text-white shadow">📋 Kehadiran</button>
+                <button class="tab-penilaian-btn py-2 px-5 rounded-t-xl font-semibold text-gray-600 bg-gray-100">📝 Penilaian</button>
             </div>
             <div class="tab-pane-kehadiran w-full"></div>
             <div class="tab-pane-penilaian hidden w-full"></div>
@@ -293,17 +289,19 @@
         const btnPenilaian = container.querySelector('.tab-penilaian-btn');
 
         btnKehadiran.onclick = () => {
-            btnKehadiran.classList.add('text-indigo-700', 'border-b-2', 'border-indigo-600');
-            btnPenilaian.classList.remove('text-indigo-700', 'border-b-2', 'border-indigo-600');
-            btnPenilaian.classList.add('text-gray-600');
+            btnKehadiran.classList.add('bg-indigo-600', 'text-white');
+            btnKehadiran.classList.remove('bg-gray-100', 'text-gray-600');
+            btnPenilaian.classList.add('bg-gray-100', 'text-gray-600');
+            btnPenilaian.classList.remove('bg-indigo-600', 'text-white');
             kehadiranPane.classList.remove('hidden');
             penilaianPane.classList.add('hidden');
             renderKehadiranTab(kehadiranPane, task);
         };
         btnPenilaian.onclick = () => {
-            btnPenilaian.classList.add('text-indigo-700', 'border-b-2', 'border-indigo-600');
-            btnKehadiran.classList.remove('text-indigo-700', 'border-b-2', 'border-indigo-600');
-            btnKehadiran.classList.add('text-gray-600');
+            btnPenilaian.classList.add('bg-indigo-600', 'text-white');
+            btnPenilaian.classList.remove('bg-gray-100', 'text-gray-600');
+            btnKehadiran.classList.add('bg-gray-100', 'text-gray-600');
+            btnKehadiran.classList.remove('bg-indigo-600', 'text-white');
             penilaianPane.classList.remove('hidden');
             kehadiranPane.classList.add('hidden');
             renderPenilaianTab(penilaianPane, task);
@@ -313,7 +311,7 @@
 
     // ================= KEHADIRAN =================
     async function renderKehadiranTab(container, task) {
-        container.innerHTML = `<div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div><span class="text-sm font-semibold">Daftar Kehadiran</span></div><button class="btn-add-kehadiran bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Kehadiran</button></div><div id="kehadiranTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
+        container.innerHTML = `<div class="flex justify-between items-center mb-3 flex-wrap gap-2"><span class="text-sm font-semibold">Daftar Kehadiran</span><button class="btn-add-kehadiran bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Kehadiran</button></div><div id="kehadiranTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
         const addBtn = container.querySelector('.btn-add-kehadiran');
         addBtn.onclick = () => openAddKehadiranModal(task);
         await refreshKehadiranTable(container, task);
@@ -394,7 +392,8 @@
             const newSessionId = Date.now().toString();
             await db.ref(`attendance/${task.id}/${newSessionId}`).set({ date: dateDMY, records: {} });
             modal.style.display = 'none';
-            const container = document.querySelector(`.assignment-card[data-id="${task.id}"] .expandable-content .tab-pane-kehadiran`);
+            // refresh current tab
+            const container = document.querySelector('#detailContent .tab-pane-kehadiran');
             if (container) refreshKehadiranTable(container, task);
             cleanup();
         };
@@ -458,19 +457,19 @@
         for (let siswa of siswaArray) {
             let totalNilai = 0;
             let countValid = 0;
-            html += `<tr><td class="p-2 border">${escapeHtml(siswa.nis)}</td><td class="p-2 border">${escapeHtml(siswa.nama)}</td>`;
+            html += `<tr><td class="p-2 border">${escapeHtml(siswa.nis)}</td><td class="p-2 border">${escapeHtml(siswa.nama)}</table>`;
             for (let as of assessList) {
                 let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
                 if (nilai !== 0) { totalNilai += nilai; countValid++; }
                 html += `<td class="p-2 border"><input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100">`;
-                html += `</td>`;
+                html += `</tr>`;
             }
             let rata = countValid ? (totalNilai / assessList.length).toFixed(1) : 0;
             html += `<td class="p-2 border font-bold text-center">${rata}</td></tr>`;
         }
         html += `</tbody></table></div>`;
         wrapper.innerHTML = html;
-        // edit header penilaian
+        // event edit header penilaian
         document.querySelectorAll('.table-header-click-penilaian').forEach(el => {
             el.onclick = (e) => {
                 const assessId = el.dataset.assessId;
@@ -479,7 +478,7 @@
                 openEditPenilaianHeader(task.id, assessId, oldDate, oldTopic, () => refreshPenilaianTable(container, task));
             };
         });
-        // simpan nilai
+        // simpan nilai dengan batasan 0-100
         document.querySelectorAll('.nilai-siswa').forEach(inp => {
             inp.onchange = async (e) => {
                 let newNilai = parseInt(inp.value,10);
@@ -512,7 +511,7 @@
             const newId = Date.now().toString();
             await db.ref(`penilaian/${task.id}/${newId}`).set({ date: dateDMY, topic: topic, scores: {} });
             modal.style.display = 'none';
-            const container = document.querySelector(`.assignment-card[data-id="${task.id}"] .expandable-content .tab-pane-penilaian`);
+            const container = document.querySelector('#detailContent .tab-pane-penilaian');
             if (container) refreshPenilaianTable(container, task);
             cleanup();
         };
@@ -599,6 +598,7 @@
         await renderAllCards();
     };
 
+    // INIT
     window.onload = async () => {
         const guruLogin = localStorage.getItem('guruLogin');
         if (!guruLogin) { window.location.href = 'index.html'; return; }
@@ -606,6 +606,7 @@
         document.getElementById('greeting').innerHTML = `<i class="fas fa-user-check"></i> ${escapeHtml(currentTeacher)} · Guru Aktif`;
         await fetchInitialData();
         await renderAllCards();
+        document.getElementById('backToListBtn').onclick = backToList;
     };
 </script>
 </body>
