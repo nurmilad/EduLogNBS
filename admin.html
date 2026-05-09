@@ -257,35 +257,27 @@
                 };
             });
             
-            // ========== FITUR IMPORT MULTI SISWA (DIPERBAIKI - TIDAK MEMBUAT DUPLIKAT KELAS) ==========
+            // ========== FITUR IMPORT MULTI SISWA (TANPA KOLOM KELAS, SESUAI KELAS CARD) ==========
             document.querySelectorAll('.copypasteBtn').forEach(btn => {
                 btn.onclick = async () => {
-                    const targetKelasFromBtn = btn.dataset.kelas; // Kelas yang sedang dilihat (opsional referensi)
-                    const rawData = prompt(
-                        "Impor banyak siswa sekaligus.\n\nFormat per baris: NIS, NAMA, KELAS, PASSWORD\nPemisah bisa: koma, tab, atau spasi.\n\nContoh:\n2526001,AHMAD YUSUF,7A,1234\n2526002,AINUN ANUGRAH,7A,1234\n\nCATATAN PENTING:\n- Nama kelas akan dicocokkan secara fleksibel (abaikan huruf besar/kecil & spasi).\n- Jika kelas sudah ada (misal '7A' dengan penulisan '7a'), siswa akan masuk ke kelas yang sudah ada.\n- Jika belum ada, akan dibuat kelas baru.\n- Data siswa akan ditambahkan ke kelas yang sesuai (tidak membuat kelas duplikat)."
-                    );
-                    if (!rawData) return;
-                    
-                    // Ambil data kelas yang sudah ada dari database (untuk pencocokan)
-                    let existingKelasMap = new Map(); // key: normalized (lowercase, trim), value: original key
-                    try {
-                        const kelasSnapshot = await db.ref('kelas').once('value');
-                        const kelasData = kelasSnapshot.val() || {};
-                        for (const originalKey of Object.keys(kelasData)) {
-                            const normalized = originalKey.trim().toLowerCase();
-                            existingKelasMap.set(normalized, originalKey);
-                        }
-                    } catch (err) {
-                        showError("Gagal membaca data kelas: " + err.message);
+                    const targetKelas = btn.dataset.kelas; // Kelas dari card tempat tombol diklik
+                    if (!targetKelas) {
+                        alert("Error: Kelas tidak ditemukan.");
                         return;
                     }
+                    
+                    const rawData = prompt(
+                        "Impor banyak siswa ke kelas " + targetKelas + "\n\n" +
+                        "Format: NIS, NAMA, PASSWORD\n" +
+                        "Pemisah: koma, tab, atau spasi.\n\n" +
+                        "Setiap baris: NIS nama password"
+                    );
+                    if (!rawData) return;
                     
                     const lines = rawData.split(/\r?\n/);
                     let successCount = 0;
                     let errorCount = 0;
-                    let kelasBaruSet = new Set();   // kelas baru yang belum ada (akan ditambahkan)
                     const studentPromises = [];
-                    const studentsToAdd = [];        // simpan sementara untuk keperluan debug
                     
                     for (let line of lines) {
                         line = line.trim();
@@ -302,46 +294,29 @@
                         }
                         
                         parts = parts.map(p => p.trim());
-                        if (parts.length < 4) {
+                        if (parts.length < 3) {
                             errorCount++;
-                            console.warn(`Baris tidak valid (min 4 kolom): ${line}`);
+                            console.warn(`Baris tidak valid (min 3 kolom): ${line}`);
                             continue;
                         }
                         
                         const nis = parts[0];
                         const nama = parts[1];
-                        let kelasInput = parts[2];
-                        const password = parts[3];
+                        const password = parts[2];
                         
-                        if (!nis || !nama || !kelasInput || !password) {
+                        if (!nis || !nama || !password) {
                             errorCount++;
                             continue;
                         }
                         
-                        // Normalisasi kelas input
-                        const normalizedInput = kelasInput.trim().toLowerCase();
-                        let actualKelas = existingKelasMap.get(normalizedInput);
-                        
-                        if (!actualKelas) {
-                            // Kelas belum ada di database: akan ditambahkan nanti
-                            // Tapi gunakan nama asli dari input (trim) sebagai calon kelas baru
-                            const newKelasRaw = kelasInput.trim();
-                            actualKelas = newKelasRaw;
-                            kelasBaruSet.add(newKelasRaw);
-                            // Catat ke map sementara agar baris berikutnya dalam satu batch bisa langsung pakai
-                            existingKelasMap.set(normalizedInput, newKelasRaw);
-                        }
-                        
-                        // Siapkan data siswa
                         const siswaData = {
                             nama: nama,
                             password: password,
-                            kelas: actualKelas,
+                            kelas: targetKelas,
                             kehadiranGlobal: 0,
                             nilaiGlobal: 0
                         };
                         
-                        studentsToAdd.push({ nis, data: siswaData });
                         const promise = db.ref(`siswa/${nis}`).set(siswaData)
                             .catch(err => {
                                 console.error(`Gagal simpan siswa ${nis}:`, err);
@@ -351,22 +326,9 @@
                         successCount++;
                     }
                     
-                    // Jika ada kelas baru yang perlu ditambahkan
-                    const kelasPromises = [];
-                    for (let newKelas of kelasBaruSet) {
-                        // Pastikan belum ada (cek ulang untuk aman)
-                        const kelasRef = db.ref(`kelas/${newKelas}`);
-                        const snapCheck = await kelasRef.once('value').catch(e => null);
-                        if (!snapCheck || !snapCheck.exists()) {
-                            kelasPromises.push(kelasRef.set({ nama: newKelas }));
-                        }
-                    }
-                    
-                    // Eksekusi semua operasi
                     try {
-                        await Promise.all([...studentPromises, ...kelasPromises]);
-                        let infoKelasBaru = kelasBaruSet.size ? Array.from(kelasBaruSet).join(', ') : 'tidak ada';
-                        alert(`✅ Impor selesai!\nBerhasil: ${successCount} siswa\nGagal: ${errorCount}\nKelas baru yang ditambahkan: ${infoKelasBaru}\n\n(Siswa telah dimasukkan ke kelas yang cocok, tidak ada duplikat kelas)`);
+                        await Promise.all(studentPromises);
+                        alert(`✅ Impor selesai!\nBerhasil: ${successCount} siswa\nGagal: ${errorCount}\nSemua siswa dimasukkan ke kelas: ${targetKelas}`);
                         loadMurid(); // refresh tampilan
                     } catch (err) {
                         showError("Gagal menyimpan data: " + err.message);
@@ -403,7 +365,7 @@
                         </tr>
                     `;
                 }
-                html += `</tbody>起点</div>`;
+                html += `</tbody> Mellon</div>`;
                 container.innerHTML = html;
                 
                 document.getElementById('tambahGuruBtn').onclick = () => {
@@ -617,7 +579,7 @@
             });
         }
         
-        // Initial load all tabs
+        // Load all tabs
         loadMurid();
         loadGuru();
         loadMapel();
