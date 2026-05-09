@@ -126,11 +126,11 @@
                                     ${siswaKelas.map(s => `
                                         <tr>
                                             <td class="p-1">${escapeHtml(s.nis)}</td>
-                                            <td>${escapeHtml(s.nama)}</td>
-                                            <td>${escapeHtml(s.password)}</td>
-                                            <td>${s.kehadiranGlobal || 0}%</td>
-                                            <td>${s.nilaiGlobal || 0}</td>
-                                            <td>
+                                            <td class="p-1">${escapeHtml(s.nama)}</td>
+                                            <td class="p-1">${escapeHtml(s.password)}</td>
+                                            <td class="p-1">${s.kehadiranGlobal || 0}%</td>
+                                            <td class="p-1">${s.nilaiGlobal || 0}</td>
+                                            <td class="p-1">
                                                 <button class="editSiswaBtn text-blue-500" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-edit"></i></button>
                                                 <button class="hapusSiswaBtn text-red-500" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-trash"></i></button>
                                             </td>
@@ -257,26 +257,41 @@
                 };
             });
             
-            // ========== FITUR IMPORT MULTI SISWA (DIPERBAIKI) ==========
+            // ========== FITUR IMPORT MULTI SISWA (DIPERBAIKI - TIDAK MEMBUAT DUPLIKAT KELAS) ==========
             document.querySelectorAll('.copypasteBtn').forEach(btn => {
-                btn.onclick = () => {
-                    // Tampilkan prompt dengan instruksi
+                btn.onclick = async () => {
+                    const targetKelasFromBtn = btn.dataset.kelas; // Kelas yang sedang dilihat (opsional referensi)
                     const rawData = prompt(
-                        "Impor banyak siswa sekaligus.\n\nFormat: NIS, NAMA, KELAS, PASSWORD\nPemisah bisa: spasi, tab, atau koma.\n\nContoh:\n2526001\tAHMAD YUSUF\t7\t1234\n2526002\tAINUN ANUGRAH\t7\t1234\n\nAtau dengan koma:\n2526003,ANDI BIDA,7,1234\n\nCatatan: Jika kelas belum ada, akan dibuat otomatis."
+                        "Impor banyak siswa sekaligus.\n\nFormat per baris: NIS, NAMA, KELAS, PASSWORD\nPemisah bisa: koma, tab, atau spasi.\n\nContoh:\n2526001,AHMAD YUSUF,7A,1234\n2526002,AINUN ANUGRAH,7A,1234\n\nCATATAN PENTING:\n- Nama kelas akan dicocokkan secara fleksibel (abaikan huruf besar/kecil & spasi).\n- Jika kelas sudah ada (misal '7A' dengan penulisan '7a'), siswa akan masuk ke kelas yang sudah ada.\n- Jika belum ada, akan dibuat kelas baru.\n- Data siswa akan ditambahkan ke kelas yang sesuai (tidak membuat kelas duplikat)."
                     );
                     if (!rawData) return;
+                    
+                    // Ambil data kelas yang sudah ada dari database (untuk pencocokan)
+                    let existingKelasMap = new Map(); // key: normalized (lowercase, trim), value: original key
+                    try {
+                        const kelasSnapshot = await db.ref('kelas').once('value');
+                        const kelasData = kelasSnapshot.val() || {};
+                        for (const originalKey of Object.keys(kelasData)) {
+                            const normalized = originalKey.trim().toLowerCase();
+                            existingKelasMap.set(normalized, originalKey);
+                        }
+                    } catch (err) {
+                        showError("Gagal membaca data kelas: " + err.message);
+                        return;
+                    }
                     
                     const lines = rawData.split(/\r?\n/);
                     let successCount = 0;
                     let errorCount = 0;
-                    let kelasBaru = new Set(); // untuk menambah kelas otomatis
-                    const promises = [];
+                    let kelasBaruSet = new Set();   // kelas baru yang belum ada (akan ditambahkan)
+                    const studentPromises = [];
+                    const studentsToAdd = [];        // simpan sementara untuk keperluan debug
                     
                     for (let line of lines) {
                         line = line.trim();
                         if (line === "") continue;
                         
-                        // Deteksi pemisah: coba tab, lalu koma, lalu spasi
+                        // Deteksi pemisah: tab, koma, spasi
                         let parts;
                         if (line.includes('\t')) {
                             parts = line.split('\t');
@@ -286,61 +301,76 @@
                             parts = line.split(/\s+/);
                         }
                         
-                        // Bersihkan spasi di setiap part
                         parts = parts.map(p => p.trim());
                         if (parts.length < 4) {
                             errorCount++;
-                            console.warn(`Baris tidak valid (kurang dari 4 kolom): ${line}`);
+                            console.warn(`Baris tidak valid (min 4 kolom): ${line}`);
                             continue;
                         }
                         
                         const nis = parts[0];
                         const nama = parts[1];
-                        const kelas = parts[2];
+                        let kelasInput = parts[2];
                         const password = parts[3];
                         
-                        if (!nis || !nama || !kelas || !password) {
+                        if (!nis || !nama || !kelasInput || !password) {
                             errorCount++;
                             continue;
                         }
                         
-                        // Simpan kelas untuk ditambahkan ke ref 'kelas' nanti
-                        kelasBaru.add(kelas);
+                        // Normalisasi kelas input
+                        const normalizedInput = kelasInput.trim().toLowerCase();
+                        let actualKelas = existingKelasMap.get(normalizedInput);
                         
-                        // Simpan siswa
-                        const promise = db.ref(`siswa/${nis}`).set({
+                        if (!actualKelas) {
+                            // Kelas belum ada di database: akan ditambahkan nanti
+                            // Tapi gunakan nama asli dari input (trim) sebagai calon kelas baru
+                            const newKelasRaw = kelasInput.trim();
+                            actualKelas = newKelasRaw;
+                            kelasBaruSet.add(newKelasRaw);
+                            // Catat ke map sementara agar baris berikutnya dalam satu batch bisa langsung pakai
+                            existingKelasMap.set(normalizedInput, newKelasRaw);
+                        }
+                        
+                        // Siapkan data siswa
+                        const siswaData = {
                             nama: nama,
                             password: password,
-                            kelas: kelas,
+                            kelas: actualKelas,
                             kehadiranGlobal: 0,
                             nilaiGlobal: 0
-                        }).catch(err => {
-                            console.error(err);
-                            errorCount++;
-                        });
-                        promises.push(promise);
+                        };
+                        
+                        studentsToAdd.push({ nis, data: siswaData });
+                        const promise = db.ref(`siswa/${nis}`).set(siswaData)
+                            .catch(err => {
+                                console.error(`Gagal simpan siswa ${nis}:`, err);
+                                errorCount++;
+                            });
+                        studentPromises.push(promise);
                         successCount++;
                     }
                     
-                    // Tambahkan kelas-kelas baru ke database (jika belum ada)
+                    // Jika ada kelas baru yang perlu ditambahkan
                     const kelasPromises = [];
-                    for (let k of kelasBaru) {
-                        const checkKelas = db.ref(`kelas/${k}`).once('value').then(snap => {
-                            if (!snap.exists()) {
-                                return db.ref(`kelas/${k}`).set({ nama: k });
-                            }
-                        });
-                        kelasPromises.push(checkKelas);
+                    for (let newKelas of kelasBaruSet) {
+                        // Pastikan belum ada (cek ulang untuk aman)
+                        const kelasRef = db.ref(`kelas/${newKelas}`);
+                        const snapCheck = await kelasRef.once('value').catch(e => null);
+                        if (!snapCheck || !snapCheck.exists()) {
+                            kelasPromises.push(kelasRef.set({ nama: newKelas }));
+                        }
                     }
                     
-                    Promise.all([...promises, ...kelasPromises])
-                        .then(() => {
-                            alert(`✅ Impor selesai!\nBerhasil: ${successCount} siswa\nGagal: ${errorCount}\nKelas baru yang ditambahkan: ${kelasBaru.size ? Array.from(kelasBaru).join(', ') : 'tidak ada'}`);
-                            loadMurid(); // refresh tampilan
-                        })
-                        .catch(err => {
-                            showError("Gagal menyimpan data: " + err.message);
-                        });
+                    // Eksekusi semua operasi
+                    try {
+                        await Promise.all([...studentPromises, ...kelasPromises]);
+                        let infoKelasBaru = kelasBaruSet.size ? Array.from(kelasBaruSet).join(', ') : 'tidak ada';
+                        alert(`✅ Impor selesai!\nBerhasil: ${successCount} siswa\nGagal: ${errorCount}\nKelas baru yang ditambahkan: ${infoKelasBaru}\n\n(Siswa telah dimasukkan ke kelas yang cocok, tidak ada duplikat kelas)`);
+                        loadMurid(); // refresh tampilan
+                    } catch (err) {
+                        showError("Gagal menyimpan data: " + err.message);
+                    }
                 };
             });
         }
@@ -365,15 +395,15 @@
                     html += `
                         <tr>
                             <td class="p-2">${escapeHtml(nama)}</td>
-                            <td>${escapeHtml(val.password)}</td>
-                            <td>
+                            <td class="p-2">${escapeHtml(val.password)}</td>
+                            <td class="p-2">
                                 <button class="editGuruBtn text-blue-500" data-nama="${escapeHtml(nama)}"><i class="fas fa-edit"></i></button>
                                 <button class="hapusGuruBtn text-red-500 ml-2" data-nama="${escapeHtml(nama)}"><i class="fas fa-trash"></i></button>
                             </td>
                         </tr>
                     `;
                 }
-                html += `</tbody></td></div>`;
+                html += `</tbody>起点</div>`;
                 container.innerHTML = html;
                 
                 document.getElementById('tambahGuruBtn').onclick = () => {
@@ -431,7 +461,7 @@
                     <div class="overflow-x-auto"><table class="min-w-full border"><thead class="bg-gray-100"><tr><th>Mata Pelajaran</th><th>Jenis</th><th>Aksi</th></tr></thead><tbody>
                 `;
                 for (let [id, val] of Object.entries(mapel)) {
-                    html += `<tr><td class="p-2">${escapeHtml(val.nama)}</td><td>${escapeHtml(val.jenis)}</td><td><button class="editMapelBtn text-blue-500" data-id="${id}"><i class="fas fa-edit"></i></button> <button class="hapusMapelBtn text-red-500 ml-2" data-id="${id}"><i class="fas fa-trash"></i></button></td></tr>`;
+                    html += `<tr><td class="p-2">${escapeHtml(val.nama)}</td><td class="p-2">${escapeHtml(val.jenis)}</td><td class="p-2"><button class="editMapelBtn text-blue-500" data-id="${id}"><i class="fas fa-edit"></i></button> <button class="hapusMapelBtn text-red-500 ml-2" data-id="${id}"><i class="fas fa-trash"></i></button></td></tr>`;
                 }
                 html += `</tbody></table></div>`;
                 container.innerHTML = html;
@@ -501,7 +531,7 @@
                 for (let [id, pg] of Object.entries(penugasan)) {
                     const namaMapel = mapel[pg.mapelId]?.nama || '❌ Mapel dihapus';
                     const jumlahSiswa = pg.siswaList?.length || 0;
-                    listHtml += `<tr><td class="p-2">${escapeHtml(namaMapel)}</td><td>${escapeHtml(pg.guruName)}</td><td>${jumlahSiswa} siswa</td><td><button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i> Hapus</button></td></tr>`;
+                    listHtml += `<tr><td class="p-2">${escapeHtml(namaMapel)}</td><td class="p-2">${escapeHtml(pg.guruName)}</td><td class="p-2">${jumlahSiswa} siswa</td><td class="p-2"><button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i> Hapus</button></td></tr>`;
                 }
                 listHtml += `</tbody></table></div>`;
                 container.innerHTML = formHtml + listHtml;
@@ -587,7 +617,7 @@
             });
         }
         
-        // Load all tabs
+        // Initial load all tabs
         loadMurid();
         loadGuru();
         loadMapel();
