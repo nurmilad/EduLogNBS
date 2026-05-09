@@ -91,6 +91,13 @@
             return null;
         }
         
+        function formatDateToDMY(date) {
+            let d = date.getDate().toString().padStart(2,'0');
+            let m = (date.getMonth()+1).toString().padStart(2,'0');
+            let y = date.getFullYear();
+            return `${d}/${m}/${y}`;
+        }
+        
         // Tab switching
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -110,12 +117,7 @@
             btn.onclick = () => showTab(btn.dataset.tab);
         });
         
-        // ===================== DATA MURID dengan sinkronisasi kehadiran & nilai =====================
-        let currentClassDetail = null;
-        
-        // Fungsi untuk menghitung statistik semua siswa:
-        // - Kehadiran: setiap sesi, jika tidak ada record maka dianggap H (hadir)
-        // - Nilai: setiap assessment, jika tidak ada record nilai maka dianggap 0
+        // ===================== DATA MURID dengan sinkronisasi kehadiran & nilai (default H) =====================
         async function hitungSemuaStatistikSiswa() {
             const [penugasanSnap, attendanceSnap, penilaianSnap] = await Promise.all([
                 db.ref('penugasan').once('value'),
@@ -126,7 +128,6 @@
             const attendanceAll = attendanceSnap.val() || {};
             const penilaianAll = penilaianSnap.val() || {};
             
-            // Mapping siswa ke penugasan
             const penugasanPerSiswa = {};
             for (let [idPen, pg] of Object.entries(penugasan)) {
                 if (pg.siswaList && Array.isArray(pg.siswaList)) {
@@ -137,7 +138,6 @@
                 }
             }
             
-            // Mapping assessment per penugasan
             const assessmentPerPenugasan = {};
             for (let [idPen, assessments] of Object.entries(penilaianAll)) {
                 if (!assessmentPerPenugasan[idPen]) assessmentPerPenugasan[idPen] = [];
@@ -150,7 +150,6 @@
             for (let [nis, listPen] of Object.entries(penugasanPerSiswa)) {
                 let totalSesi = 0;
                 let totalHadir = 0;
-                // Hitung kehadiran
                 for (let idPen of listPen) {
                     const sessions = attendanceAll[idPen] || {};
                     for (let ses of Object.values(sessions)) {
@@ -162,7 +161,6 @@
                 }
                 const kehadiranPersen = totalSesi === 0 ? 0 : Math.round((totalHadir / totalSesi) * 100);
                 
-                // Hitung nilai rata-rata (setiap assessment, nilai 0 jika tidak ada)
                 let totalNilai = 0;
                 let jumlahAssessment = 0;
                 for (let idPen of listPen) {
@@ -284,7 +282,6 @@
         }
         
         async function openClassDetail(kelas) {
-            currentClassDetail = kelas;
             const gridDiv = document.getElementById('kelasListGrid');
             const detailDiv = document.getElementById('kelasDetailPanel');
             if (gridDiv) gridDiv.classList.add('hidden');
@@ -413,7 +410,7 @@
             } catch(err){ detailDiv.innerHTML=`<div class="text-red-500 p-4">Error: ${err.message}</div>`; }
         }
         
-        // ===================== DATA GURU dengan filter range kehadiran =====================
+        // ===================== DATA GURU =====================
         async function loadGuru() {
             const container = document.getElementById('guru');
             try {
@@ -591,7 +588,7 @@
             }
         }
         
-        // ===================== PENUGASAN dengan kolom "Kelas / Murid Terlibat" =====================
+        // ===================== PENUGASAN dengan kolom yang diperbaiki =====================
         async function loadPenugasan() {
             const container = document.getElementById('penugasan');
             try {
@@ -615,13 +612,14 @@
                     <button id="simpanPenugasanBtn" class="bg-blue-600 text-white px-4 py-1 rounded">Simpan</button>
                 </div>`;
                 
-                // Buat list penugasan dengan informasi kelas/murid
                 let listHtml = `<h3 class="font-bold mt-4">Daftar Penugasan</h3><div class="overflow-x-auto"><table class="min-w-full border mt-2"><thead class="bg-gray-100"><tr><th>Mapel</th><th>Guru</th><th>Kelas / Murid Terlibat</th><th>Aksi</th></tr></thead><tbody>`;
                 for (let [id, pg] of Object.entries(penugasan)) {
                     const mapelData = mapel[pg.mapelId];
                     const namaMapel = mapelData?.nama || '❌';
                     const jenisMapel = mapelData?.jenis || 'inkul';
                     let infoTerlibat = '';
+                    const jumlahMurid = pg.siswaList?.length || 0;
+                    
                     if (jenisMapel === 'inkul') {
                         // Tampilkan daftar kelas unik
                         const kelasSet = new Set();
@@ -631,16 +629,10 @@
                         infoTerlibat = Array.from(kelasSet).map(k => `Kelas ${k}`).join(', ');
                         if (!infoTerlibat) infoTerlibat = '(Tidak ada kelas)';
                     } else {
-                        // Tampilkan daftar nama siswa (atau NIS - Nama)
-                        const siswaList = (pg.siswaList || []).slice(0, 3); // batasi 3 untuk ringkas
-                        const total = (pg.siswaList || []).length;
-                        let daftar = siswaList.map(nis => {
-                            const s = semuaMurid[nis];
-                            return s ? `${s.nama} (${nis})` : nis;
-                        }).join(', ');
-                        if (total > 3) daftar += `, +${total-3} lainnya`;
-                        infoTerlibat = daftar || '(Tidak ada murid)';
+                        // Untuk eskul / pesantren: cukup jumlah murid
+                        infoTerlibat = `${jumlahMurid} murid`;
                     }
+                    
                     listHtml += `<tr><td class="p-2">${escapeHtml(namaMapel)}</td><td class="p-2">${escapeHtml(pg.guruName)}</td><td class="p-2">${escapeHtml(infoTerlibat)}</td><td class="p-2"><button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i> Hapus</button></td></tr>`;
                 }
                 listHtml += `</tbody></table></div>`;
