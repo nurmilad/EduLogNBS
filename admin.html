@@ -47,7 +47,7 @@
     </div>
 
     <script>
-        // Konfigurasi Firebase (tetap)
+        // Konfigurasi Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
             authDomain: "edulognbs.firebaseapp.com",
@@ -69,6 +69,25 @@
             alert("Error: " + msg);
         }
         
+        // Helper: parse dd/mm/yyyy ke timestamp (midnight)
+        function parseDMY(dateStr) {
+            let parts = dateStr.split('/');
+            if (parts.length === 3) {
+                let d = parseInt(parts[0],10), m = parseInt(parts[1],10)-1, y = parseInt(parts[2],10);
+                let date = new Date(y,m,d);
+                if (!isNaN(date.getTime())) return date.getTime();
+            }
+            return null;
+        }
+        
+        // Helper: format Date ke dd/mm/yyyy
+        function formatDateToDMY(date) {
+            let d = date.getDate().toString().padStart(2,'0');
+            let m = (date.getMonth()+1).toString().padStart(2,'0');
+            let y = date.getFullYear();
+            return `${d}/${m}/${y}`;
+        }
+        
         // Tab switching
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -88,8 +107,56 @@
             btn.onclick = () => showTab(btn.dataset.tab);
         });
         
-        // ===================== DATA MURID (DUA VIEW: LIST KELAS & DETAIL KELAS) =====================
+        // ===================== DATA MURID dengan sinkronisasi kehadiran & nilai =====================
         let currentClassDetail = null;
+        
+        // Fungsi untuk menghitung ulang persentase kehadiran global siswa (berdasarkan semua sesi attendance)
+        async function hitungKehadiranGlobalSiswa(nis) {
+            // Cari semua penugasan yang melibatkan siswa ini
+            let totalSesi = 0;
+            let hadirCount = 0;
+            const penugasanSnap = await db.ref('penugasan').once('value');
+            const penugasan = penugasanSnap.val() || {};
+            for (let [idPenugasan, pg] of Object.entries(penugasan)) {
+                if (pg.siswaList && pg.siswaList.includes(nis)) {
+                    // Ambil semua sesi attendance untuk penugasan ini
+                    const attSnap = await db.ref(`attendance/${idPenugasan}`).once('value');
+                    const sessions = attSnap.val() || {};
+                    for (let ses of Object.values(sessions)) {
+                        totalSesi++;
+                        const status = ses.records?.[nis];
+                        if (status === 'H') hadirCount++;
+                    }
+                }
+            }
+            const persen = totalSesi === 0 ? 0 : Math.round((hadirCount / totalSesi) * 100);
+            // Simpan ke database siswa/kehadiranGlobal
+            await db.ref(`siswa/${nis}/kehadiranGlobal`).set(persen);
+            return persen;
+        }
+        
+        async function hitungRataNilaiGlobalSiswa(nis) {
+            let totalNilai = 0;
+            let jumlahPenilaian = 0;
+            const penugasanSnap = await db.ref('penugasan').once('value');
+            const penugasan = penugasanSnap.val() || {};
+            for (let [idPenugasan, pg] of Object.entries(penugasan)) {
+                if (pg.siswaList && pg.siswaList.includes(nis)) {
+                    const nilaiSnap = await db.ref(`penilaian/${idPenugasan}`).once('value');
+                    const penilaianMap = nilaiSnap.val() || {};
+                    for (let p of Object.values(penilaianMap)) {
+                        const score = p.scores?.[nis];
+                        if (typeof score === 'number') {
+                            totalNilai += score;
+                            jumlahPenilaian++;
+                        }
+                    }
+                }
+            }
+            const rata = jumlahPenilaian === 0 ? 0 : Math.round(totalNilai / jumlahPenilaian);
+            await db.ref(`siswa/${nis}/nilaiGlobal`).set(rata);
+            return rata;
+        }
         
         async function loadMuridListView() {
             const container = document.getElementById('murid');
@@ -213,9 +280,15 @@
             try {
                 const siswaSnap = await db.ref('siswa').once('value');
                 const semuaMurid = siswaSnap.val() || {};
-                const muridKelas = Object.entries(semuaMurid)
+                let muridKelas = Object.entries(semuaMurid)
                     .filter(([_, m]) => m.kelas === kelas)
                     .map(([nis, m]) => ({ nis, ...m }));
+                
+                // Hitung ulang kehadiran dan nilai global untuk setiap siswa di kelas ini
+                for (let murid of muridKelas) {
+                    murid.kehadiranGlobal = await hitungKehadiranGlobalSiswa(murid.nis);
+                    murid.nilaiGlobal = await hitungRataNilaiGlobalSiswa(murid.nis);
+                }
                 
                 detailDiv.innerHTML = `
                     <div class="bg-white rounded-lg border p-4">
@@ -233,10 +306,13 @@
                         </div>
                         <div class="table-wrapper overflow-x-auto">
                             <table class="min-w-full border text-sm">
-                                <thead class="bg-gray-100"><tr><th class="p-2">NIS</th><th>Nama</th><th>Password</th><th>Kehadiran</th><th>Rata Nilai</th><th>Aksi</th></tr></thead>
+                                <thead class="bg-gray-100"><tr><th class="p-2">NIS</th><th>Nama</th><th>Password</th><th>Kehadiran (%)</th><th>Rata Nilai</th><th>Aksi</th></tr></thead>
                                 <tbody id="detailMuridTbody">${muridKelas.map(m => `
-                                    <tr><td class="p-2">${escapeHtml(m.nis)}</td><td class="p-2">${escapeHtml(m.nama)}</td><td class="p-2">${escapeHtml(m.password)}</td>
-                                    <td class="p-2">${m.kehadiranGlobal || 0}%</td><td class="p-2">${m.nilaiGlobal || 0}</td>
+                                    <tr><td class="p-2">${escapeHtml(m.nis)}</td>
+                                    <td class="p-2">${escapeHtml(m.nama)}</td>
+                                    <td class="p-2">${escapeHtml(m.password)}</td>
+                                    <td class="p-2">${m.kehadiranGlobal}%</td>
+                                    <td class="p-2">${m.nilaiGlobal}</td>
                                     <td class="p-2"><button class="editMuridDetailBtn text-blue-500" data-nis="${m.nis}"><i class="fas fa-edit"></i></button>
                                     <button class="hapusMuridDetailBtn text-red-500 ml-2" data-nis="${m.nis}"><i class="fas fa-trash"></i></button></td>
                                     </tr>`).join('')}</tbody>
@@ -315,26 +391,121 @@
             } catch(err){ detailDiv.innerHTML=`<div class="text-red-500 p-4">Error: ${err.message}</div>`; }
         }
         
-        // ===================== DATA GURU =====================
+        // ===================== DATA GURU dengan filter range kehadiran =====================
         async function loadGuru() {
             const container = document.getElementById('guru');
             try {
-                const snap = await db.ref('guru').once('value');
-                const guru = snap.val() || {};
-                let html = `<div class="mb-4 flex flex-wrap gap-2"><button id="tambahGuruBtn" class="bg-green-500 text-white px-3 py-1 rounded"><i class="fas fa-plus"></i> Tambah Guru</button>
-                <button id="copypasteGuruBtn" class="bg-gray-500 text-white px-3 py-1 rounded"><i class="fas fa-paste"></i> Copypaste Excel</button></div>
-                <div class="overflow-x-auto"><table class="min-w-full border"><thead class="bg-gray-100"><tr><th class="p-2">Nama</th><th>Password</th><th>Aksi</th></tr></thead><tbody>`;
-                for(let [nama,val] of Object.entries(guru)) html+=`<tr><td class="p-2">${escapeHtml(nama)}</td><td class="p-2">${escapeHtml(val.password)}</td><td class="p-2"><button class="editGuruBtn text-blue-500" data-nama="${escapeHtml(nama)}"><i class="fas fa-edit"></i></button> <button class="hapusGuruBtn text-red-500 ml-2" data-nama="${escapeHtml(nama)}"><i class="fas fa-trash"></i></button></td></tr>`;
-                html+=`</tbody></table></div>`;
-                container.innerHTML=html;
-                document.getElementById('tambahGuruBtn').onclick=()=>{ let n=prompt('Nama Guru:'),p=prompt('Password:'); if(n&&p) db.ref(`guru/${n}`).set({password:p}).then(()=>loadGuru()).catch(showError); };
-                document.getElementById('copypasteGuruBtn').onclick=()=>{ let raw=prompt('Tempel data guru (format: Nama,Password per baris):'); if(raw){ let lines=raw.split('\n'),promises=[]; lines.forEach(l=>{ let [nama,pass]=l.split(','); if(nama&&pass) promises.push(db.ref(`guru/${nama.trim()}`).set({password:pass.trim()})); }); Promise.all(promises).then(()=>loadGuru()).catch(showError); } };
-                document.querySelectorAll('.editGuruBtn').forEach(btn=>{ btn.onclick=async()=>{ let newPass=prompt('Password baru:'); if(newPass) await db.ref(`guru/${btn.dataset.nama}/password`).set(newPass); loadGuru(); }; });
-                document.querySelectorAll('.hapusGuruBtn').forEach(btn=>{ btn.onclick=async()=>{ if(confirm('Hapus guru?')) await db.ref(`guru/${btn.dataset.nama}`).remove(); loadGuru(); }; });
-            } catch(err){ container.innerHTML=`<p class="text-red-500">Error: ${err.message}</p>`; }
+                const snapGuru = await db.ref('guru').once('value');
+                const guru = snapGuru.val() || {};
+                // Ambil semua penugasan untuk mapping guru
+                const penugasanSnap = await db.ref('penugasan').once('value');
+                const penugasan = penugasanSnap.val() || {};
+                // Ambil semua attendance
+                const attendanceSnap = await db.ref('attendance').once('value');
+                const attendanceAll = attendanceSnap.val() || {};
+                
+                // Tentukan range default (bulan ini)
+                const now = new Date();
+                const startDefault = new Date(now.getFullYear(), now.getMonth(), 1);
+                const endDefault = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+                
+                let html = `
+                    <div class="mb-4 flex flex-wrap gap-3 items-end">
+                        <div>
+                            <label class="block text-sm font-semibold">Tanggal Awal</label>
+                            <input type="date" id="startDate" class="border p-1 rounded" value="${startDefault.toISOString().slice(0,10)}">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold">Tanggal Akhir</label>
+                            <input type="date" id="endDate" class="border p-1 rounded" value="${endDefault.toISOString().slice(0,10)}">
+                        </div>
+                        <button id="applyRangeBtn" class="bg-blue-600 text-white px-3 py-1 rounded"><i class="fas fa-sync-alt"></i> Terapkan</button>
+                        <button id="tambahGuruBtn" class="bg-green-500 text-white px-3 py-1 rounded"><i class="fas fa-plus"></i> Tambah Guru</button>
+                        <button id="copypasteGuruBtn" class="bg-gray-500 text-white px-3 py-1 rounded"><i class="fas fa-paste"></i> Copypaste Excel</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full border">
+                            <thead class="bg-gray-100"><tr><th class="p-2">Nama</th><th>Password</th><th>Total Kehadiran (Range)</th><th>Aksi</th></tr></thead>
+                            <tbody id="guruTbody"></tbody>
+                        </table>
+                    </div>
+                `;
+                container.innerHTML = html;
+                
+                // Fungsi untuk menghitung jumlah kehadiran guru dalam range
+                async function hitungKehadiranGuru(guruName, startTimestamp, endTimestamp) {
+                    let totalHadir = 0;
+                    // Cari semua penugasan milik guru ini
+                    for (let [idPenugasan, pg] of Object.entries(penugasan)) {
+                        if (pg.guruName === guruName) {
+                            const sessions = attendanceAll[idPenugasan] || {};
+                            for (let ses of Object.values(sessions)) {
+                                const sesTimestamp = parseDMY(ses.date);
+                                if (sesTimestamp && sesTimestamp >= startTimestamp && sesTimestamp <= endTimestamp) {
+                                    totalHadir++;
+                                }
+                            }
+                        }
+                    }
+                    return totalHadir;
+                }
+                
+                async function renderGuruTable(startDateStr, endDateStr) {
+                    const startDate = new Date(startDateStr);
+                    const endDate = new Date(endDateStr);
+                    endDate.setHours(23,59,59,999);
+                    const startTimestamp = startDate.getTime();
+                    const endTimestamp = endDate.getTime();
+                    
+                    const tbody = document.getElementById('guruTbody');
+                    if (!tbody) return;
+                    tbody.innerHTML = '';
+                    for (let [nama, val] of Object.entries(guru)) {
+                        const jumlahKehadiran = await hitungKehadiranGuru(nama, startTimestamp, endTimestamp);
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td class="p-2 border">${escapeHtml(nama)}</td>
+                            <td class="p-2 border">${escapeHtml(val.password)}</td>
+                            <td class="p-2 border text-center font-bold">${jumlahKehadiran}</td>
+                            <td class="p-2 border"><button class="editGuruBtn text-blue-500" data-nama="${escapeHtml(nama)}"><i class="fas fa-edit"></i></button> <button class="hapusGuruBtn text-red-500 ml-2" data-nama="${escapeHtml(nama)}"><i class="fas fa-trash"></i></button></td>
+                        `;
+                        tbody.appendChild(row);
+                    }
+                    // Attach event handlers
+                    document.querySelectorAll('.editGuruBtn').forEach(btn => {
+                        btn.onclick = async () => {
+                            let newPass = prompt('Password baru:');
+                            if (newPass) await db.ref(`guru/${btn.dataset.nama}/password`).set(newPass);
+                            loadGuru();
+                        };
+                    });
+                    document.querySelectorAll('.hapusGuruBtn').forEach(btn => {
+                        btn.onclick = async () => {
+                            if (confirm('Hapus guru?')) await db.ref(`guru/${btn.dataset.nama}`).remove();
+                            loadGuru();
+                        };
+                    });
+                }
+                
+                // Event tombol terapkan
+                document.getElementById('applyRangeBtn').onclick = () => {
+                    const start = document.getElementById('startDate').value;
+                    const end = document.getElementById('endDate').value;
+                    if (start && end) renderGuruTable(start, end);
+                    else alert("Pilih rentang tanggal");
+                };
+                document.getElementById('tambahGuruBtn').onclick = () => { let n=prompt('Nama Guru:'), p=prompt('Password:'); if(n&&p) db.ref(`guru/${n}`).set({password:p}).then(()=>loadGuru()).catch(showError); };
+                document.getElementById('copypasteGuruBtn').onclick = () => { let raw=prompt('Tempel data guru (format: Nama,Password per baris):'); if(raw){ let lines=raw.split('\n'),promises=[]; lines.forEach(l=>{ let [nama,pass]=l.split(','); if(nama&&pass) promises.push(db.ref(`guru/${nama.trim()}`).set({password:pass.trim()})); }); Promise.all(promises).then(()=>loadGuru()).catch(showError); } };
+                
+                // Panggil pertama kali dengan default
+                const startDefaultVal = document.getElementById('startDate').value;
+                const endDefaultVal = document.getElementById('endDate').value;
+                await renderGuruTable(startDefaultVal, endDefaultVal);
+                
+            } catch(err) { container.innerHTML=`<p class="text-red-500">Error: ${err.message}</p>`; }
         }
         
-        // ===================== DATA MAPEL (DENGAN FITUR IMPORT) =====================
+        // ===================== DATA MAPEL (tidak berubah) =====================
         async function loadMapel() {
             const container = document.getElementById('mapel');
             try {
@@ -349,10 +520,9 @@
                     html += `<tr><td class="p-2">${escapeHtml(val.nama)}</td><td class="p-2">${escapeHtml(val.jenis)}</td>
                     <td class="p-2"><button class="editMapelBtn text-blue-500" data-id="${id}"><i class="fas fa-edit"></i></button> <button class="hapusMapelBtn text-red-500 ml-2" data-id="${id}"><i class="fas fa-trash"></i></button></td></tr>`;
                 }
-                html += `</tbody></table></div>`;
+                html += `</tbody></tr></div>`;
                 container.innerHTML = html;
                 
-                // Tombol tambah manual
                 document.getElementById('tambahMapelBtn').onclick = () => {
                     const nama = prompt('Nama Mata Pelajaran:');
                     const jenis = prompt('Jenis (inkul / eskul / pesantren):');
@@ -360,12 +530,8 @@
                         db.ref(`mapel/${Date.now()}`).set({ nama, jenis: jenis.toLowerCase() }).then(()=>loadMapel()).catch(showError);
                     } else alert('Jenis harus inkul, eskul, atau pesantren');
                 };
-                
-                // Tombol import massal
                 document.getElementById('importMapelBtn').onclick = async () => {
-                    const rawData = prompt(
-                        "Import Mata Pelajaran\n\nFormat per baris: NAMA MAPEL, JENIS\nJenis yang valid: inkul, eskul, pesantren\nPemisah: koma atau tab\n\nContoh:\nMatematika,inkul\nBahasa Inggris,inkul\nPramuka,eskul\nTahfidz,pesantren"
-                    );
+                    const rawData = prompt("Import Mata Pelajaran\n\nFormat per baris: NAMA MAPEL, JENIS\nJenis yang valid: inkul, eskul, pesantren\nPemisah: koma atau tab\n\nContoh:\nMatematika,inkul\nBahasa Inggris,inkul\nPramuka,eskul\nTahfidz,pesantren");
                     if (!rawData) return;
                     const lines = rawData.split(/\r?\n/);
                     let success = 0, error = 0;
@@ -391,8 +557,6 @@
                     alert(`✅ Impor mapel selesai!\nBerhasil: ${success}\nGagal: ${error}`);
                     loadMapel();
                 };
-                
-                // Edit & hapus
                 document.querySelectorAll('.editMapelBtn').forEach(btn => {
                     btn.onclick = async () => {
                         const id = btn.dataset.id;
@@ -413,7 +577,7 @@
             }
         }
         
-        // ===================== PENUGASAN =====================
+        // ===================== PENUGASAN (tidak diubah) =====================
         async function loadPenugasan() {
             const container = document.getElementById('penugasan');
             try {
