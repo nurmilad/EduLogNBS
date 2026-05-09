@@ -12,6 +12,12 @@
         .tab-content { transition: all 0.2s; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         .table-wrapper { overflow-x: auto; border-radius: 0.75rem; }
+        .kelas-card .murid-table-container {
+            display: none;
+        }
+        .kelas-card.expanded .murid-table-container {
+            display: block;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -83,6 +89,8 @@
         });
         
         // ===================== DATA MURID =====================
+        let cachedSiswa = null; // cache data siswa untuk efisiensi
+        
         async function loadMurid() {
             const container = document.getElementById('murid');
             container.innerHTML = `
@@ -96,52 +104,57 @@
                 const kelasSnap = await db.ref('kelas').once('value');
                 const daftarKelas = Object.keys(kelasSnap.val() || {}).sort();
                 const siswaSnap = await db.ref('siswa').once('value');
-                const semuaSiswa = siswaSnap.val() || {};
+                const semuaMurid = siswaSnap.val() || {};
+                cachedSiswa = semuaMurid;
+                
                 const kelasContainer = document.getElementById('kelasContainer');
                 if (daftarKelas.length === 0) {
                     kelasContainer.innerHTML = '<p class="text-gray-500 col-span-full">Belum ada kelas. Klik "Tambah Kelas".</p>';
                 }
                 
                 for (let kelas of daftarKelas) {
-                    const siswaKelas = Object.entries(semuaSiswa)
-                        .filter(([_, s]) => s.kelas === kelas)
-                        .map(([nis, s]) => ({ nis, ...s }));
+                    const muridKelas = Object.entries(semuaMurid)
+                        .filter(([_, m]) => m.kelas === kelas)
+                        .map(([nis, m]) => ({ nis, ...m }));
                     
                     const card = document.createElement('div');
-                    card.className = 'border rounded-lg p-3 shadow-sm bg-white';
+                    card.className = 'kelas-card border rounded-lg shadow-sm bg-white overflow-hidden';
                     card.innerHTML = `
-                        <div class="flex justify-between items-center mb-2 border-b pb-2">
+                        <div class="flex justify-between items-center p-3 bg-gray-50 cursor-pointer hover:bg-gray-100" data-kelas="${kelas}">
                             <h3 class="font-bold text-lg">Kelas ${kelas}</h3>
-                            <div>
-                                <button class="hapusKelasBtn text-red-500 hover:text-red-700 mr-2" data-kelas="${kelas}"><i class="fas fa-trash-alt"></i> Hapus Kelas</button>
-                                <button class="editKelasBtn text-blue-500 hover:text-blue-700" data-kelas="${kelas}"><i class="fas fa-edit"></i> Edit</button>
+                            <div class="flex gap-2">
+                                <button class="expandBtn text-blue-500 hover:text-blue-700"><i class="fas fa-chevron-down"></i></button>
+                                <button class="hapusKelasBtn text-red-500 hover:text-red-700" data-kelas="${kelas}"><i class="fas fa-trash-alt"></i></button>
+                                <button class="editKelasBtn text-blue-500 hover:text-blue-700" data-kelas="${kelas}"><i class="fas fa-edit"></i></button>
                             </div>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="min-w-full text-sm border">
-                                <thead class="bg-gray-100">
-                                    <tr><th class="p-1">NIS</th><th>Nama</th><th>Password</th><th>Kehadiran</th><th>Rata Nilai</th><th>Aksi</th></tr>
-                                </thead>
-                                <tbody id="tbody-${kelas.replace(/\s/g, '')}">
-                                    ${siswaKelas.map(s => `
-                                        <tr>
-                                            <td class="p-1">${escapeHtml(s.nis)}</td>
-                                            <td class="p-1">${escapeHtml(s.nama)}</td>
-                                            <td class="p-1">${escapeHtml(s.password)}</td>
-                                            <td class="p-1">${s.kehadiranGlobal || 0}%</td>
-                                            <td class="p-1">${s.nilaiGlobal || 0}</td>
-                                            <td class="p-1">
-                                                <button class="editSiswaBtn text-blue-500" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-edit"></i></button>
-                                                <button class="hapusSiswaBtn text-red-500" data-nis="${s.nis}" data-kelas="${kelas}"><i class="fas fa-trash"></i></button>
-                                            </td>
-                                        </tr>
-                                    `).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="mt-3 flex gap-2">
-                            <button class="tambahMuridBtn bg-blue-500 text-white px-2 py-1 rounded text-sm" data-kelas="${kelas}"><i class="fas fa-user-plus"></i> Tambah Murid</button>
-                            <button class="copypasteBtn bg-gray-500 text-white px-2 py-1 rounded text-sm" data-kelas="${kelas}"><i class="fas fa-paste"></i> Import Multi Siswa</button>
+                        <div class="murid-table-container p-3 border-t">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full text-sm border">
+                                    <thead class="bg-gray-100">
+                                        <tr><th class="p-1">NIS</th><th>Nama</th><th>Password</th><th>Kehadiran</th><th>Rata Nilai</th><th>Aksi</th></tr>
+                                    </thead>
+                                    <tbody id="tbody-${kelas.replace(/\s/g, '')}">
+                                        ${muridKelas.map(m => `
+                                            <tr>
+                                                <td class="p-1">${escapeHtml(m.nis)}</td>
+                                                <td class="p-1">${escapeHtml(m.nama)}</td>
+                                                <td class="p-1">${escapeHtml(m.password)}</td>
+                                                <td class="p-1">${m.kehadiranGlobal || 0}%</td>
+                                                <td class="p-1">${m.nilaiGlobal || 0}</td>
+                                                <td class="p-1">
+                                                    <button class="editMuridBtn text-blue-500" data-nis="${m.nis}" data-kelas="${kelas}"><i class="fas fa-edit"></i></button>
+                                                    <button class="hapusMuridBtn text-red-500" data-nis="${m.nis}" data-kelas="${kelas}"><i class="fas fa-trash"></i></button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="mt-3 flex gap-2">
+                                <button class="tambahMuridBtn bg-blue-500 text-white px-2 py-1 rounded text-sm" data-kelas="${kelas}"><i class="fas fa-user-plus"></i> Tambah Murid</button>
+                                <button class="copypasteBtn bg-gray-500 text-white px-2 py-1 rounded text-sm" data-kelas="${kelas}"><i class="fas fa-paste"></i> Import Multi Murid</button>
+                            </div>
                         </div>
                     `;
                     kelasContainer.appendChild(card);
@@ -154,6 +167,33 @@
         }
         
         function attachMuridEvents() {
+            // Event toggle expand/collapse
+            document.querySelectorAll('.kelas-card .expandBtn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const card = btn.closest('.kelas-card');
+                    card.classList.toggle('expanded');
+                    const icon = btn.querySelector('i');
+                    if (card.classList.contains('expanded')) {
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-up');
+                    } else {
+                        icon.classList.remove('fa-chevron-up');
+                        icon.classList.add('fa-chevron-down');
+                    }
+                };
+            });
+            // Klik pada header juga bisa toggle
+            document.querySelectorAll('.kelas-card .bg-gray-50').forEach(header => {
+                header.addEventListener('click', (e) => {
+                    // Jangan toggle jika yang diklik adalah tombol aksi
+                    if (e.target.closest('.hapusKelasBtn') || e.target.closest('.editKelasBtn') || e.target.closest('.expandBtn')) return;
+                    const card = header.closest('.kelas-card');
+                    const btn = card.querySelector('.expandBtn');
+                    btn.click();
+                });
+            });
+            
             // Tambah Kelas
             const addBtn = document.getElementById('addKelasBtn');
             if (addBtn) addBtn.onclick = () => {
@@ -167,9 +207,10 @@
             
             // Hapus Kelas
             document.querySelectorAll('.hapusKelasBtn').forEach(btn => {
-                btn.onclick = async () => {
+                btn.onclick = async (e) => {
+                    e.stopPropagation();
                     const kelas = btn.dataset.kelas;
-                    if (confirm(`Hapus kelas ${kelas} dan semua siswanya?`)) {
+                    if (confirm(`Hapus kelas ${kelas} dan semua muridnya?`)) {
                         try {
                             const siswaSnap = await db.ref('siswa').once('value');
                             const siswa = siswaSnap.val() || {};
@@ -189,7 +230,8 @@
             
             // Edit Kelas
             document.querySelectorAll('.editKelasBtn').forEach(btn => {
-                btn.onclick = async () => {
+                btn.onclick = async (e) => {
+                    e.stopPropagation();
                     const oldKelas = btn.dataset.kelas;
                     const newKelas = prompt('Masukkan nama kelas baru:', oldKelas);
                     if (newKelas && newKelas.trim() && newKelas !== oldKelas) {
@@ -213,7 +255,8 @@
             
             // Tambah Murid (satu per satu)
             document.querySelectorAll('.tambahMuridBtn').forEach(btn => {
-                btn.onclick = () => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
                     const kelas = btn.dataset.kelas;
                     const nis = prompt('NIS:');
                     const nama = prompt('Nama:');
@@ -228,10 +271,11 @@
                 };
             });
             
-            // Hapus Siswa
-            document.querySelectorAll('.hapusSiswaBtn').forEach(btn => {
-                btn.onclick = async () => {
-                    if (confirm('Hapus siswa ini?')) {
+            // Hapus Murid
+            document.querySelectorAll('.hapusMuridBtn').forEach(btn => {
+                btn.onclick = async (e) => {
+                    e.stopPropagation();
+                    if (confirm('Hapus murid ini?')) {
                         const nis = btn.dataset.nis;
                         try {
                             await db.ref(`siswa/${nis}`).remove();
@@ -241,9 +285,10 @@
                 };
             });
             
-            // Edit Siswa
-            document.querySelectorAll('.editSiswaBtn').forEach(btn => {
-                btn.onclick = async () => {
+            // Edit Murid
+            document.querySelectorAll('.editMuridBtn').forEach(btn => {
+                btn.onclick = async (e) => {
+                    e.stopPropagation();
                     const nis = btn.dataset.nis;
                     try {
                         const snap = await db.ref(`siswa/${nis}`).once('value');
@@ -257,20 +302,18 @@
                 };
             });
             
-            // ========== FITUR IMPORT MULTI SISWA (TANPA KOLOM KELAS, SESUAI KELAS CARD) ==========
+            // Import Multi Murid (tanpa kolom kelas, otomatis ke kelas card)
             document.querySelectorAll('.copypasteBtn').forEach(btn => {
-                btn.onclick = async () => {
-                    const targetKelas = btn.dataset.kelas; // Kelas dari card tempat tombol diklik
+                btn.onclick = async (e) => {
+                    e.stopPropagation();
+                    const targetKelas = btn.dataset.kelas;
                     if (!targetKelas) {
                         alert("Error: Kelas tidak ditemukan.");
                         return;
                     }
                     
                     const rawData = prompt(
-                        "Impor banyak siswa ke kelas " + targetKelas + "\n\n" +
-                        "Format: NIS, NAMA, PASSWORD\n" +
-                        "Pemisah: koma, tab, atau spasi.\n\n" +
-                        "Setiap baris: NIS nama password"
+                        `Impor banyak murid ke kelas ${targetKelas}\n\nFormat: NIS, NAMA, PASSWORD\nPemisah: koma, tab, atau spasi.\n\nContoh:\n2526001,Ahmad Yusuf,1234\n2526002,Ainun Anugrah,1234`
                     );
                     if (!rawData) return;
                     
@@ -283,7 +326,6 @@
                         line = line.trim();
                         if (line === "") continue;
                         
-                        // Deteksi pemisah: tab, koma, spasi
                         let parts;
                         if (line.includes('\t')) {
                             parts = line.split('\t');
@@ -296,7 +338,6 @@
                         parts = parts.map(p => p.trim());
                         if (parts.length < 3) {
                             errorCount++;
-                            console.warn(`Baris tidak valid (min 3 kolom): ${line}`);
                             continue;
                         }
                         
@@ -309,7 +350,7 @@
                             continue;
                         }
                         
-                        const siswaData = {
+                        const muridData = {
                             nama: nama,
                             password: password,
                             kelas: targetKelas,
@@ -317,9 +358,9 @@
                             nilaiGlobal: 0
                         };
                         
-                        const promise = db.ref(`siswa/${nis}`).set(siswaData)
+                        const promise = db.ref(`siswa/${nis}`).set(muridData)
                             .catch(err => {
-                                console.error(`Gagal simpan siswa ${nis}:`, err);
+                                console.error(err);
                                 errorCount++;
                             });
                         studentPromises.push(promise);
@@ -328,8 +369,8 @@
                     
                     try {
                         await Promise.all(studentPromises);
-                        alert(`✅ Impor selesai!\nBerhasil: ${successCount} siswa\nGagal: ${errorCount}\nSemua siswa dimasukkan ke kelas: ${targetKelas}`);
-                        loadMurid(); // refresh tampilan
+                        alert(`✅ Impor selesai!\nBerhasil: ${successCount} murid\nGagal: ${errorCount}\nSemua murid dimasukkan ke kelas: ${targetKelas}`);
+                        loadMurid();
                     } catch (err) {
                         showError("Gagal menyimpan data: " + err.message);
                     }
@@ -365,7 +406,7 @@
                         </tr>
                     `;
                 }
-                html += `</tbody> Mellon</div>`;
+                html += `</tbody></table></div>`;
                 container.innerHTML = html;
                 
                 document.getElementById('tambahGuruBtn').onclick = () => {
@@ -376,7 +417,7 @@
                     }
                 };
                 document.getElementById('copypasteGuruBtn').onclick = () => {
-                    const raw = prompt('Tempel data guru (format: Nama,Password per baris):');
+                    const raw = prompt('Tempel data guru (format: Nama,Password per baris):\nContoh:\nAhmad,1234\nBudi,5678');
                     if (raw) {
                         const lines = raw.split('\n');
                         const promises = [];
@@ -473,7 +514,7 @@
                 ]);
                 const mapel = mapelSnap.val() || {};
                 const guru = guruSnap.val() || {};
-                const semuaSiswa = siswaSnap.val() || {};
+                const semuaMurid = siswaSnap.val() || {};
                 const kelasData = kelasSnap.val() || {};
                 const daftarKelas = Object.keys(kelasData);
                 const penugasan = penugasanSnap.val() || {};
@@ -489,11 +530,11 @@
                         <button id="simpanPenugasanBtn" class="bg-blue-600 text-white px-4 py-1 rounded"><i class="fas fa-save"></i> Simpan Penugasan</button>
                     </div>
                 `;
-                let listHtml = `<h3 class="font-bold mt-4">Daftar Penugasan Aktif</h3><div class="overflow-x-auto"><table class="min-w-full border mt-2"><thead class="bg-gray-100"><tr><th>Mapel</th><th>Guru</th><th>Siswa Terlibat</th><th>Aksi</th></tr></thead><tbody>`;
+                let listHtml = `<h3 class="font-bold mt-4">Daftar Penugasan Aktif</h3><div class="overflow-x-auto"><table class="min-w-full border mt-2"><thead class="bg-gray-100"><tr><th>Mapel</th><th>Guru</th><th>Murid Terlibat</th><th>Aksi</th></tr></thead><tbody>`;
                 for (let [id, pg] of Object.entries(penugasan)) {
                     const namaMapel = mapel[pg.mapelId]?.nama || '❌ Mapel dihapus';
-                    const jumlahSiswa = pg.siswaList?.length || 0;
-                    listHtml += `<tr><td class="p-2">${escapeHtml(namaMapel)}</td><td class="p-2">${escapeHtml(pg.guruName)}</td><td class="p-2">${jumlahSiswa} siswa</td><td class="p-2"><button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i> Hapus</button></td></tr>`;
+                    const jumlahMurid = pg.siswaList?.length || 0;
+                    listHtml += `<tr><td class="p-2">${escapeHtml(namaMapel)}</td><td class="p-2">${escapeHtml(pg.guruName)}</td><td class="p-2">${jumlahMurid} murid</td><td class="p-2"><button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i> Hapus</button></td></tr>`;
                 }
                 listHtml += `</tbody></table></div>`;
                 container.innerHTML = formHtml + listHtml;
@@ -515,13 +556,13 @@
                         selectKelas.innerHTML = '<option value="">-- Pilih Kelas --</option>' + daftarKelas.map(k => `<option value="${k}">${escapeHtml(k)}</option>`).join('');
                         targetDiv.appendChild(selectKelas);
                     } else if (jenis === 'eskul' || jenis === 'pesantren') {
-                        targetLabel.innerText = 'Pilih Siswa (bisa lebih dari satu, gabungan kelas)';
-                        const selectSiswa = document.createElement('select');
-                        selectSiswa.multiple = true;
-                        selectSiswa.className = 'border p-1 rounded w-full';
-                        selectSiswa.size = 6;
-                        selectSiswa.innerHTML = Object.entries(semuaSiswa).map(([nis, s]) => `<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(s.nama)} (${s.kelas})</option>`).join('');
-                        targetDiv.appendChild(selectSiswa);
+                        targetLabel.innerText = 'Pilih Murid (bisa lebih dari satu)';
+                        const selectMurid = document.createElement('select');
+                        selectMurid.multiple = true;
+                        selectMurid.className = 'border p-1 rounded w-full';
+                        selectMurid.size = 6;
+                        selectMurid.innerHTML = Object.entries(semuaMurid).map(([nis, m]) => `<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(m.nama)} (${m.kelas})</option>`).join('');
+                        targetDiv.appendChild(selectMurid);
                     } else {
                         targetLabel.innerText = 'Target';
                         targetDiv.innerHTML = '<p class="text-gray-500 text-sm">Pilih mapel terlebih dahulu</p>';
@@ -534,23 +575,23 @@
                     const guruName = document.getElementById('pilihGuru').value;
                     if (!mapelId || !guruName) { alert('Pilih mapel dan guru'); return; }
                     const jenis = mapelSelect.options[mapelSelect.selectedIndex].dataset.jenis;
-                    let siswaList = [];
+                    let muridList = [];
                     if (jenis === 'inkul') {
                         const selectKelas = document.querySelector('#targetInput select');
                         const selectedKelas = Array.from(selectKelas.selectedOptions).map(opt => opt.value);
                         if (selectedKelas.length === 0) { alert('Pilih minimal satu kelas'); return; }
                         for (let k of selectedKelas) {
-                            const siswaDiKelas = Object.entries(semuaSiswa).filter(([_, s]) => s.kelas === k).map(([nis]) => nis);
-                            siswaList.push(...siswaDiKelas);
+                            const muridDiKelas = Object.entries(semuaMurid).filter(([_, m]) => m.kelas === k).map(([nis]) => nis);
+                            muridList.push(...muridDiKelas);
                         }
-                        siswaList = [...new Set(siswaList)];
+                        muridList = [...new Set(muridList)];
                     } else {
-                        const selectSiswa = document.querySelector('#targetInput select');
-                        siswaList = Array.from(selectSiswa.selectedOptions).map(opt => opt.value);
-                        if (siswaList.length === 0) { alert('Pilih minimal satu siswa'); return; }
+                        const selectMurid = document.querySelector('#targetInput select');
+                        muridList = Array.from(selectMurid.selectedOptions).map(opt => opt.value);
+                        if (muridList.length === 0) { alert('Pilih minimal satu murid'); return; }
                     }
-                    if (siswaList.length === 0) { alert('Tidak ada siswa yang dipilih'); return; }
-                    await db.ref('penugasan').push({ mapelId, guruName, siswaList });
+                    if (muridList.length === 0) { alert('Tidak ada murid yang dipilih'); return; }
+                    await db.ref('penugasan').push({ mapelId, guruName, siswaList: muridList });
                     alert('Penugasan berhasil disimpan');
                     loadPenugasan();
                 };
