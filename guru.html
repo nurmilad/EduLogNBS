@@ -51,14 +51,32 @@
             cursor: pointer;
             background-color: #f8fafc;
             transition: 0.1s;
+            vertical-align: top;
         }
         .table-header-click:hover, .table-header-click-penilaian:hover {
             background-color: #e0e7ff;
         }
+        /* Perbaikan tabel penilaian agar rapi */
+        .penilaian-table th, .penilaian-table td {
+            border: 1px solid #e2e8f0;
+            padding: 0.5rem 0.25rem;
+            vertical-align: middle;
+        }
+        .penilaian-table th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            text-align: center;
+        }
+        .penilaian-table .nilai-input {
+            width: 65px;
+            padding: 0.25rem;
+            font-size: 0.8rem;
+        }
         @media (max-width: 640px) {
             .nilai-input { width: 55px; font-size: 0.75rem; }
             .status-select { font-size: 0.7rem; }
-            .card-assignment { padding: 0.75rem; }
+            .penilaian-table th, .penilaian-table td { padding: 0.4rem 0.2rem; }
+            .penilaian-table .nilai-input { width: 50px; }
         }
     </style>
 </head>
@@ -226,7 +244,7 @@
         } catch(e) { console.error(e); alert('Gagal muat data: '+e.message); }
     }
 
-    // Render daftar card (semua card terlihat)
+    // Render daftar card
     async function renderAllCards() {
         const container = document.getElementById('assignmentsContainer');
         if (!penugasanList.length) { 
@@ -249,7 +267,6 @@
             `;
         }
         container.innerHTML = html;
-        // Event klik card -> tampilkan detail
         document.querySelectorAll('.card-assignment').forEach(card => {
             card.addEventListener('click', () => {
                 const assignId = card.dataset.id;
@@ -259,12 +276,10 @@
         });
     }
 
-    // Menampilkan panel detail (sembunyikan daftar card)
     function showDetailAssignment(task) {
         document.getElementById('assignmentsContainer').classList.add('hidden');
         document.getElementById('detailContainer').classList.remove('hidden');
         document.getElementById('detailTitle').innerHTML = `<i class="fas fa-book-open mr-2"></i> ${escapeHtml(task.mapelNama)} · ${escapeHtml(task.kelasDisplay)}`;
-        // Load tab di dalam detailContent
         loadDetailTabs(task);
     }
 
@@ -309,7 +324,7 @@
         renderKehadiranTab(kehadiranPane, task);
     }
 
-    // ================= KEHADIRAN =================
+    // ================= KEHADIRAN (tidak diubah, tetap rapi) =================
     async function renderKehadiranTab(container, task) {
         container.innerHTML = `<div class="flex justify-between items-center mb-3 flex-wrap gap-2"><span class="text-sm font-semibold">Daftar Kehadiran</span><button class="btn-add-kehadiran bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Kehadiran</button></div><div id="kehadiranTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
         const addBtn = container.querySelector('.btn-add-kehadiran');
@@ -352,7 +367,6 @@
         }
         html += `</tbody></table></div>`;
         wrapper.innerHTML = html;
-        // edit header tanggal
         document.querySelectorAll('.table-header-click').forEach(el => {
             el.onclick = (e) => {
                 e.stopPropagation();
@@ -361,7 +375,6 @@
                 openEditTanggalModal(task.id, sessionId, oldDate, () => refreshKehadiranTable(container, task));
             };
         });
-        // event status
         document.querySelectorAll('.kehadiran-select').forEach(sel => {
             sel.onchange = async (e) => {
                 const sessionId = sel.dataset.session;
@@ -373,7 +386,7 @@
         });
     }
 
-    async function openAddKehadiranModal(task) {
+    async function openAddKehadiranModal(task) { /* sama seperti sebelumnya */ 
         const today = formatDateToDMY(new Date());
         document.getElementById('kehadiranDate').value = today;
         const modal = document.getElementById('modalTambahKehadiran');
@@ -392,7 +405,6 @@
             const newSessionId = Date.now().toString();
             await db.ref(`attendance/${task.id}/${newSessionId}`).set({ date: dateDMY, records: {} });
             modal.style.display = 'none';
-            // refresh current tab
             const container = document.querySelector('#detailContent .tab-pane-kehadiran');
             if (container) refreshKehadiranTable(container, task);
             cleanup();
@@ -403,7 +415,7 @@
         batal.addEventListener('click', closeModal);
     }
 
-    async function openEditTanggalModal(assignmentId, sessionId, oldDateDMY, callback) {
+    async function openEditTanggalModal(assignmentId, sessionId, oldDateDMY, callback) { /* sama */ 
         const modal = document.getElementById('modalEditTanggal');
         const dateInput = document.getElementById('editTanggalInput');
         dateInput.value = oldDateDMY;
@@ -426,7 +438,7 @@
         cancelBtn.addEventListener('click', onCancel);
     }
 
-    // ================= PENILAIAN =================
+    // ================= PENILAIAN (DIPERBAIKI RAPI) =================
     async function renderPenilaianTab(container, task) {
         container.innerHTML = `<div class="flex justify-between items-center mb-3 flex-wrap gap-2"><span class="text-sm font-semibold">Penilaian Siswa</span><button class="btn-add-penilaian bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Penilaian</button></div><div id="penilaianTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
         const addBtn = container.querySelector('.btn-add-penilaian');
@@ -447,38 +459,58 @@
         });
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
-        let html = `<div class="overflow-x-auto"><table class="min-w-full bg-white border text-sm"><thead><tr><th class="p-2 border">NIS</th><th class="p-2 border">Nama</th>`;
-        for (let i=0; i<assessList.length; i++) {
-            let as = assessList[i];
-            let label = `N${i+1}`;
-            html += `<th class="p-2 border table-header-click-penilaian" data-assess-id="${as.id}" data-date="${as.date}" data-topic="${escapeHtml(as.topic)}">${label}<br><span class="text-xs font-normal">${escapeHtml(as.date)}<br>${escapeHtml(as.topic?.substring(0,12)||'')}</span> <i class="fas fa-edit text-xs"></i></th>`;
+        // Membuat tabel dengan header dua baris agar rapi
+        let html = `<div class="overflow-x-auto"><table class="min-w-full bg-white border text-sm penilaian-table" style="border-collapse: collapse;">`;
+        // Header baris pertama (N1, N2, ...)
+        html += `<thead>`;
+        html += `<tr class="bg-gray-100">`;
+        html += `<th rowspan="2" class="border p-2 align-middle">NIS</th>`;
+        html += `<th rowspan="2" class="border p-2 align-middle">Nama</th>`;
+        for (let i = 0; i < assessList.length; i++) {
+            html += `<th class="border p-2 text-center" colspan="1">N${i+1} <i class="fas fa-edit text-xs text-gray-500 cursor-pointer edit-header-icon" data-assess-id="${assessList[i].id}" style="cursor:pointer;"></i></th>`;
         }
-        html += `<th class="p-2 border bg-gray-50">Rata-Rata</th></tr></thead><tbody>`;
+        html += `<th rowspan="2" class="border p-2 align-middle bg-gray-50">Rata-Rata</th>`;
+        html += `</tr>`;
+        // Baris kedua: tanggal & topik
+        html += `<tr class="bg-gray-50 text-xs">`;
+        for (let as of assessList) {
+            let shortTopic = as.topic ? (as.topic.length > 20 ? as.topic.substring(0,17)+'...' : as.topic) : '-';
+            html += `<td class="border p-1 text-center align-middle"><div>${escapeHtml(as.date)}</div><div class="text-gray-500">${escapeHtml(shortTopic)}</div></td>`;
+        }
+        html += `</tr>`;
+        html += `</thead><tbody>`;
+        
         for (let siswa of siswaArray) {
             let totalNilai = 0;
             let countValid = 0;
-            html += `<tr><td class="p-2 border">${escapeHtml(siswa.nis)}</td><td class="p-2 border">${escapeHtml(siswa.nama)}</table>`;
+            html += `<tr>`;
+            html += `<td class="border p-2">${escapeHtml(siswa.nis)}</td>`;
+            html += `<td class="border p-2">${escapeHtml(siswa.nama)}</td>`;
             for (let as of assessList) {
                 let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
-                if (nilai !== 0) { totalNilai += nilai; countValid++; }
-                html += `<td class="p-2 border"><input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100">`;
-                html += `</tr>`;
+                if (nilai > 0) { totalNilai += nilai; countValid++; }
+                html += `<td class="border p-1 text-center"><input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100" style="width:70px; text-align:center;"></td>`;
             }
             let rata = countValid ? (totalNilai / assessList.length).toFixed(1) : 0;
-            html += `<td class="p-2 border font-bold text-center">${rata}</td></tr>`;
+            html += `<td class="border p-2 text-center font-bold">${rata}</td>`;
+            html += `</tr>`;
         }
         html += `</tbody></table></div>`;
         wrapper.innerHTML = html;
-        // event edit header penilaian
-        document.querySelectorAll('.table-header-click-penilaian').forEach(el => {
-            el.onclick = (e) => {
-                const assessId = el.dataset.assessId;
-                const oldDate = el.dataset.date;
-                const oldTopic = el.dataset.topic;
-                openEditPenilaianHeader(task.id, assessId, oldDate, oldTopic, () => refreshPenilaianTable(container, task));
+        
+        // Event edit header (ikon pensil)
+        document.querySelectorAll('.edit-header-icon').forEach(icon => {
+            icon.onclick = (e) => {
+                e.stopPropagation();
+                const assessId = icon.dataset.assessId;
+                const assessment = assessList.find(a => a.id === assessId);
+                if (assessment) {
+                    openEditPenilaianHeader(task.id, assessId, assessment.date, assessment.topic, () => refreshPenilaianTable(container, task));
+                }
             };
         });
-        // simpan nilai dengan batasan 0-100
+        
+        // Event perubahan nilai
         document.querySelectorAll('.nilai-siswa').forEach(inp => {
             inp.onchange = async (e) => {
                 let newNilai = parseInt(inp.value,10);
@@ -534,7 +566,7 @@
         if(callback) callback();
     }
 
-    // ========== TAMBAH PENUGASAN ==========
+    // ========== TAMBAH PENUGASAN (sama seperti sebelumnya) ==========
     async function prepareModalPenugasan() {
         const mapelSelect = document.getElementById('modalMapel');
         mapelSelect.innerHTML = '<option value="">-- Pilih Mapel --</option>';
@@ -563,7 +595,6 @@
         mapelSelect.onchange = updateTarget;
         updateTarget();
     }
-
     document.getElementById('btnTambahPenugasan').onclick = async () => {
         await prepareModalPenugasan();
         document.getElementById('modalPenugasan').style.display = 'flex';
