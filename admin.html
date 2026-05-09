@@ -110,11 +110,12 @@
             btn.onclick = () => showTab(btn.dataset.tab);
         });
         
-        // ===================== DATA MURID dengan sinkronisasi kehadiran & nilai =====================
+        // ===================== DATA MURID dengan sinkronisasi kehadiran & nilai (diperbaiki) =====================
         let currentClassDetail = null;
         
-        // Fungsi untuk menghitung statistik semua siswa (kehadiran persen & rata2 nilai)
-        // Mengembalikan Map: { nis: { kehadiranPersen, nilaiRata } }
+        // Fungsi untuk menghitung statistik semua siswa:
+        // - Kehadiran: hanya sesi yang memiliki record (default tidak dianggap hadir)
+        // - Nilai: setiap assessment yang ada di penugasan, jika tidak ada record nilai maka dianggap 0
         async function hitungSemuaStatistikSiswa() {
             // Ambil semua data yang diperlukan hanya sekali
             const [penugasanSnap, attendanceSnap, penilaianSnap] = await Promise.all([
@@ -137,34 +138,43 @@
                 }
             }
             
+            // Untuk setiap penugasan, kumpulkan daftar assessment (id assessment)
+            const assessmentPerPenugasan = {}; // { idPenugasan: [idAssessment] }
+            for (let [idPen, assessments] of Object.entries(penilaianAll)) {
+                if (!assessmentPerPenugasan[idPen]) assessmentPerPenugasan[idPen] = [];
+                for (let idAss of Object.keys(assessments)) {
+                    assessmentPerPenugasan[idPen].push(idAss);
+                }
+            }
+            
             const hasil = {};
             for (let [nis, listPen] of Object.entries(penugasanPerSiswa)) {
+                // HITUNG KEHADIRAN
                 let totalSesi = 0;
                 let totalHadir = 0;
-                let totalNilai = 0;
-                let jumlahPenilaian = 0;
-                
                 for (let idPen of listPen) {
-                    // 1. Hitung kehadiran
                     const sessions = attendanceAll[idPen] || {};
                     for (let ses of Object.values(sessions)) {
                         totalSesi++;
                         if (ses.records && ses.records[nis] === 'H') totalHadir++;
                     }
-                    
-                    // 2. Hitung penilaian
-                    const assessments = penilaianAll[idPen] || {};
-                    for (let as of Object.values(assessments)) {
-                        const nilai = as.scores?.[nis];
-                        if (typeof nilai === 'number') {
-                            totalNilai += nilai;
-                            jumlahPenilaian++;
-                        }
+                }
+                const kehadiranPersen = totalSesi === 0 ? 0 : Math.round((totalHadir / totalSesi) * 100);
+                
+                // HITUNG RATA-RATA NILAI (setiap assessment di setiap penugasan, nilai 0 jika tidak ada)
+                let totalNilai = 0;
+                let jumlahAssessment = 0;
+                for (let idPen of listPen) {
+                    const listAss = assessmentPerPenugasan[idPen] || [];
+                    for (let idAss of listAss) {
+                        const nilai = penilaianAll[idPen]?.[idAss]?.scores?.[nis];
+                        const nilaiFinal = (typeof nilai === 'number') ? nilai : 0;
+                        totalNilai += nilaiFinal;
+                        jumlahAssessment++;
                     }
                 }
+                const nilaiRata = jumlahAssessment === 0 ? 0 : Math.round(totalNilai / jumlahAssessment);
                 
-                const kehadiranPersen = totalSesi === 0 ? 0 : Math.round((totalHadir / totalSesi) * 100);
-                const nilaiRata = jumlahPenilaian === 0 ? 0 : Math.round(totalNilai / jumlahPenilaian);
                 hasil[nis] = { kehadiranPersen, nilaiRata };
             }
             return hasil;
@@ -283,7 +293,6 @@
                 detailDiv.classList.remove('hidden');
                 detailDiv.innerHTML = '<div class="text-center py-8"><div class="loading-spinner mx-auto mb-2"></div><p>Menghitung statistik kehadiran & nilai, harap tunggu...</p></div>';
             }
-            // Hitung semua statistik siswa secara paralel (bisa agak berat tapi sekali)
             const statsMap = await hitungSemuaStatistikSiswa();
             await renderClassDetail(kelas, statsMap);
         }
@@ -329,7 +338,7 @@
                                     <td class="p-2 font-bold">${m.nilaiGlobal}</td>
                                     <td class="p-2"><button class="editMuridDetailBtn text-blue-500" data-nis="${m.nis}"><i class="fas fa-edit"></i></button>
                                     <button class="hapusMuridDetailBtn text-red-500 ml-2" data-nis="${m.nis}"><i class="fas fa-trash"></i></button></td>
-                                    <tr>`).join('')}</tbody>
+                                    </tr>`).join('')}</tbody>
                             </table>
                         </div>
                     </div>
