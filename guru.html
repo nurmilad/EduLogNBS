@@ -21,6 +21,13 @@
         .assignment-card {
             transition: all 0.2s ease;
             border-left: 5px solid #4f46e5;
+            margin-bottom: 1rem;
+        }
+        .assignment-card.collapsed .expandable-content {
+            display: none;
+        }
+        .assignment-card .expandable-content {
+            display: block;
         }
         .tab-active {
             background-color: #4f46e5;
@@ -49,12 +56,12 @@
             width: 70px;
             text-align: center;
         }
-        .table-header-click {
+        .table-header-click, .table-header-click-penilaian {
             cursor: pointer;
             background-color: #f8fafc;
             transition: 0.1s;
         }
-        .table-header-click:hover {
+        .table-header-click:hover, .table-header-click-penilaian:hover {
             background-color: #e0e7ff;
         }
         @media (max-width: 640px) {
@@ -78,9 +85,9 @@
         </div>
     </div>
 
-    <!-- Daftar Card Penugasan -->
-    <div id="assignmentsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div class="col-span-full text-center py-10 text-slate-400"><i class="fas fa-spinner fa-pulse"></i> Memuat penugasan...</div>
+    <!-- Daftar Card Penugasan (Accordion) -->
+    <div id="assignmentsContainer" class="space-y-4">
+        <div class="text-center py-10 text-slate-400"><i class="fas fa-spinner fa-pulse"></i> Memuat penugasan...</div>
     </div>
 </div>
 
@@ -111,7 +118,7 @@
 <div id="modalEditTanggal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg" style="display:none;">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
         <h4 class="text-lg font-bold mb-3">Edit Tanggal Sesi</h4>
-        <input type="date" id="editTanggalInput" class="w-full border rounded-xl p-2 mb-4">
+        <input type="text" id="editTanggalInput" class="w-full border rounded-xl p-2 mb-4" placeholder="dd/mm/yyyy">
         <div class="flex justify-end gap-3">
             <button id="cancelEditTanggal" class="px-4 py-2 border rounded-xl">Batal</button>
             <button id="saveEditTanggal" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Simpan</button>
@@ -123,8 +130,8 @@
 <div id="modalTambahKehadiran" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg" style="display:none;">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
         <h4 class="text-lg font-bold mb-3"><i class="fas fa-calendar-plus"></i> Tambah Sesi Kehadiran</h4>
-        <label class="block font-medium mb-1">Tanggal</label>
-        <input type="date" id="kehadiranDate" class="w-full border rounded-xl p-2 mb-4">
+        <label class="block font-medium mb-1">Tanggal (dd/mm/yyyy)</label>
+        <input type="text" id="kehadiranDate" class="w-full border rounded-xl p-2 mb-4" placeholder="dd/mm/yyyy">
         <div class="flex justify-end gap-3">
             <button id="batalKehadiran" class="px-4 py-2 border rounded-xl">Batal</button>
             <button id="simpanKehadiran" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Simpan</button>
@@ -136,8 +143,8 @@
 <div id="modalTambahPenilaian" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg" style="display:none;">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
         <h4 class="text-lg font-bold mb-3"><i class="fas fa-clipboard-list"></i> Tambah Penilaian</h4>
-        <label class="block font-medium mb-1">Tanggal Penilaian</label>
-        <input type="date" id="penilaianDate" class="w-full border rounded-xl p-2 mb-3">
+        <label class="block font-medium mb-1">Tanggal (dd/mm/yyyy)</label>
+        <input type="text" id="penilaianDate" class="w-full border rounded-xl p-2 mb-3" placeholder="dd/mm/yyyy">
         <label class="block font-medium mb-1">Topik / Materi</label>
         <input type="text" id="penilaianTopik" class="w-full border rounded-xl p-2 mb-4" placeholder="e.g. UTS Bab 1">
         <div class="flex justify-end gap-3">
@@ -148,7 +155,7 @@
 </div>
 
 <script>
-    // FIREBASE KONFIGURASI (SAMA)
+    // FIREBASE KONFIGURASI
     const firebaseConfig = {
         apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
         authDomain: "edulognbs.firebaseapp.com",
@@ -161,18 +168,32 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let currentTeacher = null;          // nama guru login
-    let allMapel = {};                  // id -> {nama, jenis}
-    let allKelas = [];                  // array string
-    let allSiswa = {};                  // nis -> {nama, kelas, password}
-    let penugasanList = [];             // array object {id, mapelId, guruName, siswaList, mapelNama, mapelJenis, kelasDisplay}
+    let currentTeacher = null;
+    let allMapel = {};
+    let allKelas = [];
+    let allSiswa = {};
+    let penugasanList = [];
 
-    // helpers
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
-    function formatDateToDMY(dateObj) { let d = dateObj.getDate(), m = dateObj.getMonth()+1, y = dateObj.getFullYear(); return `${d.toString().padStart(2,'0')}/${m.toString().padStart(2,'0')}/${y}`; }
-    function dateToYMD(date) { if(!date) return ''; return date.split('/').reverse().join('-'); } // dd/mm/yyyy -> yyyy-mm-dd
+    
+    // Format tanggal ke dd/mm/yyyy
+    function formatDateToDMY(dateObj) {
+        let d = dateObj.getDate().toString().padStart(2,'0');
+        let m = (dateObj.getMonth()+1).toString().padStart(2,'0');
+        let y = dateObj.getFullYear();
+        return `${d}/${m}/${y}`;
+    }
+    // Validasi & parse dd/mm/yyyy ke Date object
+    function parseDMY(dateStr) {
+        let parts = dateStr.split('/');
+        if (parts.length === 3) {
+            let d = parseInt(parts[0],10), m = parseInt(parts[1],10)-1, y = parseInt(parts[2],10);
+            let date = new Date(y,m,d);
+            if (!isNaN(date.getTime())) return date;
+        }
+        return null;
+    }
 
-    // ambil data firebase awal
     async function fetchInitialData() {
         try {
             const [mapelSnap, kelasSnap, siswaSnap, penugasanSnap] = await Promise.all([
@@ -182,12 +203,10 @@
             allKelas = Object.keys(kelasSnap.val() || {});
             allSiswa = siswaSnap.val() || {};
             const allPenugasan = penugasanSnap.val() || {};
-            // filter penugasan berdasarkan guru login
             penugasanList = [];
             for (let [id, pg] of Object.entries(allPenugasan)) {
                 if (pg.guruName === currentTeacher) {
                     const mapelData = allMapel[pg.mapelId] || { nama: 'Mapel Dihapus', jenis: 'inkul' };
-                    // generate kelas display dari siswaList
                     const kelasSet = new Set();
                     for (let nis of (pg.siswaList || [])) {
                         if (allSiswa[nis]) kelasSet.add(allSiswa[nis].kelas);
@@ -206,46 +225,59 @@
         } catch(e) { console.error(e); alert('Gagal muat data: '+e.message); }
     }
 
-    // render semua card penugasan
+    // Render daftar card (semua dalam keadaan collapsed kecuali yang sedang aktif)
+    let activeAssignmentId = null;
     async function renderAllCards() {
         const container = document.getElementById('assignmentsContainer');
-        if (!penugasanList.length) { container.innerHTML = `<div class="col-span-full text-center py-12 bg-white rounded-2xl shadow"><i class="fas fa-folder-open text-4xl text-gray-300 mb-2"></i><p class="text-gray-500">Belum ada penugasan. Klik "+ Penugasan" untuk memulai.</p></div>`; return; }
-        container.innerHTML = '';
+        if (!penugasanList.length) { 
+            container.innerHTML = `<div class="bg-white rounded-2xl shadow p-8 text-center"><i class="fas fa-folder-open text-4xl text-gray-300 mb-2"></i><p class="text-gray-500">Belum ada penugasan. Klik "+ Penugasan" untuk memulai.</p></div>`; 
+            return; 
+        }
+        let html = '';
         for (let task of penugasanList) {
-            const card = document.createElement('div');
-            card.className = 'assignment-card bg-white rounded-2xl shadow-md overflow-hidden transition-all hover:shadow-lg';
-            card.innerHTML = `
-                <div class="p-5 cursor-pointer flex justify-between items-center" data-id="${task.id}">
-                    <div>
-                        <h3 class="font-bold text-lg text-indigo-800">${escapeHtml(task.mapelNama)}</h3>
-                        <p class="text-sm text-gray-500"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay) || 'Umum'}</p>
-                        <p class="text-xs text-gray-400 mt-1"><i class="fas fa-tag"></i> ${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p>
+            const isActive = (activeAssignmentId === task.id);
+            html += `
+                <div class="assignment-card bg-white rounded-2xl shadow-md overflow-hidden transition-all ${!isActive ? 'collapsed' : ''}" data-id="${task.id}">
+                    <div class="p-5 cursor-pointer flex justify-between items-center card-header">
+                        <div>
+                            <h3 class="font-bold text-lg text-indigo-800">${escapeHtml(task.mapelNama)}</h3>
+                            <p class="text-sm text-gray-500"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                            <p class="text-xs text-gray-400 mt-1"><i class="fas fa-tag"></i> ${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p>
+                        </div>
+                        <i class="fas fa-chevron-down text-gray-400 transition-transform duration-200 ${isActive ? 'rotate-180' : ''} expand-icon"></i>
                     </div>
-                    <i class="fas fa-chevron-down text-gray-400 transition-transform duration-200 expand-icon"></i>
+                    <div class="expandable-content border-t bg-gray-50 p-4 ${!isActive ? 'hidden' : ''}"></div>
                 </div>
-                <div class="expandable-content hidden border-t bg-gray-50 p-4"></div>
             `;
-            container.appendChild(card);
-            const header = card.querySelector('.cursor-pointer');
-            const contentDiv = card.querySelector('.expandable-content');
+        }
+        container.innerHTML = html;
+        // attach event listener untuk header setiap card
+        document.querySelectorAll('.assignment-card').forEach(card => {
+            const header = card.querySelector('.card-header');
+            const content = card.querySelector('.expandable-content');
             const icon = card.querySelector('.expand-icon');
-            header.addEventListener('click', (e) => {
+            const assignId = card.dataset.id;
+            header.addEventListener('click', async (e) => {
                 e.stopPropagation();
-                const isHidden = contentDiv.classList.contains('hidden');
-                if (isHidden) {
-                    contentDiv.classList.remove('hidden');
-                    icon.style.transform = 'rotate(180deg)';
-                    // load tab content
-                    loadTabContent(contentDiv, task);
+                // jika card yang sama dan sedang terbuka -> tutup
+                if (activeAssignmentId === assignId && !content.classList.contains('hidden')) {
+                    activeAssignmentId = null;
+                    await renderAllCards();
                 } else {
-                    contentDiv.classList.add('hidden');
-                    icon.style.transform = 'rotate(0deg)';
+                    activeAssignmentId = assignId;
+                    await renderAllCards();
+                    // setelah render, load konten untuk card yang aktif
+                    const newCard = document.querySelector(`.assignment-card[data-id="${assignId}"]`);
+                    if (newCard) {
+                        const newContent = newCard.querySelector('.expandable-content');
+                        const task = penugasanList.find(t => t.id === assignId);
+                        if (task) loadTabContent(newContent, task);
+                    }
                 }
             });
-        }
+        });
     }
 
-    // load tab kehadiran & penilaian dalam card
     async function loadTabContent(container, task) {
         container.innerHTML = `
             <div class="flex gap-2 border-b mb-3">
@@ -279,9 +311,9 @@
         renderKehadiranTab(kehadiranPane, task);
     }
 
-    // -------- KEHADIRAN ----------
+    // ================= KEHADIRAN =================
     async function renderKehadiranTab(container, task) {
-        container.innerHTML = `<div class="flex justify-between items-center mb-3"><div><span class="text-sm font-semibold">Daftar Kehadiran</span></div><button class="btn-add-kehadiran bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Kehadiran</button></div><div id="kehadiranTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
+        container.innerHTML = `<div class="flex justify-between items-center mb-3 flex-wrap gap-2"><div><span class="text-sm font-semibold">Daftar Kehadiran</span></div><button class="btn-add-kehadiran bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Kehadiran</button></div><div id="kehadiranTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
         const addBtn = container.querySelector('.btn-add-kehadiran');
         addBtn.onclick = () => openAddKehadiranModal(task);
         await refreshKehadiranTable(container, task);
@@ -290,11 +322,14 @@
     async function refreshKehadiranTable(container, task) {
         const wrapper = container.querySelector('#kehadiranTableWrapper');
         if (!wrapper) return;
-        // ambil semua sesi kehadiran untuk penugasan ini
         const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
         const sessions = sessionsSnap.val() || {};
         let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, records: val.records || {} }));
-        sessionsList.sort((a,b) => a.date.localeCompare(b.date));
+        sessionsList.sort((a,b) => {
+            let da = parseDMY(a.date), db = parseDMY(b.date);
+            if (!da) return -1; if (!db) return 1;
+            return da - db;
+        });
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
         let html = `<div class="overflow-x-auto"><table class="min-w-full bg-white border text-sm rounded-lg"><thead><tr><th class="p-2 border">NIS</th><th class="p-2 border">Nama</th>`;
@@ -319,7 +354,7 @@
         }
         html += `</tbody></table></div>`;
         wrapper.innerHTML = html;
-        // event listener edit header tanggal
+        // edit header tanggal
         document.querySelectorAll('.table-header-click').forEach(el => {
             el.onclick = (e) => {
                 e.stopPropagation();
@@ -328,7 +363,7 @@
                 openEditTanggalModal(task.id, sessionId, oldDate, () => refreshKehadiranTable(container, task));
             };
         });
-        // event listener ubah status kehadiran
+        // event status
         document.querySelectorAll('.kehadiran-select').forEach(sel => {
             sel.onchange = async (e) => {
                 const sessionId = sel.dataset.session;
@@ -341,17 +376,17 @@
     }
 
     async function openAddKehadiranModal(task) {
-        const today = new Date().toISOString().slice(0,10);
+        const today = formatDateToDMY(new Date());
         document.getElementById('kehadiranDate').value = today;
         const modal = document.getElementById('modalTambahKehadiran');
         modal.style.display = 'flex';
         const simpan = document.getElementById('simpanKehadiran');
         const batal = document.getElementById('batalKehadiran');
         const newSimpan = async () => {
-            const selectedDate = document.getElementById('kehadiranDate').value;
-            if (!selectedDate) { alert("Pilih tanggal"); return; }
-            const dateDMY = formatDateToDMY(new Date(selectedDate));
-            // cek apakah sudah ada sesi dengan tanggal sama
+            let dateStr = document.getElementById('kehadiranDate').value.trim();
+            let parsed = parseDMY(dateStr);
+            if (!parsed) { alert("Format tanggal harus dd/mm/yyyy"); return; }
+            const dateDMY = formatDateToDMY(parsed);
             const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
             const existing = sessionsSnap.val() || {};
             let exists = Object.values(existing).some(s => s.date === dateDMY);
@@ -359,13 +394,12 @@
             const newSessionId = Date.now().toString();
             await db.ref(`attendance/${task.id}/${newSessionId}`).set({ date: dateDMY, records: {} });
             modal.style.display = 'none';
-            // refresh view
-            const container = document.querySelector(`.expandable-content:not(.hidden) .tab-pane-kehadiran`);
+            const container = document.querySelector(`.assignment-card[data-id="${task.id}"] .expandable-content .tab-pane-kehadiran`);
             if (container) refreshKehadiranTable(container, task);
             cleanup();
         };
-        const cleanup = () => { simpan.removeEventListener('click', newSimpan); batal.removeEventListener('click', closeModal); };
         const closeModal = () => { modal.style.display = 'none'; cleanup(); };
+        const cleanup = () => { simpan.removeEventListener('click', newSimpan); batal.removeEventListener('click', closeModal); };
         simpan.addEventListener('click', newSimpan);
         batal.addEventListener('click', closeModal);
     }
@@ -373,16 +407,15 @@
     async function openEditTanggalModal(assignmentId, sessionId, oldDateDMY, callback) {
         const modal = document.getElementById('modalEditTanggal');
         const dateInput = document.getElementById('editTanggalInput');
-        let ymd = '';
-        if (oldDateDMY) { let [d,m,y] = oldDateDMY.split('/'); ymd = `${y}-${m}-${d}`; }
-        dateInput.value = ymd;
+        dateInput.value = oldDateDMY;
         modal.style.display = 'flex';
         const saveBtn = document.getElementById('saveEditTanggal');
         const cancelBtn = document.getElementById('cancelEditTanggal');
         const onSave = async () => {
-            const newYmd = dateInput.value;
-            if (!newYmd) return;
-            const newDateDMY = formatDateToDMY(new Date(newYmd));
+            let newDateStr = dateInput.value.trim();
+            let parsed = parseDMY(newDateStr);
+            if (!parsed) { alert("Format harus dd/mm/yyyy"); return; }
+            const newDateDMY = formatDateToDMY(parsed);
             await db.ref(`attendance/${assignmentId}/${sessionId}/date`).set(newDateDMY);
             modal.style.display = 'none';
             if (callback) callback();
@@ -394,9 +427,9 @@
         cancelBtn.addEventListener('click', onCancel);
     }
 
-    // ------------ PENILAIAN ---------------
+    // ================= PENILAIAN =================
     async function renderPenilaianTab(container, task) {
-        container.innerHTML = `<div class="flex justify-between items-center mb-3"><span class="text-sm font-semibold">Penilaian Siswa</span><button class="btn-add-penilaian bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Penilaian</button></div><div id="penilaianTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
+        container.innerHTML = `<div class="flex justify-between items-center mb-3 flex-wrap gap-2"><span class="text-sm font-semibold">Penilaian Siswa</span><button class="btn-add-penilaian bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Penilaian</button></div><div id="penilaianTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
         const addBtn = container.querySelector('.btn-add-penilaian');
         addBtn.onclick = () => openAddPenilaianModal(task);
         await refreshPenilaianTable(container, task);
@@ -408,7 +441,11 @@
         const assessmentsSnap = await db.ref(`penilaian/${task.id}`).once('value');
         const assessments = assessmentsSnap.val() || {};
         let assessList = Object.entries(assessments).map(([id, val]) => ({ id, date: val.date, topic: val.topic, scores: val.scores || {} }));
-        assessList.sort((a,b) => a.date.localeCompare(b.date));
+        assessList.sort((a,b) => {
+            let da = parseDMY(a.date), db = parseDMY(b.date);
+            if (!da) return -1; if (!db) return 1;
+            return da - db;
+        });
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
         let html = `<div class="overflow-x-auto"><table class="min-w-full bg-white border text-sm"><thead><tr><th class="p-2 border">NIS</th><th class="p-2 border">Nama</th>`;
@@ -425,14 +462,15 @@
             for (let as of assessList) {
                 let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
                 if (nilai !== 0) { totalNilai += nilai; countValid++; }
-                html += `<td class="p-2 border"><input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100"></td>`;
+                html += `<td class="p-2 border"><input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100">`;
+                html += `</td>`;
             }
             let rata = countValid ? (totalNilai / assessList.length).toFixed(1) : 0;
             html += `<td class="p-2 border font-bold text-center">${rata}</td></tr>`;
         }
         html += `</tbody></table></div>`;
         wrapper.innerHTML = html;
-        // event edit header penilaian
+        // edit header penilaian
         document.querySelectorAll('.table-header-click-penilaian').forEach(el => {
             el.onclick = (e) => {
                 const assessId = el.dataset.assessId;
@@ -441,12 +479,16 @@
                 openEditPenilaianHeader(task.id, assessId, oldDate, oldTopic, () => refreshPenilaianTable(container, task));
             };
         });
-        // event simpan nilai
+        // simpan nilai
         document.querySelectorAll('.nilai-siswa').forEach(inp => {
             inp.onchange = async (e) => {
+                let newNilai = parseInt(inp.value,10);
+                if (isNaN(newNilai)) newNilai = 0;
+                if (newNilai < 0) newNilai = 0;
+                if (newNilai > 100) newNilai = 100;
+                inp.value = newNilai;
                 const assessId = inp.dataset.assess;
                 const nis = inp.dataset.nis;
-                const newNilai = parseFloat(inp.value) || 0;
                 await db.ref(`penilaian/${task.id}/${assessId}/scores/${nis}`).set(newNilai);
                 refreshPenilaianTable(container, task);
             };
@@ -454,7 +496,7 @@
     }
 
     async function openAddPenilaianModal(task) {
-        const today = new Date().toISOString().slice(0,10);
+        const today = formatDateToDMY(new Date());
         document.getElementById('penilaianDate').value = today;
         document.getElementById('penilaianTopik').value = '';
         const modal = document.getElementById('modalTambahPenilaian');
@@ -462,14 +504,15 @@
         const simpan = document.getElementById('simpanPenilaian');
         const batal = document.getElementById('batalPenilaian');
         const onSimpan = async () => {
-            const dateRaw = document.getElementById('penilaianDate').value;
+            let dateStr = document.getElementById('penilaianDate').value.trim();
+            let parsed = parseDMY(dateStr);
+            if (!parsed) { alert("Format tanggal harus dd/mm/yyyy"); return; }
+            const dateDMY = formatDateToDMY(parsed);
             const topic = document.getElementById('penilaianTopik').value.trim() || "Penilaian";
-            if (!dateRaw) { alert("Pilih tanggal"); return; }
-            const dateDMY = formatDateToDMY(new Date(dateRaw));
             const newId = Date.now().toString();
             await db.ref(`penilaian/${task.id}/${newId}`).set({ date: dateDMY, topic: topic, scores: {} });
             modal.style.display = 'none';
-            const container = document.querySelector(`.expandable-content:not(.hidden) .tab-pane-penilaian`);
+            const container = document.querySelector(`.assignment-card[data-id="${task.id}"] .expandable-content .tab-pane-penilaian`);
             if (container) refreshPenilaianTable(container, task);
             cleanup();
         };
@@ -480,16 +523,19 @@
     }
 
     async function openEditPenilaianHeader(assignmentId, assessId, oldDate, oldTopic, callback) {
-        const newDate = prompt("Edit Tanggal (dd/mm/yyyy):", oldDate);
+        let newDate = prompt("Edit Tanggal (dd/mm/yyyy):", oldDate);
         if (!newDate) return;
+        let parsed = parseDMY(newDate);
+        if (!parsed) { alert("Format harus dd/mm/yyyy"); return; }
+        const newDateDMY = formatDateToDMY(parsed);
         const newTopic = prompt("Edit Topik/Materi:", oldTopic);
         if (newTopic === null) return;
-        await db.ref(`penilaian/${assignmentId}/${assessId}/date`).set(newDate);
+        await db.ref(`penilaian/${assignmentId}/${assessId}/date`).set(newDateDMY);
         await db.ref(`penilaian/${assignmentId}/${assessId}/topic`).set(newTopic);
         if(callback) callback();
     }
 
-    // ---------- TAMBAH PENUGASAN (MODAL DINAMIS) ----------
+    // ========== TAMBAH PENUGASAN ==========
     async function prepareModalPenugasan() {
         const mapelSelect = document.getElementById('modalMapel');
         mapelSelect.innerHTML = '<option value="">-- Pilih Mapel --</option>';
@@ -553,7 +599,6 @@
         await renderAllCards();
     };
 
-    // INISIALISASI
     window.onload = async () => {
         const guruLogin = localStorage.getItem('guruLogin');
         if (!guruLogin) { window.location.href = 'index.html'; return; }
