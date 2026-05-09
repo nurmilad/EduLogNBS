@@ -90,10 +90,8 @@
                     <label id="usernameLabel" class="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
                         <i class="fas fa-user-circle text-indigo-500"></i> Username (Admin)
                     </label>
-                    <div class="relative">
-                        <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                        <input type="text" id="username" placeholder="admin" 
-                               class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white">
+                    <div id="usernameInputContainer" class="relative">
+                        <!-- Input akan diganti dinamis oleh JS -->
                     </div>
                 </div>
                 <div>
@@ -121,7 +119,7 @@
     </div>
 
     <script>
-        // ========== KONFIGURASI FIREBASE (SAMA PERSIS DENGAN ASLI) ==========
+        // ========== KONFIGURASI FIREBASE ==========
         const firebaseConfig = {
             apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
             authDomain: "edulognbs.firebaseapp.com",
@@ -132,125 +130,179 @@
             appId: "1:759345868898:web:40487df20ab4f43045213b",
             measurementId: "G-SV83KDGZTS"
         };
-        // Pastikan inisialisasi hanya sekali
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.database();
-        // ====================================================================
 
-        // Variabel role
         let selectedRole = 'admin';
-        
-        // Ambil elemen setelah DOM siap
-        document.addEventListener('DOMContentLoaded', function() {
-            const btnAdmin = document.getElementById('btnAdmin');
-            const btnGuru = document.getElementById('btnGuru');
-            const btnSiswa = document.getElementById('btnSiswa');
-            const usernameLabel = document.getElementById('usernameLabel');
-            const usernameInput = document.getElementById('username');
-            const passwordInput = document.getElementById('password');
-            const loginBtn = document.getElementById('loginBtn');
-            const errorMsg = document.getElementById('errorMsg');
+        let guruOptionsLoaded = false;
+        let guruNames = []; // daftar nama guru
 
-            // Fungsi update UI role
-            function setActiveRole(role) {
-                selectedRole = role;
-                // Reset class active
-                [btnAdmin, btnGuru, btnSiswa].forEach(btn => btn.classList.remove('active'));
-                if (role === 'admin') {
-                    btnAdmin.classList.add('active');
-                    usernameLabel.innerHTML = '<i class="fas fa-user-cog text-indigo-500"></i> Username (Admin)';
-                    usernameInput.placeholder = 'admin';
-                    usernameInput.value = '';
-                } else if (role === 'guru') {
-                    btnGuru.classList.add('active');
-                    usernameLabel.innerHTML = '<i class="fas fa-chalkboard-user text-indigo-500"></i> Nama Guru';
-                    usernameInput.placeholder = 'Nama Guru (contoh: Bu Susi)';
-                    usernameInput.value = '';
+        // Ambil elemen
+        const btnAdmin = document.getElementById('btnAdmin');
+        const btnGuru = document.getElementById('btnGuru');
+        const btnSiswa = document.getElementById('btnSiswa');
+        const usernameLabel = document.getElementById('usernameLabel');
+        const usernameInputContainer = document.getElementById('usernameInputContainer');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMsg = document.getElementById('errorMsg');
+
+        // Fungsi untuk mengambil daftar guru dari Firebase
+        async function loadGuruList() {
+            try {
+                const snapshot = await db.ref('guru').once('value');
+                const guruData = snapshot.val() || {};
+                guruNames = Object.keys(guruData);
+                return guruNames;
+            } catch (err) {
+                console.error("Gagal load guru:", err);
+                return [];
+            }
+        }
+
+        // Fungsi untuk membuat input/dropdown sesuai role
+        async function setActiveRole(role) {
+            selectedRole = role;
+            // Reset class active
+            [btnAdmin, btnGuru, btnSiswa].forEach(btn => btn.classList.remove('active'));
+            if (role === 'admin') {
+                btnAdmin.classList.add('active');
+                usernameLabel.innerHTML = '<i class="fas fa-user-cog text-indigo-500"></i> Username (Admin)';
+                usernameInputContainer.innerHTML = `
+                    <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="username" placeholder="admin" 
+                           class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white">
+                `;
+            } else if (role === 'guru') {
+                btnGuru.classList.add('active');
+                usernameLabel.innerHTML = '<i class="fas fa-chalkboard-user text-indigo-500"></i> Pilih Nama Guru';
+                // Tampilkan dropdown, isi dengan data dari Firebase
+                usernameInputContainer.innerHTML = `
+                    <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <select id="username" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white appearance-none">
+                        <option value="">-- Pilih Guru --</option>
+                    </select>
+                    <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+                `;
+                // Isi dropdown jika belum pernah
+                if (guruNames.length === 0) {
+                    // Tampilkan loading sementara
+                    const select = document.getElementById('username');
+                    if (select) select.innerHTML = '<option value="">Memuat data guru...</option>';
+                    const namaGuru = await loadGuruList();
+                    const selectEl = document.getElementById('username');
+                    if (selectEl) {
+                        selectEl.innerHTML = '<option value="">-- Pilih Guru --</option>';
+                        namaGuru.forEach(nama => {
+                            const option = document.createElement('option');
+                            option.value = nama;
+                            option.textContent = nama;
+                            selectEl.appendChild(option);
+                        });
+                    }
                 } else {
-                    btnSiswa.classList.add('active');
-                    usernameLabel.innerHTML = '<i class="fas fa-id-card text-indigo-500"></i> NIS (Nomor Induk Siswa)';
-                    usernameInput.placeholder = 'Masukkan NIS';
-                    usernameInput.value = '';
+                    const select = document.getElementById('username');
+                    if (select) {
+                        select.innerHTML = '<option value="">-- Pilih Guru --</option>';
+                        guruNames.forEach(nama => {
+                            const option = document.createElement('option');
+                            option.value = nama;
+                            option.textContent = nama;
+                            select.appendChild(option);
+                        });
+                    }
                 }
-                errorMsg.classList.add('hidden');
-                passwordInput.value = '';
+            } else { // siswa
+                btnSiswa.classList.add('active');
+                usernameLabel.innerHTML = '<i class="fas fa-id-card text-indigo-500"></i> NIS (Nomor Induk Siswa)';
+                usernameInputContainer.innerHTML = `
+                    <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="username" placeholder="Masukkan NIS" 
+                           class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white">
+                `;
             }
+            errorMsg.classList.add('hidden');
+            passwordInput.value = '';
+        }
 
-            // Event listener role
-            btnAdmin.onclick = () => setActiveRole('admin');
-            btnGuru.onclick = () => setActiveRole('guru');
-            btnSiswa.onclick = () => setActiveRole('siswa');
-
-            // Fungsi login (logika asli, tidak diubah)
-            async function handleLogin() {
-                const username = usernameInput.value.trim();
-                const password = passwordInput.value.trim();
-                errorMsg.classList.add('hidden');
-                
-                if (!username || !password) {
-                    errorMsg.innerText = '❌ Semua field harus diisi!';
+        // Fungsi login
+        async function handleLogin() {
+            let usernameValue;
+            // Ambil nilai username (bisa dari input atau select)
+            const usernameField = document.getElementById('username');
+            if (!usernameField) return;
+            if (selectedRole === 'guru') {
+                usernameValue = usernameField.value;
+            } else {
+                usernameValue = usernameField.value.trim();
+            }
+            const password = passwordInput.value.trim();
+            errorMsg.classList.add('hidden');
+            
+            if (!usernameValue || !password) {
+                errorMsg.innerText = '❌ Semua field harus diisi!';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+            
+            if (selectedRole === 'admin') {
+                if (usernameValue === 'admin' && password === 'admin123') {
+                    window.location.href = 'admin.html';
+                } else {
+                    errorMsg.innerText = '❌ Username atau password admin salah!';
                     errorMsg.classList.remove('hidden');
-                    return;
                 }
-                
-                if (selectedRole === 'admin') {
-                    // Admin static
-                    if (username === 'admin' && password === 'admin123') {
-                        window.location.href = 'admin.html';
+            } 
+            else if (selectedRole === 'guru') {
+                try {
+                    const snapshot = await db.ref(`guru/${usernameValue}`).once('value');
+                    const guru = snapshot.val();
+                    if (guru && guru.password === password) {
+                        localStorage.setItem('guruLogin', usernameValue);
+                        window.location.href = 'guru.html';
                     } else {
-                        errorMsg.innerText = '❌ Username atau password admin salah!';
+                        errorMsg.innerText = '❌ Nama Guru atau password tidak cocok!';
                         errorMsg.classList.remove('hidden');
                     }
-                } 
-                else if (selectedRole === 'guru') {
-                    try {
-                        const snapshot = await db.ref(`guru/${username}`).once('value');
-                        const guru = snapshot.val();
-                        if (guru && guru.password === password) {
-                            localStorage.setItem('guruLogin', username);
-                            window.location.href = 'guru.html';
-                        } else {
-                            errorMsg.innerText = '❌ Nama Guru atau password tidak cocok!';
-                            errorMsg.classList.remove('hidden');
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        errorMsg.innerText = '⚠️ Gagal koneksi database. Coba lagi.';
-                        errorMsg.classList.remove('hidden');
-                    }
-                }
-                else if (selectedRole === 'siswa') {
-                    try {
-                        const snapshot = await db.ref(`siswa/${username}`).once('value');
-                        const siswa = snapshot.val();
-                        if (siswa && siswa.password === password) {
-                            localStorage.setItem('siswaLogin', username);
-                            window.location.href = 'murid.html';
-                        } else {
-                            errorMsg.innerText = '❌ NIS atau password salah!';
-                            errorMsg.classList.remove('hidden');
-                        }
-                    } catch (err) {
-                        console.error(err);
-                        errorMsg.innerText = '⚠️ Gagal memverifikasi data siswa.';
-                        errorMsg.classList.remove('hidden');
-                    }
+                } catch (err) {
+                    console.error(err);
+                    errorMsg.innerText = '⚠️ Gagal koneksi database. Coba lagi.';
+                    errorMsg.classList.remove('hidden');
                 }
             }
+            else if (selectedRole === 'siswa') {
+                try {
+                    const snapshot = await db.ref(`siswa/${usernameValue}`).once('value');
+                    const siswa = snapshot.val();
+                    if (siswa && siswa.password === password) {
+                        localStorage.setItem('siswaLogin', usernameValue);
+                        window.location.href = 'murid.html';
+                    } else {
+                        errorMsg.innerText = '❌ NIS atau password salah!';
+                        errorMsg.classList.remove('hidden');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    errorMsg.innerText = '⚠️ Gagal memverifikasi data siswa.';
+                    errorMsg.classList.remove('hidden');
+                }
+            }
+        }
 
-            loginBtn.onclick = handleLogin;
-            
-            // Enter key event
-            const enterHandler = (e) => { if (e.key === 'Enter') handleLogin(); };
-            usernameInput.addEventListener('keypress', enterHandler);
-            passwordInput.addEventListener('keypress', enterHandler);
-            
-            // Set default role admin
-            setActiveRole('admin');
-            usernameInput.focus();
-        });
+        // Event listeners
+        btnAdmin.onclick = () => setActiveRole('admin');
+        btnGuru.onclick = () => setActiveRole('guru');
+        btnSiswa.onclick = () => setActiveRole('siswa');
+        loginBtn.onclick = handleLogin;
+
+        // Enter key pada password
+        const enterHandler = (e) => { if (e.key === 'Enter') handleLogin(); };
+        passwordInput.addEventListener('keypress', enterHandler);
+        
+        // Set default role admin
+        setActiveRole('admin');
     </script>
 </body>
 </html>
