@@ -29,10 +29,6 @@
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(4px);
         }
-        .table-wrapper {
-            overflow-x: auto;
-            border-radius: 1rem;
-        }
         select, input[type="number"] {
             border-radius: 0.5rem;
             border: 1px solid #e2e8f0;
@@ -53,10 +49,7 @@
             color: #1e293b;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        .status-badge:active {
-            transform: scale(0.94);
-        }
-        /* Warna sesuai status opsional untuk kejelasan */
+        .status-badge:active { transform: scale(0.94); }
         .status-h { background-color: #dcfce7; color: #15803d; }
         .status-i { background-color: #fed7aa; color: #9a3412; }
         .status-s { background-color: #fef9c3; color: #854d0e; }
@@ -65,20 +58,97 @@
             width: 70px;
             text-align: center;
         }
-        .table-header-click, .table-header-click-penilaian {
-            cursor: pointer;
+        
+        /* ========== STICKY HEADER & FREEZE KOLOM ========== */
+        .table-scroll-wrapper {
+            overflow: auto;
+            max-height: 68vh;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+            position: relative;
+        }
+        
+        /* Sticky header baris pertama */
+        .sticky-table thead tr th {
+            position: sticky;
+            top: 0;
             background-color: #f8fafc;
-            transition: 0.1s;
+            z-index: 20;
+            box-shadow: inset 0 -1px 0 #e2e8f0;
         }
-        .table-header-click:hover, .table-header-click-penilaian:hover {
-            background-color: #e0e7ff;
+        
+        /* Untuk tabel penilaian yang punya 2 baris header, pastikan baris ke-2 ikut sticky (berdasarkan posisi top-nya) */
+        .sticky-table thead tr:first-child th {
+            top: 0;
         }
-        .penilaian-table th {
-            cursor: pointer;
+        .sticky-table thead tr:nth-child(2) th {
+            top: 42px; /* tinggi baris pertama kurang lebih, diberi ruang agar nempel */
+            background-color: #f8fafc;
         }
+        
+        /* Kolom NIS (kolom pertama) */
+        .sticky-col-first {
+            position: sticky;
+            left: 0;
+            background-color: white;
+            z-index: 15;
+            box-shadow: 2px 0 4px -2px rgba(0,0,0,0.05);
+        }
+        /* Kolom Nama (kolom kedua) */
+        .sticky-col-second {
+            position: sticky;
+            left: 100px; /* lebar kolom NIS kurang lebih 100px, bisa fleksibel */
+            background-color: white;
+            z-index: 15;
+            box-shadow: 2px 0 4px -2px rgba(0,0,0,0.05);
+        }
+        /* Untuk header yang juga sticky, perlu background dan z-index lebih tinggi */
+        .sticky-table thead tr th.sticky-col-first,
+        .sticky-table thead tr th.sticky-col-second {
+            background-color: #f8fafc;
+            z-index: 30;
+        }
+        
+        /* Lebar minimum biar konsisten */
+        .sticky-table td.sticky-col-first,
+        .sticky-table th.sticky-col-first {
+            min-width: 90px;
+            width: 90px;
+        }
+        .sticky-table td.sticky-col-second,
+        .sticky-table th.sticky-col-second {
+            min-width: 140px;
+            width: 140px;
+        }
+        
+        /* Biar border rapi */
+        .sticky-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+        .sticky-table th, .sticky-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px 10px;
+            vertical-align: middle;
+        }
+        
+        /* Responsive: pada layar kecil tetap fungsional */
         @media (max-width: 640px) {
+            .sticky-table td.sticky-col-first { min-width: 75px; width: 75px; }
+            .sticky-col-second { left: 75px; min-width: 120px; }
             .nilai-input { width: 55px; font-size: 0.75rem; }
             .status-badge { width: 36px; font-size: 0.75rem; padding: 4px 0; }
+        }
+        
+        .table-header-click, .penilaian-header-click {
+            cursor: pointer;
+            transition: 0.1s;
+            white-space: nowrap;
+        }
+        .table-header-click:hover, .penilaian-header-click:hover {
+            background-color: #e0e7ff;
         }
     </style>
 </head>
@@ -124,7 +194,7 @@
     </div>
 </div>
 
-<!-- MODAL EDIT TANGGAL KEHADIRAN (pakai date picker) -->
+<!-- MODAL EDIT TANGGAL KEHADIRAN -->
 <div id="modalEditTanggal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
         <h4 class="text-lg font-bold mb-3">Edit Tanggal Sesi Kehadiran</h4>
@@ -133,7 +203,7 @@
     </div>
 </div>
 
-<!-- MODAL TAMBAH KEHADIRAN (date picker) -->
+<!-- MODAL TAMBAH KEHADIRAN -->
 <div id="modalTambahKehadiran" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
         <h4 class="text-lg font-bold mb-3"><i class="fas fa-calendar-plus"></i> Tambah Sesi Kehadiran</h4>
@@ -143,7 +213,7 @@
     </div>
 </div>
 
-<!-- MODAL TAMBAH PENILAIAN (date picker) -->
+<!-- MODAL TAMBAH PENILAIAN -->
 <div id="modalTambahPenilaian" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
         <h4 class="text-lg font-bold mb-3"><i class="fas fa-clipboard-list"></i> Tambah Penilaian</h4>
@@ -175,7 +245,7 @@
     function toYMD(date) { return date.toISOString().slice(0,10); }
     function toDMY(ymd) { if (!ymd) return ''; let [y,m,d] = ymd.split('-'); return `${d}/${m}/${y}`; }
     function formatDateToDMY(date) { return toDMY(toYMD(date)); }
-    function parseDMY(dateStr) { let parts = dateStr.split('/'); if(parts.length===3){ let d=parseInt(parts[0]), m=parseInt(parts[1])-1, y=parseInt(parts[2]); return new Date(y,m,d); } return null; }
+    function parseDMY(dateStr) { if(!dateStr) return null; let parts = dateStr.split('/'); if(parts.length===3){ let d=parseInt(parts[0]), m=parseInt(parts[1])-1, y=parseInt(parts[2]); return new Date(y,m,d); } return null; }
 
     async function fetchInitialData() {
         try {
@@ -250,14 +320,23 @@
         renderKehadiranTab(kehadiranPane, task);
     }
 
-    // ================= KEHADIRAN (KLIK STATUS, BUKAN DROPDOWN) =================
+    // ================= UTILITY PRESERVE SCROLL =================
+    async function refreshWithScroll(wrapperElement, refreshFn, ...args) {
+        if (!wrapperElement) { await refreshFn(...args); return; }
+        const oldLeft = wrapperElement.scrollLeft;
+        const oldTop = wrapperElement.scrollTop;
+        await refreshFn(...args);
+        wrapperElement.scrollLeft = oldLeft;
+        wrapperElement.scrollTop = oldTop;
+    }
+
+    // ================= KEHADIRAN =================
     async function renderKehadiranTab(container, task) {
-        container.innerHTML = `<div class="flex justify-between items-center mb-3"><span class="text-sm font-semibold">Daftar Kehadiran (Klik status untuk ubah: H → I → S → A)</span><button class="btn-add-kehadiran bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Kehadiran</button></div><div id="kehadiranTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
+        container.innerHTML = `<div class="flex justify-between items-center mb-3"><span class="text-sm font-semibold">Klik status untuk ubah (H → I → S → A)</span><button class="btn-add-kehadiran bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Kehadiran</button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
         container.querySelector('.btn-add-kehadiran').onclick = () => openAddKehadiranModal(task);
         await refreshKehadiranTable(container, task);
     }
 
-    // Fungsi untuk update status ke Firebase setelah klik
     async function updateStatusKehadiran(taskId, sessionId, nis, currentStatus) {
         const statusCycle = { 'H': 'I', 'I': 'S', 'S': 'A', 'A': 'H' };
         const newStatus = statusCycle[currentStatus] || 'H';
@@ -265,25 +344,29 @@
     }
 
     async function refreshKehadiranTable(container, task) {
-        const wrapper = container.querySelector('#kehadiranTableWrapper');
-        if (!wrapper) return;
+        const wrapperDiv = container.querySelector('#kehadiranTableWrapper');
+        if (!wrapperDiv) return;
         const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
         const sessions = sessionsSnap.val() || {};
         let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, records: val.records || {} }));
         sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
-        let html = `<div class="overflow-x-auto"><table class="min-w-full bg-white border text-sm rounded-lg"><thead>`;
-        html += `<tr><th class="p-2 border">NIS</th><th class="p-2 border">Nama</th>`;
+        let html = `<table class="sticky-table w-full text-sm">`;
+        html += `<thead><tr>
+                    <th class="sticky-col-first">NIS</th>
+                    <th class="sticky-col-second">Nama</th>`;
         for (let ses of sessionsList) {
             let shortDate = ses.date.split('/').slice(0,2).join('/');
-            html += `<th class="p-2 border table-header-click text-center" data-session-id="${ses.id}" data-current-date="${ses.date}">${escapeHtml(shortDate)} <i class="fas fa-pen text-xs"></i></th>`;
+            html += `<th class="table-header-click text-center whitespace-nowrap" data-session-id="${ses.id}" data-current-date="${ses.date}">${escapeHtml(shortDate)} <i class="fas fa-pen text-xs"></i></th>`;
         }
-        html += `<th class="p-2 border bg-gray-50 text-center">Jumlah (H)</th></tr></thead><tbody>`;
+        html += `<th class="bg-gray-50 text-center">Jml H</th></tr></thead><tbody>`;
         
         for (let siswa of siswaArray) {
             let hadirCount = 0;
-            html += `<tr><td class="p-2 border">${escapeHtml(siswa.nis)}</td><td class="p-2 border">${escapeHtml(siswa.nama)}</td>`;
+            html += `<tr>
+                        <td class="sticky-col-first">${escapeHtml(siswa.nis)}</td>
+                        <td class="sticky-col-second">${escapeHtml(siswa.nama)}</td>`;
             for (let ses of sessionsList) {
                 let status = ses.records[siswa.nis] || 'H';
                 if (status === 'H') hadirCount++;
@@ -292,33 +375,32 @@
                 else if (status === 'I') statusClass = 'status-i';
                 else if (status === 'S') statusClass = 'status-s';
                 else if (status === 'A') statusClass = 'status-a';
-                html += `<td class="p-2 border text-center">
+                html += `<td class="text-center">
                             <div class="status-badge ${statusClass} kehadiran-status" data-session="${ses.id}" data-nis="${siswa.nis}" data-status="${status}">${status}</div>
-                         </td>`;
+                          </td>`;
             }
-            html += `<td class="p-2 border font-bold text-center">${hadirCount}</td></tr>`;
+            html += `<td class="font-bold text-center">${hadirCount}</td></tr>`;
         }
-        html += `</tbody></table></div>`;
-        wrapper.innerHTML = html;
+        html += `</tbody></table>`;
+        wrapperDiv.innerHTML = html;
         
-        // Event klik untuk mengedit tanggal sesi (header)
-        document.querySelectorAll('.table-header-click').forEach(el => {
+        // Event edit tanggal
+        wrapperDiv.querySelectorAll('.table-header-click').forEach(el => {
             el.onclick = (e) => {
                 e.stopPropagation();
-                openEditTanggalModal(task.id, el.dataset.sessionId, el.dataset.currentDate, () => refreshKehadiranTable(container, task));
+                openEditTanggalModal(task.id, el.dataset.sessionId, el.dataset.currentDate, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
             };
         });
         
-        // Event klik untuk status badge (H/I/S/A) -> update status dan refresh tabel
-        document.querySelectorAll('.kehadiran-status').forEach(badge => {
+        // Event klik status (dengan preserve scroll)
+        wrapperDiv.querySelectorAll('.kehadiran-status').forEach(badge => {
             badge.onclick = async (e) => {
                 e.stopPropagation();
                 const sessionId = badge.dataset.session;
                 const nis = badge.dataset.nis;
                 const currentStatus = badge.dataset.status;
                 await updateStatusKehadiran(task.id, sessionId, nis, currentStatus);
-                // Refresh tabel setelah update
-                await refreshKehadiranTable(container, task);
+                await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task);
             };
         });
     }
@@ -333,13 +415,16 @@
         const onSimpan = async () => {
             let ymd = document.getElementById('kehadiranDate').value;
             if (!ymd) return alert("Pilih tanggal");
-            let dateObj = new Date(ymd);
-            let dateDMY = formatDateToDMY(dateObj);
+            let dateDMY = formatDateToDMY(new Date(ymd));
             const newSessionId = Date.now().toString();
             await db.ref(`attendance/${task.id}/${newSessionId}`).set({ date: dateDMY, records: {} });
             modal.style.display = 'none';
             const container = document.querySelector('#detailContent .tab-pane-kehadiran');
-            if (container) refreshKehadiranTable(container, task);
+            if (container) {
+                const wrap = container.querySelector('#kehadiranTableWrapper');
+                if(wrap) await refreshWithScroll(wrap, refreshKehadiranTable, container, task);
+                else await refreshKehadiranTable(container, task);
+            }
             cleanup();
         };
         const cleanup = () => { simpan.removeEventListener('click', onSimpan); batal.removeEventListener('click', closeModal); };
@@ -360,8 +445,7 @@
         const onSave = async () => {
             let newYmd = dateInput.value;
             if (!newYmd) return alert("Pilih tanggal");
-            let newDateObj = new Date(newYmd);
-            let newDateDMY = formatDateToDMY(newDateObj);
+            let newDateDMY = formatDateToDMY(new Date(newYmd));
             await db.ref(`attendance/${assignmentId}/${sessionId}/date`).set(newDateDMY);
             modal.style.display = 'none';
             if (callback) callback();
@@ -373,65 +457,86 @@
         cancelBtn.addEventListener('click', onCancel);
     }
 
-    // ================= PENILAIAN (Tetap sama seperti semula) =================
+    // ================= PENILAIAN =================
     async function renderPenilaianTab(container, task) {
-        container.innerHTML = `<div class="flex justify-between items-center mb-3"><span class="text-sm font-semibold">Penilaian Siswa</span><button class="btn-add-penilaian bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Penilaian</button></div><div id="penilaianTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
+        container.innerHTML = `<div class="flex justify-between items-center mb-3"><span class="text-sm font-semibold">Penilaian Siswa</span><button class="btn-add-penilaian bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Penilaian</button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
         container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
         await refreshPenilaianTable(container, task);
     }
 
     async function refreshPenilaianTable(container, task) {
-        const wrapper = container.querySelector('#penilaianTableWrapper');
-        if (!wrapper) return;
+        const wrapperDiv = container.querySelector('#penilaianTableWrapper');
+        if (!wrapperDiv) return;
         const assessmentsSnap = await db.ref(`penilaian/${task.id}`).once('value');
         const assessments = assessmentsSnap.val() || {};
         let assessList = Object.entries(assessments).map(([id, val]) => ({ id, date: val.date, topic: val.topic, scores: val.scores || {} }));
         assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
-        let html = `<div class="overflow-x-auto"><table class="min-w-full bg-white border text-sm penilaian-table" style="border-collapse: collapse;"><thead>`;
-        html += `<tr class="bg-gray-100"><th rowspan="2" class="border p-2 align-middle">NIS</th><th rowspan="2" class="border p-2 align-middle">Nama</th>`;
+        let html = `<table class="sticky-table w-full text-sm" style="border-collapse: separate;">`;
+        // Header row 1 (NIS, Nama, dan N1, N2 ...)
+        html += `<thead><tr>
+                    <th rowspan="2" class="sticky-col-first align-middle">NIS</th>
+                    <th rowspan="2" class="sticky-col-second align-middle">Nama</th>`;
         for (let i=0; i<assessList.length; i++) {
-            html += `<th class="border p-2 text-center penilaian-header-click" data-assess-id="${assessList[i].id}">N${i+1} <i class="fas fa-edit text-xs"></i></th>`;
+            html += `<th class="text-center penilaian-header-click align-middle" data-assess-id="${assessList[i].id}">N${i+1} <i class="fas fa-edit text-xs"></i></th>`;
         }
-        html += `<th rowspan="2" class="border p-2 align-middle bg-gray-50">Rata-Rata</th></tr>`;
+        html += `<th rowspan="2" class="bg-gray-50 text-center align-middle">Rata-Rata</th></tr>`;
+        // Header row 2 (tanggal & topik)
         html += `<tr class="bg-gray-50 text-xs">`;
         for (let as of assessList) {
-            let shortTopic = as.topic ? (as.topic.length>20 ? as.topic.substring(0,17)+'...' : as.topic) : '-';
-            html += `<td class="border p-1 text-center align-middle"><div>${escapeHtml(as.date)}</div><div class="text-gray-500">${escapeHtml(shortTopic)}</div></td>`;
+            let shortTopic = as.topic ? (as.topic.length>18 ? as.topic.substring(0,15)+'...' : as.topic) : '-';
+            html += `<td class="border p-1 text-center align-middle whitespace-nowrap"><div>${escapeHtml(as.date)}</div><div class="text-gray-500 text-xs">${escapeHtml(shortTopic)}</div></td>`;
         }
         html += `</tr></thead><tbody>`;
+        
         for (let siswa of siswaArray) {
-            let totalNilai = 0;
-            let countValid = 0;
-            html += `<tr><td class="border p-2">${escapeHtml(siswa.nis)}</td><td class="border p-2">${escapeHtml(siswa.nama)}</td>`;
+            let totalNilai = 0, countValid = 0;
+            html += `<tr>
+                        <td class="sticky-col-first">${escapeHtml(siswa.nis)}</td>
+                        <td class="sticky-col-second">${escapeHtml(siswa.nama)}</td>`;
             for (let as of assessList) {
                 let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
                 if (nilai !== 0) { totalNilai += nilai; countValid++; }
-                html += `<td class="border p-1 text-center"><input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100"></td>`;
+                html += `<td class="text-center"><input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100"></td>`;
             }
             let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
-            html += `<td class="border p-2 text-center font-bold">${rata}</td></tr>`;
+            html += `<td class="font-bold text-center">${rata}</td></tr>`;
         }
-        html += `</tbody></table></div>`;
-        wrapper.innerHTML = html;
-
-        document.querySelectorAll('.penilaian-header-click').forEach(th => {
-            th.onclick = (e) => {
+        html += `</tbody></table>`;
+        wrapperDiv.innerHTML = html;
+        
+        // Edit header penilaian (tanggal/topik)
+        wrapperDiv.querySelectorAll('.penilaian-header-click').forEach(th => {
+            th.onclick = async (e) => {
                 e.stopPropagation();
                 const assessId = th.dataset.assessId;
                 const assessment = assessList.find(a => a.id === assessId);
-                if (assessment) openEditPenilaianHeader(task.id, assessId, assessment.date, assessment.topic, () => refreshPenilaianTable(container, task));
+                if (assessment) {
+                    let newDate = prompt("Edit Tanggal (yyyy-mm-dd):", assessment.date?.split('/').reverse().join('-') || '');
+                    if (!newDate) return;
+                    let newDateObj = new Date(newDate);
+                    if (isNaN(newDateObj)) return alert("Format salah");
+                    let newDateDMY = formatDateToDMY(newDateObj);
+                    let newTopic = prompt("Edit Topik:", assessment.topic);
+                    if (newTopic !== null) {
+                        await db.ref(`penilaian/${task.id}/${assessId}/date`).set(newDateDMY);
+                        await db.ref(`penilaian/${task.id}/${assessId}/topic`).set(newTopic || "Penilaian");
+                        await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
+                    }
+                }
             };
         });
-        document.querySelectorAll('.nilai-siswa').forEach(inp => {
+        
+        // Input nilai onchange dengan preserve scroll
+        wrapperDiv.querySelectorAll('.nilai-siswa').forEach(inp => {
             inp.onchange = async () => {
                 let val = parseInt(inp.value,10);
                 if (isNaN(val)) val = 0;
                 val = Math.min(100, Math.max(0, val));
                 inp.value = val;
                 await db.ref(`penilaian/${task.id}/${inp.dataset.assess}/scores/${inp.dataset.nis}`).set(val);
-                refreshPenilaianTable(container, task);
+                await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
             };
         });
     }
@@ -447,35 +552,23 @@
         const onSimpan = async () => {
             let ymd = document.getElementById('penilaianDate').value;
             if (!ymd) return alert("Pilih tanggal");
-            let dateObj = new Date(ymd);
-            let dateDMY = formatDateToDMY(dateObj);
+            let dateDMY = formatDateToDMY(new Date(ymd));
             let topic = document.getElementById('penilaianTopik').value.trim() || "Penilaian";
             let newId = Date.now().toString();
             await db.ref(`penilaian/${task.id}/${newId}`).set({ date: dateDMY, topic, scores: {} });
             modal.style.display = 'none';
             const container = document.querySelector('#detailContent .tab-pane-penilaian');
-            if (container) refreshPenilaianTable(container, task);
+            if (container) {
+                const wrap = container.querySelector('#penilaianTableWrapper');
+                if(wrap) await refreshWithScroll(wrap, refreshPenilaianTable, container, task);
+                else await refreshPenilaianTable(container, task);
+            }
             cleanup();
         };
         const cleanup = () => { simpan.removeEventListener('click', onSimpan); batal.removeEventListener('click', onBatal); };
         const onBatal = () => { modal.style.display = 'none'; cleanup(); };
         simpan.addEventListener('click', onSimpan);
         batal.addEventListener('click', onBatal);
-    }
-
-    async function openEditPenilaianHeader(assignmentId, assessId, oldDateDMY, oldTopic, callback) {
-        let oldDate = parseDMY(oldDateDMY);
-        let ymd = oldDate ? toYMD(oldDate) : '';
-        let newYmd = prompt("Edit Tanggal (yyyy-mm-dd):", ymd);
-        if (!newYmd) return;
-        let newDateObj = new Date(newYmd);
-        if (isNaN(newDateObj)) return alert("Format tanggal salah");
-        let newDateDMY = formatDateToDMY(newDateObj);
-        let newTopic = prompt("Edit Topik/Materi:", oldTopic);
-        if (newTopic === null) return;
-        await db.ref(`penilaian/${assignmentId}/${assessId}/date`).set(newDateDMY);
-        await db.ref(`penilaian/${assignmentId}/${assessId}/topic`).set(newTopic);
-        if (callback) callback();
     }
 
     // ========== TAMBAH PENUGASAN ==========
