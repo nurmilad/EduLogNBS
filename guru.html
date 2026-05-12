@@ -56,6 +56,7 @@
         .status-badge:active {
             transform: scale(0.94);
         }
+        /* Warna sesuai status opsional untuk kejelasan */
         .status-h { background-color: #dcfce7; color: #15803d; }
         .status-i { background-color: #fed7aa; color: #9a3412; }
         .status-s { background-color: #fef9c3; color: #854d0e; }
@@ -249,13 +250,14 @@
         renderKehadiranTab(kehadiranPane, task);
     }
 
-    // ================= KEHADIRAN (KLIK STATUS, BUKAN DROPDOWN, dengan scroll retention) =================
+    // ================= KEHADIRAN (KLIK STATUS, BUKAN DROPDOWN) =================
     async function renderKehadiranTab(container, task) {
         container.innerHTML = `<div class="flex justify-between items-center mb-3"><span class="text-sm font-semibold">Daftar Kehadiran (Klik status untuk ubah: H → I → S → A)</span><button class="btn-add-kehadiran bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Kehadiran</button></div><div id="kehadiranTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
         container.querySelector('.btn-add-kehadiran').onclick = () => openAddKehadiranModal(task);
         await refreshKehadiranTable(container, task);
     }
 
+    // Fungsi untuk update status ke Firebase setelah klik
     async function updateStatusKehadiran(taskId, sessionId, nis, currentStatus) {
         const statusCycle = { 'H': 'I', 'I': 'S', 'S': 'A', 'A': 'H' };
         const newStatus = statusCycle[currentStatus] || 'H';
@@ -263,12 +265,8 @@
     }
 
     async function refreshKehadiranTable(container, task) {
-        const wrapperDiv = container.querySelector('#kehadiranTableWrapper');
-        if (!wrapperDiv) return;
-        
-        // Simpan posisi scroll horizontal sebelum refresh
-        let savedScrollLeft = wrapperDiv.scrollLeft;
-        
+        const wrapper = container.querySelector('#kehadiranTableWrapper');
+        if (!wrapper) return;
         const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
         const sessions = sessionsSnap.val() || {};
         let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, records: val.records || {} }));
@@ -285,7 +283,7 @@
         
         for (let siswa of siswaArray) {
             let hadirCount = 0;
-            html += `<td><td class="p-2 border">${escapeHtml(siswa.nis)}</td><td class="p-2 border">${escapeHtml(siswa.nama)}</td>`;
+            html += `<tr><td class="p-2 border">${escapeHtml(siswa.nis)}</td><td class="p-2 border">${escapeHtml(siswa.nama)}</td>`;
             for (let ses of sessionsList) {
                 let status = ses.records[siswa.nis] || 'H';
                 if (status === 'H') hadirCount++;
@@ -296,17 +294,14 @@
                 else if (status === 'A') statusClass = 'status-a';
                 html += `<td class="p-2 border text-center">
                             <div class="status-badge ${statusClass} kehadiran-status" data-session="${ses.id}" data-nis="${siswa.nis}" data-status="${status}">${status}</div>
-                          </td>`;
+                         </td>`;
             }
             html += `<td class="p-2 border font-bold text-center">${hadirCount}</td></tr>`;
         }
         html += `</tbody></table></div>`;
-        wrapperDiv.innerHTML = html;
+        wrapper.innerHTML = html;
         
-        // Kembalikan posisi scroll horizontal
-        wrapperDiv.scrollLeft = savedScrollLeft;
-        
-        // Event klik untuk edit tanggal sesi (header)
+        // Event klik untuk mengedit tanggal sesi (header)
         document.querySelectorAll('.table-header-click').forEach(el => {
             el.onclick = (e) => {
                 e.stopPropagation();
@@ -314,7 +309,7 @@
             };
         });
         
-        // Event klik untuk status badge
+        // Event klik untuk status badge (H/I/S/A) -> update status dan refresh tabel
         document.querySelectorAll('.kehadiran-status').forEach(badge => {
             badge.onclick = async (e) => {
                 e.stopPropagation();
@@ -322,6 +317,7 @@
                 const nis = badge.dataset.nis;
                 const currentStatus = badge.dataset.status;
                 await updateStatusKehadiran(task.id, sessionId, nis, currentStatus);
+                // Refresh tabel setelah update
                 await refreshKehadiranTable(container, task);
             };
         });
@@ -377,7 +373,7 @@
         cancelBtn.addEventListener('click', onCancel);
     }
 
-    // ================= PENILAIAN (Tetap sama, tidak perlu scroll retention) =================
+    // ================= PENILAIAN (Tetap sama seperti semula) =================
     async function renderPenilaianTab(container, task) {
         container.innerHTML = `<div class="flex justify-between items-center mb-3"><span class="text-sm font-semibold">Penilaian Siswa</span><button class="btn-add-penilaian bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Penilaian</button></div><div id="penilaianTableWrapper" class="table-wrapper"><div class="text-center py-4">Memuat data...</div></div>`;
         container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
@@ -398,7 +394,7 @@
         for (let i=0; i<assessList.length; i++) {
             html += `<th class="border p-2 text-center penilaian-header-click" data-assess-id="${assessList[i].id}">N${i+1} <i class="fas fa-edit text-xs"></i></th>`;
         }
-        html += `<th rowspan="2" class="border p-2 align-middle bg-gray-50">Rata-Rata</th> </tr>`;
+        html += `<th rowspan="2" class="border p-2 align-middle bg-gray-50">Rata-Rata</th></tr>`;
         html += `<tr class="bg-gray-50 text-xs">`;
         for (let as of assessList) {
             let shortTopic = as.topic ? (as.topic.length>20 ? as.topic.substring(0,17)+'...' : as.topic) : '-';
