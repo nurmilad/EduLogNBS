@@ -20,11 +20,6 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
         .card-assignment:active { transform: scale(0.98); }
-        .tab-active {
-            background-color: #4f46e5;
-            color: white;
-            border-radius: 2rem;
-        }
         .modal-bg {
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(4px);
@@ -69,7 +64,6 @@
             position: relative;
         }
         
-        /* Sticky header baris pertama */
         .sticky-table thead tr th {
             position: sticky;
             top: 0;
@@ -78,16 +72,14 @@
             box-shadow: inset 0 -1px 0 #e2e8f0;
         }
         
-        /* Untuk tabel penilaian yang punya 2 baris header, pastikan baris ke-2 ikut sticky (berdasarkan posisi top-nya) */
         .sticky-table thead tr:first-child th {
             top: 0;
         }
         .sticky-table thead tr:nth-child(2) th {
-            top: 42px; /* tinggi baris pertama kurang lebih, diberi ruang agar nempel */
+            top: 42px;
             background-color: #f8fafc;
         }
         
-        /* Kolom NIS (kolom pertama) */
         .sticky-col-first {
             position: sticky;
             left: 0;
@@ -95,22 +87,19 @@
             z-index: 15;
             box-shadow: 2px 0 4px -2px rgba(0,0,0,0.05);
         }
-        /* Kolom Nama (kolom kedua) */
         .sticky-col-second {
             position: sticky;
-            left: 100px; /* lebar kolom NIS kurang lebih 100px, bisa fleksibel */
+            left: 100px;
             background-color: white;
             z-index: 15;
             box-shadow: 2px 0 4px -2px rgba(0,0,0,0.05);
         }
-        /* Untuk header yang juga sticky, perlu background dan z-index lebih tinggi */
         .sticky-table thead tr th.sticky-col-first,
         .sticky-table thead tr th.sticky-col-second {
             background-color: #f8fafc;
             z-index: 30;
         }
         
-        /* Lebar minimum biar konsisten */
         .sticky-table td.sticky-col-first,
         .sticky-table th.sticky-col-first {
             min-width: 90px;
@@ -122,7 +111,6 @@
             width: 140px;
         }
         
-        /* Biar border rapi */
         .sticky-table {
             border-collapse: separate;
             border-spacing: 0;
@@ -134,7 +122,6 @@
             vertical-align: middle;
         }
         
-        /* Responsive: pada layar kecil tetap fungsional */
         @media (max-width: 640px) {
             .sticky-table td.sticky-col-first { min-width: 75px; width: 75px; }
             .sticky-col-second { left: 75px; min-width: 120px; }
@@ -149,6 +136,34 @@
         }
         .table-header-click:hover, .penilaian-header-click:hover {
             background-color: #e0e7ff;
+        }
+        
+        /* Tombol plus besar dan tebal */
+        .btn-plus {
+            background-color: #4f46e5;
+            color: white;
+            width: 42px;
+            height: 42px;
+            border-radius: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            font-weight: 800;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-plus:hover {
+            background-color: #4338ca;
+            transform: scale(1.02);
+        }
+        .btn-plus:active {
+            transform: scale(0.96);
+        }
+        .btn-plus i {
+            font-size: 1.4rem;
         }
     </style>
 </head>
@@ -320,7 +335,7 @@
         renderKehadiranTab(kehadiranPane, task);
     }
 
-    // ================= UTILITY PRESERVE SCROLL =================
+    // ================= PRESERVE SCROLL =================
     async function refreshWithScroll(wrapperElement, refreshFn, ...args) {
         if (!wrapperElement) { await refreshFn(...args); return; }
         const oldLeft = wrapperElement.scrollLeft;
@@ -330,9 +345,10 @@
         wrapperElement.scrollTop = oldTop;
     }
 
-    // ================= KEHADIRAN =================
+    // ================= KEHADIRAN (tanpa teks instruksi) =================
     async function renderKehadiranTab(container, task) {
-        container.innerHTML = `<div class="flex justify-between items-center mb-3"><span class="text-sm font-semibold">Klik status untuk ubah (H → I → S → A)</span><button class="btn-add-kehadiran bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Kehadiran</button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
+        // Hilangkan teks instruksi, ganti tombol dengan plus besar
+        container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-kehadiran" title="Tambah sesi kehadiran"><i class="fas fa-plus"></i></button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
         container.querySelector('.btn-add-kehadiran').onclick = () => openAddKehadiranModal(task);
         await refreshKehadiranTable(container, task);
     }
@@ -377,14 +393,15 @@
                 else if (status === 'A') statusClass = 'status-a';
                 html += `<td class="text-center">
                             <div class="status-badge ${statusClass} kehadiran-status" data-session="${ses.id}" data-nis="${siswa.nis}" data-status="${status}">${status}</div>
-                          </td>`;
+                           </td>`;
             }
-            html += `<td class="font-bold text-center">${hadirCount}</td></tr>`;
+            html += `<td class="font-bold text-center">${hadirCount}</td>`;
+            html += `</tr>`;
         }
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        // Event edit tanggal
+        // Edit tanggal header
         wrapperDiv.querySelectorAll('.table-header-click').forEach(el => {
             el.onclick = (e) => {
                 e.stopPropagation();
@@ -392,7 +409,7 @@
             };
         });
         
-        // Event klik status (dengan preserve scroll)
+        // Klik status (preserve scroll)
         wrapperDiv.querySelectorAll('.kehadiran-status').forEach(badge => {
             badge.onclick = async (e) => {
                 e.stopPropagation();
@@ -457,9 +474,9 @@
         cancelBtn.addEventListener('click', onCancel);
     }
 
-    // ================= PENILAIAN =================
+    // ================= PENILAIAN (tombol plus) =================
     async function renderPenilaianTab(container, task) {
-        container.innerHTML = `<div class="flex justify-between items-center mb-3"><span class="text-sm font-semibold">Penilaian Siswa</span><button class="btn-add-penilaian bg-indigo-100 text-indigo-700 px-3 py-1 rounded-full text-sm"><i class="fas fa-plus"></i> + Penilaian</button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
+        container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-penilaian" title="Tambah penilaian"><i class="fas fa-plus"></i></button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
         container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
         await refreshPenilaianTable(container, task);
     }
@@ -473,17 +490,15 @@
         assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
-        let html = `<table class="sticky-table w-full text-sm" style="border-collapse: separate;">`;
-        // Header row 1 (NIS, Nama, dan N1, N2 ...)
+        let html = `<table class="sticky-table w-full text-sm">`;
         html += `<thead><tr>
                     <th rowspan="2" class="sticky-col-first align-middle">NIS</th>
                     <th rowspan="2" class="sticky-col-second align-middle">Nama</th>`;
         for (let i=0; i<assessList.length; i++) {
             html += `<th class="text-center penilaian-header-click align-middle" data-assess-id="${assessList[i].id}">N${i+1} <i class="fas fa-edit text-xs"></i></th>`;
         }
-        html += `<th rowspan="2" class="bg-gray-50 text-center align-middle">Rata-Rata</th></tr>`;
-        // Header row 2 (tanggal & topik)
-        html += `<tr class="bg-gray-50 text-xs">`;
+        html += `<th rowspan="2" class="bg-gray-50 text-center align-middle">Rata-Rata</th>`;
+        html += `</tr><tr class="bg-gray-50 text-xs">`;
         for (let as of assessList) {
             let shortTopic = as.topic ? (as.topic.length>18 ? as.topic.substring(0,15)+'...' : as.topic) : '-';
             html += `<td class="border p-1 text-center align-middle whitespace-nowrap"><div>${escapeHtml(as.date)}</div><div class="text-gray-500 text-xs">${escapeHtml(shortTopic)}</div></td>`;
@@ -501,12 +516,13 @@
                 html += `<td class="text-center"><input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100"></td>`;
             }
             let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
-            html += `<td class="font-bold text-center">${rata}</td></tr>`;
+            html += `<td class="font-bold text-center">${rata}</td>`;
+            html += `</tr>`;
         }
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        // Edit header penilaian (tanggal/topik)
+        // Edit header penilaian
         wrapperDiv.querySelectorAll('.penilaian-header-click').forEach(th => {
             th.onclick = async (e) => {
                 e.stopPropagation();
@@ -528,7 +544,7 @@
             };
         });
         
-        // Input nilai onchange dengan preserve scroll
+        // Input nilai onchange
         wrapperDiv.querySelectorAll('.nilai-siswa').forEach(inp => {
             inp.onchange = async () => {
                 let val = parseInt(inp.value,10);
