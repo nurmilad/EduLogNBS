@@ -52,12 +52,11 @@
         .nilai-input {
             width: 70px;
             text-align: center;
-            transition: all 0.1s;
-            cursor: pointer;
+            cursor: ew-resize;
+            transition: background 0.1s;
         }
-        /* Untuk sentuhan mobile, tambah sedikit tap highlight */
-        .nilai-input:active {
-            background-color: #f1f5f9;
+        .nilai-input.dragging-active {
+            background-color: #eef2ff;
         }
         
         /* ========== STICKY HEADER & FREEZE KOLOM ========== */
@@ -144,7 +143,7 @@
             background-color: #e0e7ff;
         }
         
-        /* Tombol plus besar */
+        /* Tombol plus besar dan tebal */
         .btn-plus {
             background-color: #4f46e5;
             color: white;
@@ -161,9 +160,16 @@
             cursor: pointer;
             border: none;
         }
-        .btn-plus:hover { background-color: #4338ca; transform: scale(1.02); }
-        .btn-plus:active { transform: scale(0.96); }
-        .btn-plus i { font-size: 1.4rem; }
+        .btn-plus:hover {
+            background-color: #4338ca;
+            transform: scale(1.02);
+        }
+        .btn-plus:active {
+            transform: scale(0.96);
+        }
+        .btn-plus i {
+            font-size: 1.4rem;
+        }
         
         .icon-btn {
             background: transparent;
@@ -178,53 +184,6 @@
         .icon-btn:hover { background-color: rgba(0,0,0,0.05); }
         .icon-delete { color: #e11d48; }
         .icon-edit { color: #4f46e5; }
-        
-        /* ========== SLIDER MODAL STYLE ========== */
-        .slider-popup {
-            position: fixed;
-            z-index: 9999;
-            background: white;
-            border-radius: 2rem;
-            box-shadow: 0 20px 35px -12px rgba(0,0,0,0.3);
-            padding: 1rem 1.5rem;
-            min-width: 260px;
-            text-align: center;
-            border: 1px solid #e2e8f0;
-            backdrop-filter: blur(4px);
-            background-color: rgba(255,255,255,0.98);
-            transition: all 0.1s ease;
-        }
-        .slider-popup input[type="range"] {
-            width: 100%;
-            margin: 12px 0;
-            accent-color: #4f46e5;
-        }
-        .slider-popup .nilai-besar {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #1e293b;
-        }
-        .slider-popup .close-slider {
-            background: none;
-            border: none;
-            font-size: 1.2rem;
-            position: absolute;
-            right: 12px;
-            top: 8px;
-            cursor: pointer;
-            color: #94a3b8;
-        }
-        .slider-popup .close-slider:hover { color: #ef4444; }
-        .slider-popup button.simpan-slider {
-            background: #4f46e5;
-            color: white;
-            border: none;
-            border-radius: 40px;
-            padding: 6px 16px;
-            font-size: 0.8rem;
-            margin-top: 8px;
-            cursor: pointer;
-        }
     </style>
 </head>
 <body class="p-4 md:p-6">
@@ -404,7 +363,7 @@
         wrapperElement.scrollTop = oldTop;
     }
 
-    // ================= KEHADIRAN =================
+    // ================= KEHADIRAN (tidak diubah) =================
     async function renderKehadiranTab(container, task) {
         container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-kehadiran" title="Tambah sesi kehadiran"><i class="fas fa-plus"></i></button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
         container.querySelector('.btn-add-kehadiran').onclick = () => openAddKehadiranModal(task);
@@ -426,8 +385,7 @@
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
         let html = `<table class="sticky-table w-full text-sm">`;
-        html += `<thead>`;
-        html += `<tr><th class="sticky-col-first">NIS</th><th class="sticky-col-second">Nama</th>`;
+        html += `<thead><tr><th class="sticky-col-first">NIS</th><th class="sticky-col-second">Nama</th>`;
         for (let ses of sessionsList) {
             let shortDate = ses.date.split('/').slice(0,2).join('/');
             html += `<th class="text-center whitespace-nowrap" style="min-width: 100px;">
@@ -454,10 +412,10 @@
         wrapperDiv.innerHTML = html;
         wrapperDiv.querySelectorAll('.edit-session-date').forEach(btn => btn.onclick = (e) => { e.stopPropagation(); openEditTanggalModal(task.id, btn.dataset.sessionId, btn.dataset.currentDate, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task)); });
         wrapperDiv.querySelectorAll('.delete-session').forEach(btn => btn.onclick = async (e) => { e.stopPropagation(); await deleteAttendanceSession(task.id, btn.dataset.sessionId); await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task); });
-        wrapperDiv.querySelectorAll('.kehadiran-status').forEach(badge => { badge.onclick = async (e) => { e.stopPropagation(); const statusCycle = { 'H': 'I', 'I': 'S', 'S': 'A', 'A': 'H' }; const newStatus = statusCycle[badge.dataset.status] || 'H'; await db.ref(`attendance/${task.id}/${badge.dataset.session}/records/${badge.dataset.nis}`).set(newStatus); await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task); }; });
+        wrapperDiv.querySelectorAll('.kehadiran-status').forEach(badge => badge.onclick = async (e) => { e.stopPropagation(); const sessionId = badge.dataset.session, nis = badge.dataset.nis, current = badge.dataset.status; const cycle = { 'H':'I','I':'S','S':'A','A':'H' }; const newStatus = cycle[current] || 'H'; await db.ref(`attendance/${task.id}/${sessionId}/records/${nis}`).set(newStatus); await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task); });
     }
 
-    async function openAddKehadiranModal(task) { /* sama seperti asli */ 
+    async function openAddKehadiranModal(task) { /* existing */
         const todayYMD = toYMD(new Date());
         document.getElementById('kehadiranDate').value = todayYMD;
         const modal = document.getElementById('modalTambahKehadiran');
@@ -480,63 +438,110 @@
         simpan.addEventListener('click', onSimpan);
         batal.addEventListener('click', closeModal);
     }
-    async function openEditTanggalModal(assignmentId, sessionId, oldDateDMY, callback) { /* sama asli */ 
-        let oldDate = parseDMY(oldDateDMY); let ymd = oldDate ? toYMD(oldDate) : '';
-        const modal = document.getElementById('modalEditTanggal'); const dateInput = document.getElementById('editTanggalInput'); dateInput.value = ymd; modal.style.display = 'flex';
-        const saveBtn = document.getElementById('saveEditTanggal'); const cancelBtn = document.getElementById('cancelEditTanggal');
-        const onSave = async () => { let newYmd = dateInput.value; if (!newYmd) return; let newDateDMY = formatDateToDMY(new Date(newYmd)); await db.ref(`attendance/${assignmentId}/${sessionId}/date`).set(newDateDMY); modal.style.display = 'none'; if (callback) callback(); cleanup(); };
-        const onCancel = () => { modal.style.display = 'none'; cleanup(); }; const cleanup = () => { saveBtn.removeEventListener('click', onSave); cancelBtn.removeEventListener('click', onCancel); };
-        saveBtn.addEventListener('click', onSave); cancelBtn.addEventListener('click', onCancel);
-    }
 
-    // ================= PENILAIAN DENGAN SLIDER =================
-    // Fungsi untuk menyimpan nilai ke Firebase
-    async function simpanNilai(assignmentId, assessId, nis, nilai) {
-        await db.ref(`penilaian/${assignmentId}/${assessId}/scores/${nis}`).set(nilai);
+    async function openEditTanggalModal(assignmentId, sessionId, oldDateDMY, callback) { /* existing */ 
+        let oldDate = parseDMY(oldDateDMY);
+        let ymd = oldDate ? toYMD(oldDate) : '';
+        const modal = document.getElementById('modalEditTanggal');
+        const dateInput = document.getElementById('editTanggalInput');
+        dateInput.value = ymd;
+        modal.style.display = 'flex';
+        const saveBtn = document.getElementById('saveEditTanggal');
+        const cancelBtn = document.getElementById('cancelEditTanggal');
+        const onSave = async () => { let newYmd = dateInput.value; if (!newYmd) return alert("Pilih tanggal"); let newDateDMY = formatDateToDMY(new Date(newYmd)); await db.ref(`attendance/${assignmentId}/${sessionId}/date`).set(newDateDMY); modal.style.display = 'none'; if (callback) callback(); cleanup(); };
+        const onCancel = () => { modal.style.display = 'none'; cleanup(); };
+        const cleanup = () => { saveBtn.removeEventListener('click', onSave); cancelBtn.removeEventListener('click', onCancel); };
+        saveBtn.addEventListener('click', onSave);
+        cancelBtn.addEventListener('click', onCancel);
     }
-
-    // Slider popup global
-    let activeSlider = null;
-    function closeActiveSlider() { if(activeSlider) { activeSlider.remove(); activeSlider = null; } }
     
-    function showSliderForInput(inputEl, assignmentId, assessId, nis, currentVal, wrapperDiv, container, task) {
-        closeActiveSlider();
-        const rect = inputEl.getBoundingClientRect();
-        const popup = document.createElement('div');
-        popup.className = 'slider-popup';
-        popup.style.top = (rect.bottom + window.scrollY + 8) + 'px';
-        popup.style.left = (rect.left + window.scrollX - 20) + 'px';
-        popup.innerHTML = `
-            <button class="close-slider"><i class="fas fa-times"></i></button>
-            <div class="nilai-besar" id="sliderNilaiPreview">${currentVal}</div>
-            <input type="range" id="nilaiSlider" min="0" max="100" step="1" value="${currentVal}">
-            <div class="flex justify-between text-xs text-gray-500 mt-1"><span>0</span><span>50</span><span>100</span></div>
-            <button class="simpan-slider mt-2 w-full">Simpan & Tutup</button>
-        `;
-        document.body.appendChild(popup);
-        activeSlider = popup;
-        const range = popup.querySelector('#nilaiSlider');
-        const preview = popup.querySelector('#sliderNilaiPreview');
-        const closeBtn = popup.querySelector('.close-slider');
-        const simpanBtn = popup.querySelector('.simpan-slider');
+    // ============= PENILAIAN DENGAN SLIDER DRAG =============
+    async function renderPenilaianTab(container, task) {
+        container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-penilaian" title="Tambah penilaian"><i class="fas fa-plus"></i></button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
+        container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
+        await refreshPenilaianTable(container, task);
+    }
+
+    async function deleteAssessment(assignmentId, assessId) {
+        if (!confirm("Hapus kolom penilaian ini? Semua nilai siswa untuk penilaian ini akan hilang.")) return;
+        await db.ref(`penilaian/${assignmentId}/${assessId}`).remove();
+    }
+
+    // Fungsi universal untuk update nilai dan refresh tabel tanpa kehilangan scroll
+    async function updateNilaiAndRefresh(assignmentId, assessId, nis, newValue, wrapperDiv, container, task) {
+        newValue = Math.min(100, Math.max(0, parseInt(newValue)||0));
+        await db.ref(`penilaian/${assignmentId}/${assessId}/scores/${nis}`).set(newValue);
+        // refresh tabel dengan mempertahankan posisi scroll
+        if (wrapperDiv) {
+            const oldLeft = wrapperDiv.scrollLeft;
+            const oldTop = wrapperDiv.scrollTop;
+            await refreshPenilaianTable(container, task);
+            wrapperDiv.scrollLeft = oldLeft;
+            wrapperDiv.scrollTop = oldTop;
+        } else {
+            await refreshPenilaianTable(container, task);
+        }
+    }
+
+    // Menambahkan Event Dragging (geser) pada input nilai
+    function attachDragToInput(inputEl, task, assessId, nis, wrapperDiv, container) {
+        let dragActive = false;
+        let startX = 0, startVal = 0;
+        let movedEnough = false;
         
-        const updatePreview = () => { preview.innerText = range.value; };
-        range.addEventListener('input', updatePreview);
-        const saveAndClose = async () => {
-            const newValue = parseInt(range.value, 10);
-            inputEl.value = newValue;
-            await simpanNilai(assignmentId, assessId, nis, newValue);
-            // refresh tabel untuk update rata2 dan tampilan
-            if(wrapperDiv) await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
-            closeActiveSlider();
+        const onPointerMove = (e) => {
+            if (!dragActive) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const delta = clientX - startX;
+            if (!movedEnough && Math.abs(delta) < 5) return; // threshold 5px
+            movedEnough = true;
+            e.preventDefault();
+            // sensitivitas: setiap 3px = 1 angka
+            let rawVal = startVal + Math.round(delta / 3);
+            let newVal = Math.min(100, Math.max(0, rawVal));
+            inputEl.value = newVal;
+            inputEl.classList.add('dragging-active');
         };
-        simpanBtn.addEventListener('click', saveAndClose);
-        closeBtn.addEventListener('click', () => closeActiveSlider());
-        // klik di luar popup (deteksi sederhana)
-        setTimeout(() => {
-            const outsideClick = (e) => { if (activeSlider && !activeSlider.contains(e.target)) { closeActiveSlider(); document.removeEventListener('click', outsideClick); } };
-            document.addEventListener('click', outsideClick);
-        }, 10);
+        
+        const onPointerUp = async (e) => {
+            if (dragActive && movedEnough) {
+                const finalVal = parseInt(inputEl.value, 10);
+                if (!isNaN(finalVal) && finalVal !== startVal) {
+                    await updateNilaiAndRefresh(task.id, assessId, nis, finalVal, wrapperDiv, container, task);
+                }
+            }
+            cleanup();
+            if (!movedEnough && dragActive) {
+                // jika hanya klik (tanpa geser), biarkan fokus normal untuk mengetik
+                inputEl.focus();
+            }
+            inputEl.classList.remove('dragging-active');
+        };
+        
+        const onPointerDown = (e) => {
+            // hanya tombol kiri mouse / sentuhan
+            if (e.button === 2) return;
+            dragActive = true;
+            movedEnough = false;
+            startVal = parseInt(inputEl.value, 10) || 0;
+            startX = e.touches ? e.touches[0].clientX : e.clientX;
+            window.addEventListener('mousemove', onPointerMove);
+            window.addEventListener('mouseup', onPointerUp);
+            window.addEventListener('touchmove', onPointerMove, { passive: false });
+            window.addEventListener('touchend', onPointerUp);
+            e.preventDefault();
+        };
+        
+        const cleanup = () => {
+            dragActive = false;
+            window.removeEventListener('mousemove', onPointerMove);
+            window.removeEventListener('mouseup', onPointerUp);
+            window.removeEventListener('touchmove', onPointerMove);
+            window.removeEventListener('touchend', onPointerUp);
+        };
+        
+        inputEl.addEventListener('mousedown', onPointerDown);
+        inputEl.addEventListener('touchstart', onPointerDown, { passive: false });
     }
 
     async function refreshPenilaianTable(container, task) {
@@ -548,19 +553,13 @@
         assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
-        let html = `<table class="sticky-table w-full text-sm">`;
-        html += `<thead><tr>
-                    <th rowspan="2" class="sticky-col-first align-middle">NIS</th>
-                    <th rowspan="2" class="sticky-col-second align-middle">Nama</th>`;
+        let html = `<table class="sticky-table w-full text-sm"><thead>`;
+        // header utama
+        html += `<tr><th rowspan="2" class="sticky-col-first align-middle">NIS</th><th rowspan="2" class="sticky-col-second align-middle">Nama</th>`;
         for (let i=0; i<assessList.length; i++) {
-            html += `<th class="text-center align-middle" style="min-width: 100px;">
-                        <div class="flex items-center justify-center gap-1"><span>N${i+1}</span>
-                        <button class="icon-btn icon-edit edit-assessment" data-assess-id="${assessList[i].id}" title="Edit"><i class="fas fa-pen"></i></button>
-                        <button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}" title="Hapus"><i class="fas fa-trash-alt"></i></button></div>
-                     </th>`;
+            html += `<th class="text-center align-middle" style="min-width: 100px;"><div class="flex items-center justify-center gap-1"><span>N${i+1}</span><button class="icon-btn icon-edit edit-assessment" data-assess-id="${assessList[i].id}" title="Edit tanggal/topik"><i class="fas fa-pen"></i></button><button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}" title="Hapus kolom"><i class="fas fa-trash-alt"></i></button></div></th>`;
         }
-        html += `<th rowspan="2" class="bg-gray-50 text-center align-middle">Rata-Rata</th></tr>
-                 <tr class="bg-gray-50 text-xs">`;
+        html += `<th rowspan="2" class="bg-gray-50 text-center align-middle">Rata-Rata</th></tr><tr class="bg-gray-50 text-xs">`;
         for (let as of assessList) {
             let shortTopic = as.topic ? (as.topic.length>18 ? as.topic.substring(0,15)+'...' : as.topic) : '-';
             html += `<td class="border p-1 text-center align-middle whitespace-nowrap"><div>${escapeHtml(as.date)}</div><div class="text-gray-500 text-xs">${escapeHtml(shortTopic)}</div></td>`;
@@ -573,7 +572,7 @@
             for (let as of assessList) {
                 let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
                 if (nilai !== 0) { totalNilai += nilai; countValid++; }
-                html += `<td class="text-center"><input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" data-assignment="${task.id}" value="${nilai}" step="1" min="0" max="100"></td>`;
+                html += `<td class="text-center"><input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100"></td>`;
             }
             let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
             html += `<td class="font-bold text-center">${rata}</td></tr>`;
@@ -581,28 +580,51 @@
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        // Edit & Hapus assessment (sama seperti sebelumnya)
-        wrapperDiv.querySelectorAll('.edit-assessment').forEach(btn => { btn.onclick = async (e) => { e.stopPropagation(); const assessId = btn.dataset.assessId; const assessment = assessList.find(a => a.id === assessId); if (assessment) { let newDate = prompt("Edit Tanggal (yyyy-mm-dd):", assessment.date?.split('/').reverse().join('-') || ''); if (!newDate) return; let newDateObj = new Date(newDate); if (isNaN(newDateObj)) return alert("Format salah"); let newDateDMY = formatDateToDMY(newDateObj); let newTopic = prompt("Edit Topik:", assessment.topic); if (newTopic !== null) { await db.ref(`penilaian/${task.id}/${assessId}/date`).set(newDateDMY); await db.ref(`penilaian/${task.id}/${assessId}/topic`).set(newTopic || "Penilaian"); await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task); } } }; });
-        wrapperDiv.querySelectorAll('.delete-assessment').forEach(btn => { btn.onclick = async (e) => { e.stopPropagation(); if(!confirm("Hapus kolom penilaian?")) return; await db.ref(`penilaian/${task.id}/${btn.dataset.assessId}`).remove(); await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task); }; });
-        
-        // Input nilai: tetap dengan onchange + slider di klik
-        const inputs = wrapperDiv.querySelectorAll('.nilai-siswa');
-        inputs.forEach(inp => {
-            // Event change untuk keyboard manual
-            inp.onchange = async () => {
-                let val = parseInt(inp.value,10);
-                if (isNaN(val)) val = 0;
-                val = Math.min(100, Math.max(0, val));
-                inp.value = val;
-                await simpanNilai(task.id, inp.dataset.assess, inp.dataset.nis, val);
+        // event untuk edit/hapus assessment
+        wrapperDiv.querySelectorAll('.edit-assessment').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                const assessId = btn.dataset.assessId;
+                const assessment = assessList.find(a => a.id === assessId);
+                if (assessment) {
+                    let newDate = prompt("Edit Tanggal (yyyy-mm-dd):", assessment.date?.split('/').reverse().join('-') || '');
+                    if (!newDate) return;
+                    let newDateObj = new Date(newDate);
+                    if (isNaN(newDateObj)) return alert("Format salah");
+                    let newDateDMY = formatDateToDMY(newDateObj);
+                    let newTopic = prompt("Edit Topik:", assessment.topic);
+                    if (newTopic !== null) {
+                        await db.ref(`penilaian/${task.id}/${assessId}/date`).set(newDateDMY);
+                        await db.ref(`penilaian/${task.id}/${assessId}/topic`).set(newTopic || "Penilaian");
+                        await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
+                    }
+                }
+            };
+        });
+        wrapperDiv.querySelectorAll('.delete-assessment').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                await deleteAssessment(task.id, btn.dataset.assessId);
                 await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
             };
-            // Event click untuk memunculkan slider geser (mobile & desktop)
-            inp.onclick = (e) => {
-                e.stopPropagation();
-                const currentVal = parseInt(inp.value, 10) || 0;
-                showSliderForInput(inp, task.id, inp.dataset.assess, inp.dataset.nis, currentVal, wrapperDiv, container, task);
+        });
+        
+        // Binding input nilai: typo & drag-to-slide
+        const inputs = wrapperDiv.querySelectorAll('.nilai-siswa');
+        inputs.forEach(inp => {
+            const assessId = inp.dataset.assess;
+            const nis = inp.dataset.nis;
+            // Handler untuk perubahan via keyboard / blur
+            const handleChange = async () => {
+                let raw = parseInt(inp.value, 10);
+                if (isNaN(raw)) raw = 0;
+                raw = Math.min(100, Math.max(0, raw));
+                inp.value = raw;
+                await updateNilaiAndRefresh(task.id, assessId, nis, raw, wrapperDiv, container, task);
             };
+            inp.addEventListener('change', handleChange);
+            // Drag geser kemampuan sentuhan / mouse
+            attachDragToInput(inp, task, assessId, nis, wrapperDiv, container);
         });
     }
 
@@ -623,7 +645,11 @@
             await db.ref(`penilaian/${task.id}/${newId}`).set({ date: dateDMY, topic, scores: {} });
             modal.style.display = 'none';
             const container = document.querySelector('#detailContent .tab-pane-penilaian');
-            if (container) { const wrap = container.querySelector('#penilaianTableWrapper'); if(wrap) await refreshWithScroll(wrap, refreshPenilaianTable, container, task); else await refreshPenilaianTable(container, task); }
+            if (container) {
+                const wrap = container.querySelector('#penilaianTableWrapper');
+                if(wrap) await refreshWithScroll(wrap, refreshPenilaianTable, container, task);
+                else await refreshPenilaianTable(container, task);
+            }
             cleanup();
         };
         const cleanup = () => { simpan.removeEventListener('click', onSimpan); batal.removeEventListener('click', onBatal); };
@@ -641,8 +667,11 @@
         const updateTarget = () => {
             let jenis = mapelSelect.options[mapelSelect.selectedIndex]?.dataset?.jenis;
             if (!jenis) { targetDiv.innerHTML = '<div class="text-gray-500">Pilih mata pelajaran dahulu</div>'; return; }
-            if (jenis === 'inkul') { targetDiv.innerHTML = `<p class="text-xs mb-2">Pilih Kelas (bisa lebih dari satu)</p><select multiple size="5" class="w-full border rounded p-1" id="targetKelasSelect">${allKelas.map(k=>`<option value="${k}">${escapeHtml(k)}</option>`).join('')}</select>`; }
-            else { targetDiv.innerHTML = `<p class="text-xs mb-2">Pilih Siswa (bisa lebih)</p><select multiple size="8" class="w-full border rounded p-1" id="targetSiswaSelect">${Object.entries(allSiswa).map(([nis,s])=>`<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(s.nama)} (${s.kelas})</option>`).join('')}</select>`; }
+            if (jenis === 'inkul') {
+                targetDiv.innerHTML = `<p class="text-xs mb-2">Pilih Kelas (bisa lebih dari satu)</p><select multiple size="5" class="w-full border rounded p-1" id="targetKelasSelect">${allKelas.map(k=>`<option value="${k}">${escapeHtml(k)}</option>`).join('')}</select>`;
+            } else {
+                targetDiv.innerHTML = `<p class="text-xs mb-2">Pilih Siswa (bisa lebih)</p><select multiple size="8" class="w-full border rounded p-1" id="targetSiswaSelect">${Object.entries(allSiswa).map(([nis,s])=>`<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(s.nama)} (${s.kelas})</option>`).join('')}</select>`;
+            }
         };
         mapelSelect.onchange = updateTarget;
         updateTarget();
