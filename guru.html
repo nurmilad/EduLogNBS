@@ -52,11 +52,6 @@
         .nilai-input {
             width: 70px;
             text-align: center;
-            cursor: ew-resize;
-            transition: background 0.1s;
-        }
-        .nilai-input.dragging-active {
-            background-color: #eef2ff;
         }
         
         /* ========== STICKY HEADER & FREEZE KOLOM ========== */
@@ -363,7 +358,7 @@
         wrapperElement.scrollTop = oldTop;
     }
 
-    // ================= KEHADIRAN (tidak diubah) =================
+    // ================= KEHADIRAN =================
     async function renderKehadiranTab(container, task) {
         container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-kehadiran" title="Tambah sesi kehadiran"><i class="fas fa-plus"></i></button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
         container.querySelector('.btn-add-kehadiran').onclick = () => openAddKehadiranModal(task);
@@ -385,7 +380,9 @@
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
         let html = `<table class="sticky-table w-full text-sm">`;
-        html += `<thead><tr><th class="sticky-col-first">NIS</th><th class="sticky-col-second">Nama</th>`;
+        html += `<thead><tr>
+                    <th class="sticky-col-first">NIS</th>
+                    <th class="sticky-col-second">Nama</th>`;
         for (let ses of sessionsList) {
             let shortDate = ses.date.split('/').slice(0,2).join('/');
             html += `<th class="text-center whitespace-nowrap" style="min-width: 100px;">
@@ -396,26 +393,63 @@
                         </div>
                      </th>`;
         }
-        html += `<th class="bg-gray-50 text-center">Jml H</th></tr></thead><tbody>`;
+        html += `<th class="bg-gray-50 text-center">Jml H</th>`;
+        html += `</tr></thead><tbody>`;
+        
         for (let siswa of siswaArray) {
             let hadirCount = 0;
-            html += `<tr><td class="sticky-col-first">${escapeHtml(siswa.nis)}</td><td class="sticky-col-second">${escapeHtml(siswa.nama)}</td>`;
+            html += `<tr>
+                        <td class="sticky-col-first">${escapeHtml(siswa.nis)}</td>
+                        <td class="sticky-col-second">${escapeHtml(siswa.nama)}</td>`;
             for (let ses of sessionsList) {
                 let status = ses.records[siswa.nis] || 'H';
                 if (status === 'H') hadirCount++;
-                let statusClass = status === 'H' ? 'status-h' : (status === 'I' ? 'status-i' : (status === 'S' ? 'status-s' : 'status-a'));
-                html += `<td class="text-center"><div class="status-badge ${statusClass} kehadiran-status" data-session="${ses.id}" data-nis="${siswa.nis}" data-status="${status}">${status}</div></td>`;
+                let statusClass = '';
+                if (status === 'H') statusClass = 'status-h';
+                else if (status === 'I') statusClass = 'status-i';
+                else if (status === 'S') statusClass = 'status-s';
+                else if (status === 'A') statusClass = 'status-a';
+                html += `<td class="text-center">
+                            <div class="status-badge ${statusClass} kehadiran-status" data-session="${ses.id}" data-nis="${siswa.nis}" data-status="${status}">${status}</div>
+                          </td>`;
             }
-            html += `<td class="font-bold text-center">${hadirCount}</td></tr>`;
+            html += `<td class="font-bold text-center">${hadirCount}</td>`;
+            html += `</tr>`;
         }
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
-        wrapperDiv.querySelectorAll('.edit-session-date').forEach(btn => btn.onclick = (e) => { e.stopPropagation(); openEditTanggalModal(task.id, btn.dataset.sessionId, btn.dataset.currentDate, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task)); });
-        wrapperDiv.querySelectorAll('.delete-session').forEach(btn => btn.onclick = async (e) => { e.stopPropagation(); await deleteAttendanceSession(task.id, btn.dataset.sessionId); await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task); });
-        wrapperDiv.querySelectorAll('.kehadiran-status').forEach(badge => badge.onclick = async (e) => { e.stopPropagation(); const sessionId = badge.dataset.session, nis = badge.dataset.nis, current = badge.dataset.status; const cycle = { 'H':'I','I':'S','S':'A','A':'H' }; const newStatus = cycle[current] || 'H'; await db.ref(`attendance/${task.id}/${sessionId}/records/${nis}`).set(newStatus); await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task); });
+        
+        // Edit tanggal
+        wrapperDiv.querySelectorAll('.edit-session-date').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                openEditTanggalModal(task.id, btn.dataset.sessionId, btn.dataset.currentDate, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
+            };
+        });
+        // Hapus sesi
+        wrapperDiv.querySelectorAll('.delete-session').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                await deleteAttendanceSession(task.id, btn.dataset.sessionId);
+                await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task);
+            };
+        });
+        // Klik status
+        wrapperDiv.querySelectorAll('.kehadiran-status').forEach(badge => {
+            badge.onclick = async (e) => {
+                e.stopPropagation();
+                const sessionId = badge.dataset.session;
+                const nis = badge.dataset.nis;
+                const currentStatus = badge.dataset.status;
+                const statusCycle = { 'H': 'I', 'I': 'S', 'S': 'A', 'A': 'H' };
+                const newStatus = statusCycle[currentStatus] || 'H';
+                await db.ref(`attendance/${task.id}/${sessionId}/records/${nis}`).set(newStatus);
+                await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task);
+            };
+        });
     }
 
-    async function openAddKehadiranModal(task) { /* existing */
+    async function openAddKehadiranModal(task) {
         const todayYMD = toYMD(new Date());
         document.getElementById('kehadiranDate').value = todayYMD;
         const modal = document.getElementById('modalTambahKehadiran');
@@ -430,7 +464,11 @@
             await db.ref(`attendance/${task.id}/${newSessionId}`).set({ date: dateDMY, records: {} });
             modal.style.display = 'none';
             const container = document.querySelector('#detailContent .tab-pane-kehadiran');
-            if (container) { const wrap = container.querySelector('#kehadiranTableWrapper'); if(wrap) await refreshWithScroll(wrap, refreshKehadiranTable, container, task); else await refreshKehadiranTable(container, task); }
+            if (container) {
+                const wrap = container.querySelector('#kehadiranTableWrapper');
+                if(wrap) await refreshWithScroll(wrap, refreshKehadiranTable, container, task);
+                else await refreshKehadiranTable(container, task);
+            }
             cleanup();
         };
         const cleanup = () => { simpan.removeEventListener('click', onSimpan); batal.removeEventListener('click', closeModal); };
@@ -439,7 +477,7 @@
         batal.addEventListener('click', closeModal);
     }
 
-    async function openEditTanggalModal(assignmentId, sessionId, oldDateDMY, callback) { /* existing */ 
+    async function openEditTanggalModal(assignmentId, sessionId, oldDateDMY, callback) {
         let oldDate = parseDMY(oldDateDMY);
         let ymd = oldDate ? toYMD(oldDate) : '';
         const modal = document.getElementById('modalEditTanggal');
@@ -448,14 +486,22 @@
         modal.style.display = 'flex';
         const saveBtn = document.getElementById('saveEditTanggal');
         const cancelBtn = document.getElementById('cancelEditTanggal');
-        const onSave = async () => { let newYmd = dateInput.value; if (!newYmd) return alert("Pilih tanggal"); let newDateDMY = formatDateToDMY(new Date(newYmd)); await db.ref(`attendance/${assignmentId}/${sessionId}/date`).set(newDateDMY); modal.style.display = 'none'; if (callback) callback(); cleanup(); };
+        const onSave = async () => {
+            let newYmd = dateInput.value;
+            if (!newYmd) return alert("Pilih tanggal");
+            let newDateDMY = formatDateToDMY(new Date(newYmd));
+            await db.ref(`attendance/${assignmentId}/${sessionId}/date`).set(newDateDMY);
+            modal.style.display = 'none';
+            if (callback) callback();
+            cleanup();
+        };
         const onCancel = () => { modal.style.display = 'none'; cleanup(); };
         const cleanup = () => { saveBtn.removeEventListener('click', onSave); cancelBtn.removeEventListener('click', onCancel); };
         saveBtn.addEventListener('click', onSave);
         cancelBtn.addEventListener('click', onCancel);
     }
-    
-    // ============= PENILAIAN DENGAN SLIDER DRAG =============
+
+    // ================= PENILAIAN =================
     async function renderPenilaianTab(container, task) {
         container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-penilaian" title="Tambah penilaian"><i class="fas fa-plus"></i></button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
         container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
@@ -467,83 +513,6 @@
         await db.ref(`penilaian/${assignmentId}/${assessId}`).remove();
     }
 
-    // Fungsi universal untuk update nilai dan refresh tabel tanpa kehilangan scroll
-    async function updateNilaiAndRefresh(assignmentId, assessId, nis, newValue, wrapperDiv, container, task) {
-        newValue = Math.min(100, Math.max(0, parseInt(newValue)||0));
-        await db.ref(`penilaian/${assignmentId}/${assessId}/scores/${nis}`).set(newValue);
-        // refresh tabel dengan mempertahankan posisi scroll
-        if (wrapperDiv) {
-            const oldLeft = wrapperDiv.scrollLeft;
-            const oldTop = wrapperDiv.scrollTop;
-            await refreshPenilaianTable(container, task);
-            wrapperDiv.scrollLeft = oldLeft;
-            wrapperDiv.scrollTop = oldTop;
-        } else {
-            await refreshPenilaianTable(container, task);
-        }
-    }
-
-    // Menambahkan Event Dragging (geser) pada input nilai
-    function attachDragToInput(inputEl, task, assessId, nis, wrapperDiv, container) {
-        let dragActive = false;
-        let startX = 0, startVal = 0;
-        let movedEnough = false;
-        
-        const onPointerMove = (e) => {
-            if (!dragActive) return;
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const delta = clientX - startX;
-            if (!movedEnough && Math.abs(delta) < 5) return; // threshold 5px
-            movedEnough = true;
-            e.preventDefault();
-            // sensitivitas: setiap 3px = 1 angka
-            let rawVal = startVal + Math.round(delta / 3);
-            let newVal = Math.min(100, Math.max(0, rawVal));
-            inputEl.value = newVal;
-            inputEl.classList.add('dragging-active');
-        };
-        
-        const onPointerUp = async (e) => {
-            if (dragActive && movedEnough) {
-                const finalVal = parseInt(inputEl.value, 10);
-                if (!isNaN(finalVal) && finalVal !== startVal) {
-                    await updateNilaiAndRefresh(task.id, assessId, nis, finalVal, wrapperDiv, container, task);
-                }
-            }
-            cleanup();
-            if (!movedEnough && dragActive) {
-                // jika hanya klik (tanpa geser), biarkan fokus normal untuk mengetik
-                inputEl.focus();
-            }
-            inputEl.classList.remove('dragging-active');
-        };
-        
-        const onPointerDown = (e) => {
-            // hanya tombol kiri mouse / sentuhan
-            if (e.button === 2) return;
-            dragActive = true;
-            movedEnough = false;
-            startVal = parseInt(inputEl.value, 10) || 0;
-            startX = e.touches ? e.touches[0].clientX : e.clientX;
-            window.addEventListener('mousemove', onPointerMove);
-            window.addEventListener('mouseup', onPointerUp);
-            window.addEventListener('touchmove', onPointerMove, { passive: false });
-            window.addEventListener('touchend', onPointerUp);
-            e.preventDefault();
-        };
-        
-        const cleanup = () => {
-            dragActive = false;
-            window.removeEventListener('mousemove', onPointerMove);
-            window.removeEventListener('mouseup', onPointerUp);
-            window.removeEventListener('touchmove', onPointerMove);
-            window.removeEventListener('touchend', onPointerUp);
-        };
-        
-        inputEl.addEventListener('mousedown', onPointerDown);
-        inputEl.addEventListener('touchstart', onPointerDown, { passive: false });
-    }
-
     async function refreshPenilaianTable(container, task) {
         const wrapperDiv = container.querySelector('#penilaianTableWrapper');
         if (!wrapperDiv) return;
@@ -553,13 +522,23 @@
         assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
-        let html = `<table class="sticky-table w-full text-sm"><thead>`;
-        // header utama
-        html += `<tr><th rowspan="2" class="sticky-col-first align-middle">NIS</th><th rowspan="2" class="sticky-col-second align-middle">Nama</th>`;
+        let html = `<table class="sticky-table w-full text-sm">`;
+        html += `<thead>`;
+        // baris 1: header dengan edit & hapus
+        html += `<tr>
+                    <th rowspan="2" class="sticky-col-first align-middle">NIS</th>
+                    <th rowspan="2" class="sticky-col-second align-middle">Nama</th>`;
         for (let i=0; i<assessList.length; i++) {
-            html += `<th class="text-center align-middle" style="min-width: 100px;"><div class="flex items-center justify-center gap-1"><span>N${i+1}</span><button class="icon-btn icon-edit edit-assessment" data-assess-id="${assessList[i].id}" title="Edit tanggal/topik"><i class="fas fa-pen"></i></button><button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}" title="Hapus kolom"><i class="fas fa-trash-alt"></i></button></div></th>`;
+            html += `<th class="text-center align-middle" style="min-width: 100px;">
+                        <div class="flex items-center justify-center gap-1">
+                            <span>N${i+1}</span>
+                            <button class="icon-btn icon-edit edit-assessment" data-assess-id="${assessList[i].id}" title="Edit tanggal/topik"><i class="fas fa-pen"></i></button>
+                            <button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}" title="Hapus kolom"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                     </th>`;
         }
-        html += `<th rowspan="2" class="bg-gray-50 text-center align-middle">Rata-Rata</th></tr><tr class="bg-gray-50 text-xs">`;
+        html += `<th rowspan="2" class="bg-gray-50 text-center align-middle">Rata-Rata</th>`;
+        html += `</tr><tr class="bg-gray-50 text-xs">`;
         for (let as of assessList) {
             let shortTopic = as.topic ? (as.topic.length>18 ? as.topic.substring(0,15)+'...' : as.topic) : '-';
             html += `<td class="border p-1 text-center align-middle whitespace-nowrap"><div>${escapeHtml(as.date)}</div><div class="text-gray-500 text-xs">${escapeHtml(shortTopic)}</div></td>`;
@@ -568,19 +547,22 @@
         
         for (let siswa of siswaArray) {
             let totalNilai = 0, countValid = 0;
-            html += `<tr><td class="sticky-col-first">${escapeHtml(siswa.nis)}</td><td class="sticky-col-second">${escapeHtml(siswa.nama)}</td>`;
+            html += `<tr>
+                        <td class="sticky-col-first">${escapeHtml(siswa.nis)}</td>
+                        <td class="sticky-col-second">${escapeHtml(siswa.nama)}</td>`;
             for (let as of assessList) {
                 let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
                 if (nilai !== 0) { totalNilai += nilai; countValid++; }
                 html += `<td class="text-center"><input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100"></td>`;
             }
             let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
-            html += `<td class="font-bold text-center">${rata}</td></tr>`;
+            html += `<td class="font-bold text-center">${rata}</td>`;
+            html += `</tr>`;
         }
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        // event untuk edit/hapus assessment
+        // Edit assessment (tanggal/topik)
         wrapperDiv.querySelectorAll('.edit-assessment').forEach(btn => {
             btn.onclick = async (e) => {
                 e.stopPropagation();
@@ -601,6 +583,7 @@
                 }
             };
         });
+        // Hapus assessment
         wrapperDiv.querySelectorAll('.delete-assessment').forEach(btn => {
             btn.onclick = async (e) => {
                 e.stopPropagation();
@@ -608,23 +591,16 @@
                 await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
             };
         });
-        
-        // Binding input nilai: typo & drag-to-slide
-        const inputs = wrapperDiv.querySelectorAll('.nilai-siswa');
-        inputs.forEach(inp => {
-            const assessId = inp.dataset.assess;
-            const nis = inp.dataset.nis;
-            // Handler untuk perubahan via keyboard / blur
-            const handleChange = async () => {
-                let raw = parseInt(inp.value, 10);
-                if (isNaN(raw)) raw = 0;
-                raw = Math.min(100, Math.max(0, raw));
-                inp.value = raw;
-                await updateNilaiAndRefresh(task.id, assessId, nis, raw, wrapperDiv, container, task);
+        // Input nilai onchange
+        wrapperDiv.querySelectorAll('.nilai-siswa').forEach(inp => {
+            inp.onchange = async () => {
+                let val = parseInt(inp.value,10);
+                if (isNaN(val)) val = 0;
+                val = Math.min(100, Math.max(0, val));
+                inp.value = val;
+                await db.ref(`penilaian/${task.id}/${inp.dataset.assess}/scores/${inp.dataset.nis}`).set(val);
+                await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
             };
-            inp.addEventListener('change', handleChange);
-            // Drag geser kemampuan sentuhan / mouse
-            attachDragToInput(inp, task, assessId, nis, wrapperDiv, container);
         });
     }
 
