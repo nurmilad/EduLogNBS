@@ -165,6 +165,20 @@
         .btn-plus i {
             font-size: 1.4rem;
         }
+        
+        .icon-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin: 0 2px;
+            padding: 2px 4px;
+            border-radius: 8px;
+            transition: all 0.1s;
+        }
+        .icon-btn:hover { background-color: rgba(0,0,0,0.05); }
+        .icon-delete { color: #e11d48; }
+        .icon-edit { color: #4f46e5; }
     </style>
 </head>
 <body class="p-4 md:p-6">
@@ -335,7 +349,6 @@
         renderKehadiranTab(kehadiranPane, task);
     }
 
-    // ================= PRESERVE SCROLL =================
     async function refreshWithScroll(wrapperElement, refreshFn, ...args) {
         if (!wrapperElement) { await refreshFn(...args); return; }
         const oldLeft = wrapperElement.scrollLeft;
@@ -345,18 +358,16 @@
         wrapperElement.scrollTop = oldTop;
     }
 
-    // ================= KEHADIRAN (tanpa teks instruksi) =================
+    // ================= KEHADIRAN =================
     async function renderKehadiranTab(container, task) {
-        // Hilangkan teks instruksi, ganti tombol dengan plus besar
         container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-kehadiran" title="Tambah sesi kehadiran"><i class="fas fa-plus"></i></button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
         container.querySelector('.btn-add-kehadiran').onclick = () => openAddKehadiranModal(task);
         await refreshKehadiranTable(container, task);
     }
 
-    async function updateStatusKehadiran(taskId, sessionId, nis, currentStatus) {
-        const statusCycle = { 'H': 'I', 'I': 'S', 'S': 'A', 'A': 'H' };
-        const newStatus = statusCycle[currentStatus] || 'H';
-        await db.ref(`attendance/${taskId}/${sessionId}/records/${nis}`).set(newStatus);
+    async function deleteAttendanceSession(assignmentId, sessionId) {
+        if (!confirm("Hapus sesi kehadiran ini? Seluruh data status kehadiran akan hilang.")) return;
+        await db.ref(`attendance/${assignmentId}/${sessionId}`).remove();
     }
 
     async function refreshKehadiranTable(container, task) {
@@ -374,9 +385,16 @@
                     <th class="sticky-col-second">Nama</th>`;
         for (let ses of sessionsList) {
             let shortDate = ses.date.split('/').slice(0,2).join('/');
-            html += `<th class="table-header-click text-center whitespace-nowrap" data-session-id="${ses.id}" data-current-date="${ses.date}">${escapeHtml(shortDate)} <i class="fas fa-pen text-xs"></i></th>`;
+            html += `<th class="text-center whitespace-nowrap" style="min-width: 100px;">
+                        <div class="flex items-center justify-center gap-1">
+                            <span>${escapeHtml(shortDate)}</span>
+                            <button class="icon-btn icon-edit edit-session-date" data-session-id="${ses.id}" data-current-date="${ses.date}" title="Edit tanggal"><i class="fas fa-pen"></i></button>
+                            <button class="icon-btn icon-delete delete-session" data-session-id="${ses.id}" title="Hapus kolom"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                     </th>`;
         }
-        html += `<th class="bg-gray-50 text-center">Jml H</th></tr></thead><tbody>`;
+        html += `<th class="bg-gray-50 text-center">Jml H</th>`;
+        html += `</tr></thead><tbody>`;
         
         for (let siswa of siswaArray) {
             let hadirCount = 0;
@@ -393,7 +411,7 @@
                 else if (status === 'A') statusClass = 'status-a';
                 html += `<td class="text-center">
                             <div class="status-badge ${statusClass} kehadiran-status" data-session="${ses.id}" data-nis="${siswa.nis}" data-status="${status}">${status}</div>
-                           </td>`;
+                          </td>`;
             }
             html += `<td class="font-bold text-center">${hadirCount}</td>`;
             html += `</tr>`;
@@ -401,22 +419,31 @@
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        // Edit tanggal header
-        wrapperDiv.querySelectorAll('.table-header-click').forEach(el => {
-            el.onclick = (e) => {
+        // Edit tanggal
+        wrapperDiv.querySelectorAll('.edit-session-date').forEach(btn => {
+            btn.onclick = (e) => {
                 e.stopPropagation();
-                openEditTanggalModal(task.id, el.dataset.sessionId, el.dataset.currentDate, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
+                openEditTanggalModal(task.id, btn.dataset.sessionId, btn.dataset.currentDate, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
             };
         });
-        
-        // Klik status (preserve scroll)
+        // Hapus sesi
+        wrapperDiv.querySelectorAll('.delete-session').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                await deleteAttendanceSession(task.id, btn.dataset.sessionId);
+                await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task);
+            };
+        });
+        // Klik status
         wrapperDiv.querySelectorAll('.kehadiran-status').forEach(badge => {
             badge.onclick = async (e) => {
                 e.stopPropagation();
                 const sessionId = badge.dataset.session;
                 const nis = badge.dataset.nis;
                 const currentStatus = badge.dataset.status;
-                await updateStatusKehadiran(task.id, sessionId, nis, currentStatus);
+                const statusCycle = { 'H': 'I', 'I': 'S', 'S': 'A', 'A': 'H' };
+                const newStatus = statusCycle[currentStatus] || 'H';
+                await db.ref(`attendance/${task.id}/${sessionId}/records/${nis}`).set(newStatus);
                 await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task);
             };
         });
@@ -474,11 +501,16 @@
         cancelBtn.addEventListener('click', onCancel);
     }
 
-    // ================= PENILAIAN (tombol plus) =================
+    // ================= PENILAIAN =================
     async function renderPenilaianTab(container, task) {
         container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-penilaian" title="Tambah penilaian"><i class="fas fa-plus"></i></button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
         container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
         await refreshPenilaianTable(container, task);
+    }
+
+    async function deleteAssessment(assignmentId, assessId) {
+        if (!confirm("Hapus kolom penilaian ini? Semua nilai siswa untuk penilaian ini akan hilang.")) return;
+        await db.ref(`penilaian/${assignmentId}/${assessId}`).remove();
     }
 
     async function refreshPenilaianTable(container, task) {
@@ -491,11 +523,19 @@
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
         let html = `<table class="sticky-table w-full text-sm">`;
-        html += `<thead><tr>
+        html += `<thead>`;
+        // baris 1: header dengan edit & hapus
+        html += `<tr>
                     <th rowspan="2" class="sticky-col-first align-middle">NIS</th>
                     <th rowspan="2" class="sticky-col-second align-middle">Nama</th>`;
         for (let i=0; i<assessList.length; i++) {
-            html += `<th class="text-center penilaian-header-click align-middle" data-assess-id="${assessList[i].id}">N${i+1} <i class="fas fa-edit text-xs"></i></th>`;
+            html += `<th class="text-center align-middle" style="min-width: 100px;">
+                        <div class="flex items-center justify-center gap-1">
+                            <span>N${i+1}</span>
+                            <button class="icon-btn icon-edit edit-assessment" data-assess-id="${assessList[i].id}" title="Edit tanggal/topik"><i class="fas fa-pen"></i></button>
+                            <button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}" title="Hapus kolom"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                     </th>`;
         }
         html += `<th rowspan="2" class="bg-gray-50 text-center align-middle">Rata-Rata</th>`;
         html += `</tr><tr class="bg-gray-50 text-xs">`;
@@ -522,11 +562,11 @@
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        // Edit header penilaian
-        wrapperDiv.querySelectorAll('.penilaian-header-click').forEach(th => {
-            th.onclick = async (e) => {
+        // Edit assessment (tanggal/topik)
+        wrapperDiv.querySelectorAll('.edit-assessment').forEach(btn => {
+            btn.onclick = async (e) => {
                 e.stopPropagation();
-                const assessId = th.dataset.assessId;
+                const assessId = btn.dataset.assessId;
                 const assessment = assessList.find(a => a.id === assessId);
                 if (assessment) {
                     let newDate = prompt("Edit Tanggal (yyyy-mm-dd):", assessment.date?.split('/').reverse().join('-') || '');
@@ -543,7 +583,14 @@
                 }
             };
         });
-        
+        // Hapus assessment
+        wrapperDiv.querySelectorAll('.delete-assessment').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                await deleteAssessment(task.id, btn.dataset.assessId);
+                await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
+            };
+        });
         // Input nilai onchange
         wrapperDiv.querySelectorAll('.nilai-siswa').forEach(inp => {
             inp.onchange = async () => {
