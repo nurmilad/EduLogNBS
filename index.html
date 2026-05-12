@@ -3,629 +3,306 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>EduLogNBS — Windows Me Edition (Tosca)</title>
+    <title>EduLogNBS — Sistem Perangkat Mengajar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Reset & Base Windows Me Style - TOSCA THEME */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { font-family: 'Inter', system-ui, sans-serif; }
         body {
-            background: #3A6B5E;  /* base tosca solid fallback */
-            background-image: radial-gradient(circle at 10% 20%, rgba(20, 80, 70, 0.6) 2%, transparent 2.5%),
-                              radial-gradient(circle at 80% 70%, rgba(70, 130, 110, 0.5) 1.5%, transparent 2%);
-            background-size: 40px 40px, 35px 35px;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            font-family: 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', sans-serif;
-            cursor: default;
+            background: linear-gradient(145deg, #0f172a 0%, #1e1b4b 50%, #2e1065 100%);
+            background-attachment: fixed;
         }
-
-        /* Jendela Windows Me dengan border khas */
-        .winme-window {
-            background: #ECE9D8;  /* warna latar jendela klasik */
-            border: 1px solid #0a2f2a;
-            box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.3);
-            width: 100%;
-            max-width: 480px;
-            border-radius: 8px 8px 6px 6px;
-            transition: all 0.1s ease;
+        .glass-card {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(0px);
+            border-radius: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
         }
-
-        /* Title Bar ala Windows Me (tosca gradien) */
-        .winme-titlebar {
-            background: linear-gradient(90deg, #167a6b, #2ba18b);
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            border-radius: 7px 7px 0 0;
-            border-bottom: 1px solid #5fbeae;
-            cursor: move;
-            user-select: none;
+        .role-btn {
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        .winme-titlebar-left {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .winme-icon {
-            font-size: 1.25rem;
-            color: #FFFFD0;
-            filter: drop-shadow(0 1px 0 #226655);
-        }
-        .winme-title {
-            font-weight: bold;
-            font-size: 0.9rem;
-            letter-spacing: 0.3px;
+        .role-btn.active {
+            background: linear-gradient(105deg, #4f46e5 0%, #7c3aed 100%);
             color: white;
-            text-shadow: 1px 1px 0 #146b58;
+            box-shadow: 0 8px 20px -6px #4f46e5;
         }
-        .winme-titlebar-buttons {
-            display: flex;
-            gap: 6px;
+        .input-focus:focus {
+            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+            border-color: #4f46e5;
         }
-        .winme-control {
-            background: #C2C7CB;
-            width: 26px;
-            height: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
-            color: #1f2f2a;
-            border-radius: 3px;
-            border: 1px solid #F0F0F0;
-            border-top-color: #FFFFFF;
-            border-left-color: #FFFFFF;
-            border-bottom-color: #808080;
-            border-right-color: #808080;
-            cursor: pointer;
-            transition: all 0.05s linear;
+        .login-btn {
+            background: linear-gradient(100deg, #4f46e5 0%, #7c3aed 100%);
+            transition: all 0.2s;
         }
-        .winme-control:active {
-            border-top-color: #808080;
-            border-left-color: #808080;
-            border-bottom-color: #FFFFFF;
-            border-right-color: #FFFFFF;
-            background: #a7aeb3;
+        .login-btn:hover {
+            transform: scale(1.01);
+            box-shadow: 0 15px 25px -12px #5b21b6;
         }
-
-        /* Area konten window */
-        .winme-content {
-            padding: 22px 24px 26px 24px;
-            background: #ECE9D8;
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
         }
-
-        /* Login header dalam window */
-        .winme-login-header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #C0C0B8;
-            padding-bottom: 12px;
-        }
-        .winme-badge {
-            background: #cbdad4;
-            display: inline-block;
-            padding: 4px 14px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            color: #1e5e51;
-            border: 1px solid #b1c6bc;
-            box-shadow: inset 0 1px 0 white, 0 1px 0 rgba(0,0,0,0.05);
-        }
-        .winme-login-header h2 {
-            font-size: 1.8rem;
-            font-weight: 600;
-            color: #1a5448;
-            margin-top: 10px;
-            letter-spacing: -0.5px;
-        }
-        .winme-login-header p {
-            color: #4a665e;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-
-        /* Role Switcher gaya Windows 98/Me (tab look) */
-        .winme-role-container {
-            display: flex;
-            background: #D4D0C0;
-            padding: 4px;
-            border-radius: 6px;
-            margin-bottom: 20px;
-            border: 1px solid #B0AA9A;
-            box-shadow: inset 0 1px 1px rgba(0,0,0,0.1);
-        }
-        .winme-role-btn {
-            flex: 1;
-            background: #ECEBE0;
-            border: 1px solid #FEFEF7;
-            border-right-color: #9c9688;
-            border-bottom-color: #9c9688;
-            padding: 8px 0;
-            font-weight: bold;
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            color: #2b4b40;
-            transition: none;
-            cursor: pointer;
-            border-radius: 0;
-            margin: 0 2px;
-        }
-        .winme-role-btn:first-child {
-            border-radius: 4px 0 0 4px;
-        }
-        .winme-role-btn:last-child {
-            border-radius: 0 4px 4px 0;
-        }
-        .winme-role-btn.active {
-            background: #2b8f7a;
-            border: 1px solid #176e5c;
-            color: white;
-            box-shadow: inset 0 1px 1px rgba(0,0,0,0.2);
-            text-shadow: 0 1px 0 #0b5a4a;
-        }
-
-        /* Input fields gaya retro */
-        .winme-field {
-            margin-bottom: 18px;
-        }
-        .winme-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.75rem;
-            font-weight: bold;
-            color: #2b5f53;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        .winme-input-wrapper {
-            position: relative;
-            background: #f9f8f0;
-            border: 1px solid #7f7c6f;
-            border-top-color: #5a574c;
-            border-left-color: #5a574c;
-            border-right-color: #e3dfcf;
-            border-bottom-color: #e3dfcf;
-            border-radius: 3px;
-        }
-        .winme-input-wrapper i.field-icon {
-            position: absolute;
-            left: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #5f8b7c;
-            font-size: 0.8rem;
-            z-index: 2;
-        }
-        .winme-input-wrapper input, 
-        .winme-input-wrapper select {
-            width: 100%;
-            background: #FFFFF0;
-            border: none;
-            padding: 10px 10px 10px 32px;
-            font-size: 0.85rem;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            outline: none;
-            color: #1c3c33;
-        }
-        .winme-input-wrapper select {
-            padding: 10px 10px 10px 32px;
-            appearance: none;
-            background: #FFFFF0;
-            cursor: pointer;
-        }
-        .winme-input-wrapper .chevron-icon {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-            color: #757159;
-            font-size: 0.7rem;
-        }
-        input:focus, select:focus {
-            background: #FFFEF5;
-            outline: 2px solid #308b78;
-        }
-
-        /* Tombol login gaya Windows Me */
-        .winme-login-btn {
-            width: 100%;
-            background: #D9D4C4;
-            border: 1px solid #F0EDE0;
-            border-right-color: #7f7864;
-            border-bottom-color: #7f7864;
-            padding: 10px;
-            font-weight: bold;
-            font-size: 0.85rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            color: #1c5b4c;
-            margin-top: 12px;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: 0.05s linear;
-        }
-        .winme-login-btn:active {
-            border-top-color: #7f7864;
-            border-left-color: #7f7864;
-            border-right-color: #F0EDE0;
-            border-bottom-color: #F0EDE0;
-            background: #C8C2B0;
-        }
-
-        /* Error message style */
-        .winme-error {
-            background: #fce2e2;
-            border-left: 4px solid #c0443b;
-            color: #a53128;
-            padding: 8px 12px;
-            font-size: 0.7rem;
-            font-weight: bold;
-            margin-top: 12px;
-            border-radius: 4px;
-            text-align: center;
-            display: none;
-        }
-
-        /* Status bar bawah mirip WinMe */
-        .winme-statusbar {
-            background: #E0DBC8;
-            border-top: 1px solid #FFFBE8;
-            padding: 5px 12px;
-            font-size: 0.65rem;
-            color: #3c6b5e;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-radius: 0 0 6px 6px;
-            font-weight: 500;
-        }
-        .winme-statusbar i {
-            margin-right: 4px;
-        }
-
-        /* efek tombol hover */
-        .winme-role-btn:hover:not(.active) {
-            background: #f5f3e6;
-        }
-        .winme-login-btn:hover {
-            background: #E4E0D3;
-        }
-        .winme-control:hover {
-            background: #d5dadf;
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
         }
     </style>
 </head>
-<body>
-
-<div class="winme-window">
-    <!-- title bar ala Windows Millennium (tosca gradient) -->
-    <div class="winme-titlebar">
-        <div class="winme-titlebar-left">
-            <i class="fas fa-desktop winme-icon"></i>
-            <span class="winme-title">EduLogNBS - Login Portal</span>
-        </div>
-        <div class="winme-titlebar-buttons">
-            <div class="winme-control" style="font-size: 10px;">—</div>
-            <div class="winme-control" style="font-size: 10px;">□</div>
-            <div class="winme-control" style="font-size: 11px; line-height: 1;">✕</div>
-        </div>
-    </div>
-
-    <!-- konten window -->
-    <div class="winme-content">
-        <div class="winme-login-header">
-            <span class="winme-badge"><i class="fas fa-key me-1"></i> MILLENNIUM EDITION · TOSCA</span>
-            <h2><i class="fas fa-chalkboard-user me-2"></i>EduLog<span style="font-weight:400">NBS</span></h2>
-            <p>Sistem Perangkat Mengajar Digital — Windows Me Style</p>
-        </div>
-
-        <!-- Role Switcher Windows Me look -->
-        <div class="winme-role-container">
-            <button id="btnAdmin" class="winme-role-btn"><i class="fas fa-user-shield"></i> Admin</button>
-            <button id="btnGuru" class="winme-role-btn"><i class="fas fa-chalkboard-user"></i> Guru</button>
-            <button id="btnSiswa" class="winme-role-btn"><i class="fas fa-graduation-cap"></i> Siswa</button>
-        </div>
-
-        <!-- Form area -->
-        <div>
-            <div class="winme-field">
-                <div class="winme-label" id="usernameLabel">
-                    <i class="fas fa-user-cog"></i> <span>USERNAME (ADMIN)</span>
-                </div>
-                <div id="usernameInputContainer">
-                    <!-- dynamic input / select will be injected here -->
-                </div>
+<body class="flex items-center justify-center min-h-screen p-5">
+    <div class="relative z-10 w-full max-w-md">
+        <!-- Header -->
+        <div class="text-center mb-6 animate-float">
+            <div class="inline-flex items-center justify-center bg-white/10 backdrop-blur-sm p-4 rounded-3xl shadow-lg border border-white/20 mb-2">
+                <i class="fas fa-chalkboard-user text-5xl text-white drop-shadow-md"></i>
             </div>
-            <div class="winme-field">
-                <div class="winme-label">
-                    <i class="fas fa-key"></i> <span>PASSWORD</span>
-                </div>
-                <div class="winme-input-wrapper">
-                    <i class="fas fa-lock field-icon"></i>
-                    <input type="password" id="password" placeholder="Masukkan password rahasia">
-                </div>
+            <h1 class="text-4xl font-extrabold text-white tracking-tight mt-3">EduLog<span class="font-light">NBS</span></h1>
+            <p class="text-indigo-200 text-sm mt-1 font-medium">Sistem Perangkat Mengajar Digital</p>
+        </div>
+
+        <!-- Kartu Login -->
+        <div class="glass-card p-6 md:p-8 w-full border border-white/40">
+            <div class="text-center mb-5">
+                <span class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold"><i class="fas fa-lock mr-1"></i> PORTAL AKSES</span>
+                <h2 class="text-2xl font-bold text-gray-800 mt-3">Masuk ke Akun</h2>
+                <p class="text-gray-500 text-sm mt-1">Pilih peran dan masukkan kredensial</p>
             </div>
 
-            <button id="loginBtn" class="winme-login-btn">
-                <i class="fas fa-sign-in-alt"></i> MASUK KE DASHBOARD
-            </button>
-            <div id="errorMsg" class="winme-error"></div>
+            <!-- Role Switcher -->
+            <div class="flex bg-gray-100/80 p-1.5 rounded-2xl gap-1.5 mb-6">
+                <button id="btnAdmin" class="role-btn flex-1 py-2.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 bg-white text-gray-700">
+                    <i class="fas fa-user-shield"></i> Admin
+                </button>
+                <button id="btnGuru" class="role-btn flex-1 py-2.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 bg-white text-gray-700">
+                    <i class="fas fa-chalkboard-user"></i> Guru
+                </button>
+                <button id="btnSiswa" class="role-btn flex-1 py-2.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 bg-white text-gray-700">
+                    <i class="fas fa-graduation-cap"></i> Siswa
+                </button>
+            </div>
+
+            <!-- Form -->
+            <div class="space-y-4">
+                <div>
+                    <label id="usernameLabel" class="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
+                        <i class="fas fa-user-circle text-indigo-500"></i> Username (Admin)
+                    </label>
+                    <div id="usernameInputContainer" class="relative">
+                        <!-- Input akan diganti dinamis oleh JS -->
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
+                        <i class="fas fa-key text-indigo-500"></i> Password
+                    </label>
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="password" id="password" placeholder="Masukkan password" 
+                               class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white">
+                    </div>
+                </div>
+
+                <button id="loginBtn" class="login-btn w-full text-white font-bold py-3 rounded-xl mt-2 shadow-lg flex items-center justify-center gap-2 transition-all">
+                    <i class="fas fa-arrow-right-to-bracket"></i> Masuk ke Dashboard
+                </button>
+                
+                <p id="errorMsg" class="text-red-600 text-sm text-center mt-3 hidden bg-red-50 py-2 rounded-lg border border-red-100"></p>
+            </div>
+            
+            <div class="mt-6 text-center text-xs text-gray-400 border-t pt-4">
+                <i class="far fa-shield-alt mr-1"></i> Sistem aman & terenkripsi
+            </div>
         </div>
     </div>
 
-    <!-- Status Bar ala Windows Me -->
-    <div class="winme-statusbar">
-        <div><i class="fas fa-shield-alt"></i> Sistem aman & terenkripsi</div>
-        <div><i class="fas fa-window-maximize"></i> EduLogNBS v2.0 (Millennium)</div>
-    </div>
-</div>
-
-<script>
-    // ========== KONFIGURASI FIREBASE (Tetap sama) ==========
-    const firebaseConfig = {
-        apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
-        authDomain: "edulognbs.firebaseapp.com",
-        databaseURL: "https://edulognbs-default-rtdb.asia-southeast1.firebasedatabase.app",
-        projectId: "edulognbs",
-        storageBucket: "edulognbs.firebasestorage.app",
-        messagingSenderId: "759345868898",
-        appId: "1:759345868898:web:40487df20ab4f43045213b",
-        measurementId: "G-SV83KDGZTS"
-    };
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-    }
-    const db = firebase.database();
-
-    let selectedRole = 'admin';
-    let guruOptionsLoaded = false;
-    let guruNames = []; // daftar nama guru
-
-    // DOM elements
-    const btnAdmin = document.getElementById('btnAdmin');
-    const btnGuru = document.getElementById('btnGuru');
-    const btnSiswa = document.getElementById('btnSiswa');
-    const usernameLabelSpan = document.querySelector('#usernameLabel span');
-    const usernameLabelDiv = document.getElementById('usernameLabel');
-    const usernameInputContainer = document.getElementById('usernameInputContainer');
-    const passwordInput = document.getElementById('password');
-    const loginBtn = document.getElementById('loginBtn');
-    const errorMsgDiv = document.getElementById('errorMsg');
-
-    // Fungsi load daftar guru dari Firebase
-    async function loadGuruList() {
-        try {
-            const snapshot = await db.ref('guru').once('value');
-            const guruData = snapshot.val() || {};
-            guruNames = Object.keys(guruData);
-            return guruNames;
-        } catch (err) {
-            console.error("Gagal memuat data guru:", err);
-            return [];
+    <script>
+        // ========== KONFIGURASI FIREBASE ==========
+        const firebaseConfig = {
+            apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
+            authDomain: "edulognbs.firebaseapp.com",
+            databaseURL: "https://edulognbs-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "edulognbs",
+            storageBucket: "edulognbs.firebasestorage.app",
+            messagingSenderId: "759345868898",
+            appId: "1:759345868898:web:40487df20ab4f43045213b",
+            measurementId: "G-SV83KDGZTS"
+        };
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
         }
-    }
+        const db = firebase.database();
 
-    // Helper show error
-    function showError(msg) {
-        errorMsgDiv.innerText = msg;
-        errorMsgDiv.style.display = 'block';
-    }
-    function hideError() {
-        errorMsgDiv.style.display = 'none';
-    }
+        let selectedRole = 'admin';
+        let guruOptionsLoaded = false;
+        let guruNames = []; // daftar nama guru
 
-    // Render UI sesuai role
-    async function setActiveRole(role) {
-        selectedRole = role;
-        // update active class
-        [btnAdmin, btnGuru, btnSiswa].forEach(btn => btn.classList.remove('active'));
-        if (role === 'admin') {
-            btnAdmin.classList.add('active');
-            usernameLabelSpan.innerHTML = '<i class="fas fa-user-cog me-1"></i> USERNAME (ADMIN)';
-            // input username biasa
-            usernameInputContainer.innerHTML = `
-                <div class="winme-input-wrapper">
-                    <i class="fas fa-user field-icon"></i>
-                    <input type="text" id="username" placeholder="admin" value="">
-                </div>
-            `;
-        } 
-        else if (role === 'guru') {
-            btnGuru.classList.add('active');
-            usernameLabelSpan.innerHTML = '<i class="fas fa-chalkboard-user me-1"></i> PILIH NAMA GURU';
-            // generate dropdown select
-            usernameInputContainer.innerHTML = `
-                <div class="winme-input-wrapper">
-                    <i class="fas fa-user-graduate field-icon"></i>
-                    <select id="username" class="winme-select">
+        // Ambil elemen
+        const btnAdmin = document.getElementById('btnAdmin');
+        const btnGuru = document.getElementById('btnGuru');
+        const btnSiswa = document.getElementById('btnSiswa');
+        const usernameLabel = document.getElementById('usernameLabel');
+        const usernameInputContainer = document.getElementById('usernameInputContainer');
+        const passwordInput = document.getElementById('password');
+        const loginBtn = document.getElementById('loginBtn');
+        const errorMsg = document.getElementById('errorMsg');
+
+        // Fungsi untuk mengambil daftar guru dari Firebase
+        async function loadGuruList() {
+            try {
+                const snapshot = await db.ref('guru').once('value');
+                const guruData = snapshot.val() || {};
+                guruNames = Object.keys(guruData);
+                return guruNames;
+            } catch (err) {
+                console.error("Gagal load guru:", err);
+                return [];
+            }
+        }
+
+        // Fungsi untuk membuat input/dropdown sesuai role
+        async function setActiveRole(role) {
+            selectedRole = role;
+            // Reset class active
+            [btnAdmin, btnGuru, btnSiswa].forEach(btn => btn.classList.remove('active'));
+            if (role === 'admin') {
+                btnAdmin.classList.add('active');
+                usernameLabel.innerHTML = '<i class="fas fa-user-cog text-indigo-500"></i> Username (Admin)';
+                usernameInputContainer.innerHTML = `
+                    <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="username" placeholder="admin" 
+                           class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white">
+                `;
+            } else if (role === 'guru') {
+                btnGuru.classList.add('active');
+                usernameLabel.innerHTML = '<i class="fas fa-chalkboard-user text-indigo-500"></i> Pilih Nama Guru';
+                // Tampilkan dropdown, isi dengan data dari Firebase
+                usernameInputContainer.innerHTML = `
+                    <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <select id="username" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white appearance-none">
                         <option value="">-- Pilih Guru --</option>
                     </select>
-                    <i class="fas fa-chevron-down chevron-icon"></i>
-                </div>
-            `;
-            // Isi data guru
-            if (guruNames.length === 0) {
-                const selectEl = document.getElementById('username');
-                if (selectEl) selectEl.innerHTML = '<option value="">Memuat data guru...</option>';
-                const loadedNames = await loadGuruList();
-                const select = document.getElementById('username');
-                if (select) {
-                    select.innerHTML = '<option value="">-- Pilih Guru --</option>';
-                    loadedNames.forEach(nama => {
-                        const option = document.createElement('option');
-                        option.value = nama;
-                        option.textContent = nama;
-                        select.appendChild(option);
-                    });
-                }
-            } else {
-                const select = document.getElementById('username');
-                if (select) {
-                    select.innerHTML = '<option value="">-- Pilih Guru --</option>';
-                    guruNames.forEach(nama => {
-                        const option = document.createElement('option');
-                        option.value = nama;
-                        option.textContent = nama;
-                        select.appendChild(option);
-                    });
-                }
-            }
-        } 
-        else { // siswa
-            btnSiswa.classList.add('active');
-            usernameLabelSpan.innerHTML = '<i class="fas fa-id-card me-1"></i> NIS (NOMOR INDUK SISWA)';
-            usernameInputContainer.innerHTML = `
-                <div class="winme-input-wrapper">
-                    <i class="fas fa-user field-icon"></i>
-                    <input type="text" id="username" placeholder="Masukkan NIS" value="">
-                </div>
-            `;
-        }
-        // reset error dan password
-        hideError();
-        if (passwordInput) passwordInput.value = '';
-    }
-
-    // LOGIN handler
-    async function handleLogin() {
-        let usernameValue = null;
-        const usernameField = document.getElementById('username');
-        if (!usernameField) {
-            showError("Input tidak valid, coba refresh halaman.");
-            return;
-        }
-        
-        if (selectedRole === 'guru') {
-            usernameValue = usernameField.value;
-        } else {
-            usernameValue = usernameField.value.trim();
-        }
-        const password = passwordInput.value.trim();
-        hideError();
-
-        if (!usernameValue || !password) {
-            showError("❌ Semua field (username/NIS & password) harus diisi!");
-            return;
-        }
-
-        if (selectedRole === 'admin') {
-            if (usernameValue === 'admin' && password === 'admin123') {
-                window.location.href = 'admin.html';
-            } else {
-                showError("❌ Username atau password admin salah! (default: admin / admin123)");
-            }
-        } 
-        else if (selectedRole === 'guru') {
-            try {
-                const snapshot = await db.ref(`guru/${usernameValue}`).once('value');
-                const guru = snapshot.val();
-                if (guru && guru.password === password) {
-                    localStorage.setItem('guruLogin', usernameValue);
-                    window.location.href = 'guru.html';
+                    <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
+                `;
+                // Isi dropdown jika belum pernah
+                if (guruNames.length === 0) {
+                    // Tampilkan loading sementara
+                    const select = document.getElementById('username');
+                    if (select) select.innerHTML = '<option value="">Memuat data guru...</option>';
+                    const namaGuru = await loadGuruList();
+                    const selectEl = document.getElementById('username');
+                    if (selectEl) {
+                        selectEl.innerHTML = '<option value="">-- Pilih Guru --</option>';
+                        namaGuru.forEach(nama => {
+                            const option = document.createElement('option');
+                            option.value = nama;
+                            option.textContent = nama;
+                            selectEl.appendChild(option);
+                        });
+                    }
                 } else {
-                    showError("❌ Nama Guru atau password tidak cocok! Periksa kembali.");
+                    const select = document.getElementById('username');
+                    if (select) {
+                        select.innerHTML = '<option value="">-- Pilih Guru --</option>';
+                        guruNames.forEach(nama => {
+                            const option = document.createElement('option');
+                            option.value = nama;
+                            option.textContent = nama;
+                            select.appendChild(option);
+                        });
+                    }
                 }
-            } catch (err) {
-                console.error(err);
-                showError("⚠️ Gagal koneksi database. Coba lagi nanti.");
+            } else { // siswa
+                btnSiswa.classList.add('active');
+                usernameLabel.innerHTML = '<i class="fas fa-id-card text-indigo-500"></i> NIS (Nomor Induk Siswa)';
+                usernameInputContainer.innerHTML = `
+                    <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                    <input type="text" id="username" placeholder="Masukkan NIS" 
+                           class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white">
+                `;
             }
+            errorMsg.classList.add('hidden');
+            passwordInput.value = '';
         }
-        else if (selectedRole === 'siswa') {
-            try {
-                const snapshot = await db.ref(`siswa/${usernameValue}`).once('value');
-                const siswa = snapshot.val();
-                if (siswa && siswa.password === password) {
-                    localStorage.setItem('siswaLogin', usernameValue);
-                    window.location.href = 'murid.html';
-                } else {
-                    showError("❌ NIS atau password salah! Verifikasi data siswa.");
-                }
-            } catch (err) {
-                console.error(err);
-                showError("⚠️ Gagal memverifikasi data siswa. Cek koneksi.");
-            }
-        }
-    }
 
-    // Event listeners ala klasik
-    btnAdmin.onclick = () => setActiveRole('admin');
-    btnGuru.onclick = () => setActiveRole('guru');
-    btnSiswa.onclick = () => setActiveRole('siswa');
-    loginBtn.onclick = handleLogin;
-
-    // Enter key on password input
-    const enterHandler = (e) => { 
-        if (e.key === 'Enter') handleLogin(); 
-    };
-    passwordInput.addEventListener('keypress', enterHandler);
-    
-    // Inisialisasi default admin
-    setActiveRole('admin');
-    
-    // Preload data guru di background supaya saat pilih guru sudah tersedia (tidak mengganggu loading)
-    window.addEventListener('load', () => {
-        // preload daftar guru untuk mempercepat (jika diperlukan)
-        loadGuruList().then(() => {
-            // Jika role sedang guru dan dropdown belum terisi sempurna, bisa refresh
+        // Fungsi login
+        async function handleLogin() {
+            let usernameValue;
+            // Ambil nilai username (bisa dari input atau select)
+            const usernameField = document.getElementById('username');
+            if (!usernameField) return;
             if (selectedRole === 'guru') {
-                // jika dropdown sudah ada, perbaharui
-                const currentSelect = document.getElementById('username');
-                if (currentSelect && currentSelect.tagName === 'SELECT') {
-                    const oldVal = currentSelect.value;
-                    currentSelect.innerHTML = '<option value="">-- Pilih Guru --</option>';
-                    guruNames.forEach(nama => {
-                        const opt = document.createElement('option');
-                        opt.value = nama;
-                        opt.textContent = nama;
-                        currentSelect.appendChild(opt);
-                    });
-                    if (oldVal && guruNames.includes(oldVal)) currentSelect.value = oldVal;
+                usernameValue = usernameField.value;
+            } else {
+                usernameValue = usernameField.value.trim();
+            }
+            const password = passwordInput.value.trim();
+            errorMsg.classList.add('hidden');
+            
+            if (!usernameValue || !password) {
+                errorMsg.innerText = '❌ Semua field harus diisi!';
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+            
+            if (selectedRole === 'admin') {
+                if (usernameValue === 'admin' && password === 'admin123') {
+                    window.location.href = 'admin.html';
+                } else {
+                    errorMsg.innerText = '❌ Username atau password admin salah!';
+                    errorMsg.classList.remove('hidden');
+                }
+            } 
+            else if (selectedRole === 'guru') {
+                try {
+                    const snapshot = await db.ref(`guru/${usernameValue}`).once('value');
+                    const guru = snapshot.val();
+                    if (guru && guru.password === password) {
+                        localStorage.setItem('guruLogin', usernameValue);
+                        window.location.href = 'guru.html';
+                    } else {
+                        errorMsg.innerText = '❌ Nama Guru atau password tidak cocok!';
+                        errorMsg.classList.remove('hidden');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    errorMsg.innerText = '⚠️ Gagal koneksi database. Coba lagi.';
+                    errorMsg.classList.remove('hidden');
                 }
             }
-        });
-    });
-
-    // sentuhan ekstra untuk tombol titlebar (hanya dekorasi, tidak ada fungsi)
-    const closeDecor = document.querySelector('.winme-titlebar-buttons .winme-control:last-child');
-    if (closeDecor) {
-        closeDecor.addEventListener('click', () => {
-            // Estetika Windows Me: efek close dialog (tidak benar2 menutup)
-            alert("EduLogNBS Millennium Edition\n\nKlik 'Masuk ke Dashboard' untuk melanjutkan.");
-        });
-    }
-    const minimizeDecor = document.querySelector('.winme-titlebar-buttons .winme-control:first-child');
-    if (minimizeDecor) {
-        minimizeDecor.addEventListener('click', () => {
-            // efek minimalis (hanya untuk nostalgia)
-            const winWindow = document.querySelector('.winme-window');
-            if (winWindow) {
-                winWindow.style.opacity = '0.9';
-                setTimeout(() => winWindow.style.opacity = '1', 180);
+            else if (selectedRole === 'siswa') {
+                try {
+                    const snapshot = await db.ref(`siswa/${usernameValue}`).once('value');
+                    const siswa = snapshot.val();
+                    if (siswa && siswa.password === password) {
+                        localStorage.setItem('siswaLogin', usernameValue);
+                        window.location.href = 'murid.html';
+                    } else {
+                        errorMsg.innerText = '❌ NIS atau password salah!';
+                        errorMsg.classList.remove('hidden');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    errorMsg.innerText = '⚠️ Gagal memverifikasi data siswa.';
+                    errorMsg.classList.remove('hidden');
+                }
             }
-        });
-    }
-</script>
+        }
+
+        // Event listeners
+        btnAdmin.onclick = () => setActiveRole('admin');
+        btnGuru.onclick = () => setActiveRole('guru');
+        btnSiswa.onclick = () => setActiveRole('siswa');
+        loginBtn.onclick = handleLogin;
+
+        // Enter key pada password
+        const enterHandler = (e) => { if (e.key === 'Enter') handleLogin(); };
+        passwordInput.addEventListener('keypress', enterHandler);
+        
+        // Set default role admin
+        setActiveRole('admin');
+    </script>
 </body>
 </html>
