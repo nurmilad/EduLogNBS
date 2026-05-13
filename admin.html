@@ -28,6 +28,47 @@
             animation: spin 1s ease-in-out infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Modal style for Daftar Nilai */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+        .modal-container {
+            background: white;
+            border-radius: 1rem;
+            max-width: 95vw;
+            width: auto;
+            max-height: 90vh;
+            overflow: auto;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-header {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 10;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        @media (max-width: 640px) {
+            .modal-container { width: 98vw; }
+            .modal-container table { font-size: 0.7rem; }
+            .modal-container td, .modal-container th { padding: 0.4rem 0.2rem; }
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -321,6 +362,7 @@
                         <div class="mb-3 flex flex-wrap gap-2">
                             <button id="tambahMuridDetailBtn" class="bg-blue-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-user-plus"></i> Tambah Murid</button>
                             <button id="importMuridDetailBtn" class="bg-gray-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-paste"></i> Import Data Murid</button>
+                            <button id="nilaiMuridDetailBtn" class="bg-purple-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-chart-line"></i> Daftar Nilai Murid</button>
                         </div>
                         <div class="table-wrapper overflow-x-auto">
                             <table class="min-w-full border text-sm">
@@ -333,7 +375,7 @@
                                     <td class="p-2 font-bold">${m.nilaiGlobal}</td>
                                     <td class="p-2"><button class="editMuridDetailBtn text-blue-500" data-nis="${m.nis}"><i class="fas fa-edit"></i></button>
                                     <button class="hapusMuridDetailBtn text-red-500 ml-2" data-nis="${m.nis}"><i class="fas fa-trash"></i></button></td>
-                                    </tr>`).join('')}</tbody>
+                                </td>`).join('')}</tbody>
                             </table>
                         </div>
                     </div>
@@ -391,6 +433,12 @@
                     alert(`✅ Selesai! Berhasil: ${success}, Gagal: ${error}`);
                     openClassDetail(kelas);
                 };
+                
+                // ** FITUR BARU: Daftar Nilai Murid **
+                document.getElementById('nilaiMuridDetailBtn').onclick = () => {
+                    showNilaiMuridModal(kelas);
+                };
+                
                 document.querySelectorAll('.editMuridDetailBtn').forEach(btn=>{
                     btn.onclick = async () => {
                         const nis=btn.dataset.nis;
@@ -407,6 +455,181 @@
                     btn.onclick = async () => { if(confirm('Hapus murid ini?')){ await db.ref(`siswa/${btn.dataset.nis}`).remove(); openClassDetail(kelas); } };
                 });
             } catch(err){ detailDiv.innerHTML=`<div class="text-red-500 p-4">Error: ${err.message}</div>`; }
+        }
+        
+        // ========= MODAL NILAI MURID (Daftar Nilai Per Mapel) =========
+        async function showNilaiMuridModal(kelas) {
+            // loading overlay
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.innerHTML = `<div class="modal-container p-5 max-w-5xl"><div class="text-center py-8"><div class="loading-spinner mx-auto mb-2"></div><p>Memuat data nilai murid...</p></div></div>`;
+            document.body.appendChild(overlay);
+            
+            try {
+                // fetch all needed data
+                const [siswaSnap, penugasanSnap, mapelSnap, penilaianSnap] = await Promise.all([
+                    db.ref('siswa').once('value'),
+                    db.ref('penugasan').once('value'),
+                    db.ref('mapel').once('value'),
+                    db.ref('penilaian').once('value')
+                ]);
+                
+                const semuaMurid = siswaSnap.val() || {};
+                const penugasan = penugasanSnap.val() || {};
+                const mapel = mapelSnap.val() || {};
+                const penilaian = penilaianSnap.val() || {};
+                
+                // filter siswa berdasarkan kelas
+                const siswaKelas = Object.entries(semuaMurid)
+                    .filter(([_, data]) => data.kelas === kelas)
+                    .map(([nis, data]) => ({ nis, nama: data.nama }));
+                
+                if (siswaKelas.length === 0) {
+                    overlay.innerHTML = `<div class="modal-container p-5"><div class="text-center"><i class="fas fa-exclamation-triangle text-yellow-500 text-3xl mb-2"></i><p>Tidak ada murid di kelas ${escapeHtml(kelas)}</p><button class="mt-4 bg-blue-500 text-white px-4 py-2 rounded closeModalBtn">Tutup</button></div></div>`;
+                    attachCloseModal(overlay);
+                    return;
+                }
+                
+                // mapping mapelId -> kode & nama (prioritas kode untuk header)
+                const mapelInfo = {};
+                for (let [id, m] of Object.entries(mapel)) {
+                    mapelInfo[id] = { kode: m.kode || m.nama.substring(0,5).toUpperCase(), nama: m.nama, jenis: m.jenis };
+                }
+                
+                // untuk setiap penugasan, ketahui mapelId, siswaList, lalu kumpulkan nilai dari penilaian
+                // struktur: per siswa per mapelId kumpulkan semua skor dari assessment
+                const studentScoresByMapel = {}; // { nis: { mapelId: [scores] } }
+                siswaKelas.forEach(s => { studentScoresByMapel[s.nis] = {}; });
+                
+                // iterasi penugasan
+                for (let [penId, pg] of Object.entries(penugasan)) {
+                    const mapelId = pg.mapelId;
+                    if (!mapelId || !mapelInfo[mapelId]) continue;
+                    const siswaList = pg.siswaList || [];
+                    // ambil data penilaian untuk penugasan ini
+                    const assessments = penilaian[penId] || {};
+                    // untuk setiap assessment di penugasan ini
+                    for (let [assId, assData] of Object.entries(assessments)) {
+                        const scores = assData.scores || {};
+                        // untuk setiap siswa dalam kelas yang juga ada di siswaList & punya nilai
+                        for (let student of siswaKelas) {
+                            const nis = student.nis;
+                            if (!siswaList.includes(nis)) continue;
+                            const nilai = scores[nis];
+                            if (typeof nilai === 'number' && !isNaN(nilai)) {
+                                if (!studentScoresByMapel[nis][mapelId]) studentScoresByMapel[nis][mapelId] = [];
+                                studentScoresByMapel[nis][mapelId].push(nilai);
+                            }
+                        }
+                    }
+                }
+                
+                // hitung rata2 per mapel per siswa, dan kumpulkan daftar mapel yang memiliki minimal 1 nilai di kelas ini
+                const subjectCodesSet = new Set();
+                const studentSubjectAvg = {}; // { nis: { mapelId: avg } }
+                for (let s of siswaKelas) {
+                    const nis = s.nis;
+                    studentSubjectAvg[nis] = {};
+                    const scoresMap = studentScoresByMapel[nis] || {};
+                    for (let [mapelId, nilaiArr] of Object.entries(scoresMap)) {
+                        if (nilaiArr.length > 0) {
+                            const avg = nilaiArr.reduce((a,b)=>a+b,0) / nilaiArr.length;
+                            const rounded = Math.round(avg * 10) / 10;
+                            studentSubjectAvg[nis][mapelId] = rounded;
+                            subjectCodesSet.add(mapelId);
+                        }
+                    }
+                }
+                
+                // urutkan mapelId berdasarkan kode mapel
+                let mapelIdsWithData = Array.from(subjectCodesSet);
+                mapelIdsWithData.sort((a,b) => {
+                    const kodeA = mapelInfo[a]?.kode || '';
+                    const kodeB = mapelInfo[b]?.kode || '';
+                    return kodeA.localeCompare(kodeB);
+                });
+                
+                // jika tidak ada satupun nilai, tetap tampilkan tabel tanpa kolom mapel
+                const hasAnySubject = mapelIdsWithData.length > 0;
+                
+                // bangun modal tabel
+                let tableHtml = `
+                    <div class="modal-header px-4 py-3 flex justify-between items-center">
+                        <h3 class="text-lg font-bold"><i class="fas fa-chart-simple text-purple-600"></i> Daftar Nilai Murid - Kelas ${escapeHtml(kelas)}</h3>
+                        <button class="closeModalBtn text-gray-500 hover:text-gray-800 text-2xl leading-5">&times;</button>
+                    </div>
+                    <div class="p-4 overflow-x-auto">
+                        <table class="min-w-full border text-sm">
+                            <thead class="bg-gray-100">
+                                <tr>
+                                    <th class="p-2 border">NIS</th>
+                                    <th class="p-2 border">Nama</th>
+                                    ${hasAnySubject ? mapelIdsWithData.map(mid => `<th class="p-2 border">${escapeHtml(mapelInfo[mid]?.kode || '?')}</th>`).join('') : ''}
+                                    <th class="p-2 border bg-gray-200">Rata2</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                for (let student of siswaKelas) {
+                    const nis = student.nis;
+                    const nama = student.nama;
+                    const subjectAvgs = {};
+                    let totalMapelScore = 0;
+                    let countMapelWithScore = 0;
+                    
+                    if (hasAnySubject) {
+                        for (let mid of mapelIdsWithData) {
+                            const avg = studentSubjectAvg[nis]?.[mid];
+                            const displayVal = (avg !== undefined && !isNaN(avg)) ? avg : '-';
+                            subjectAvgs[mid] = displayVal;
+                            if (typeof avg === 'number' && !isNaN(avg)) {
+                                totalMapelScore += avg;
+                                countMapelWithScore++;
+                            }
+                        }
+                    }
+                    
+                    // rata2 overall = total skor mapel / jumlah mapel yang memiliki nilai (jika ada)
+                    let overallAvg = 0;
+                    if (hasAnySubject && countMapelWithScore > 0) {
+                        overallAvg = Math.round((totalMapelScore / countMapelWithScore) * 10) / 10;
+                    } else if (!hasAnySubject) {
+                        overallAvg = 0;
+                    }
+                    const overallDisplay = overallAvg === 0 && !hasAnySubject ? '-' : overallAvg;
+                    
+                    tableHtml += `<tr>
+                        <td class="p-2 border">${escapeHtml(nis)}</td>
+                        <td class="p-2 border">${escapeHtml(nama)}</td>
+                        ${hasAnySubject ? mapelIdsWithData.map(mid => `<td class="p-2 border text-center">${subjectAvgs[mid] === '-' ? '-' : subjectAvgs[mid]}</td>`).join('') : ''}
+                        <td class="p-2 border text-center font-bold bg-gray-50">${overallDisplay}</td>
+                    </tr>`;
+                }
+                
+                tableHtml += `</tbody></table>`;
+                if (!hasAnySubject) {
+                    tableHtml += `<div class="mt-4 text-center text-gray-500"><i class="fas fa-info-circle"></i> Belum ada nilai untuk mata pelajaran apapun di kelas ini. Nilai akan muncul setelah guru melakukan penilaian minimal 1 kali.</div>`;
+                }
+                tableHtml += `</div><div class="p-3 border-t text-right"><button class="closeModalBtn bg-purple-600 text-white px-4 py-2 rounded">Tutup</button></div>`;
+                
+                overlay.innerHTML = `<div class="modal-container max-w-6xl w-full">${tableHtml}</div>`;
+                attachCloseModal(overlay);
+                
+            } catch (err) {
+                overlay.innerHTML = `<div class="modal-container p-5"><div class="text-red-500"><i class="fas fa-exclamation-circle"></i> Gagal memuat nilai: ${err.message}</div><button class="mt-4 closeModalBtn bg-blue-500 text-white px-4 py-2 rounded">Tutup</button></div>`;
+                attachCloseModal(overlay);
+            }
+            
+            function attachCloseModal(modalEl) {
+                const closeBtns = modalEl.querySelectorAll('.closeModalBtn');
+                closeBtns.forEach(btn => {
+                    btn.onclick = () => modalEl.remove();
+                });
+                modalEl.addEventListener('click', (e) => {
+                    if (e.target === modalEl) modalEl.remove();
+                });
+            }
         }
         
         // ===================== DATA GURU =====================
@@ -515,29 +738,20 @@
             } catch(err) { container.innerHTML=`<p class="text-red-500">Error: ${err.message}</p>`; }
         }
         
-        // ===================== DATA MAPEL (DENGAN KODE MAPEL) =====================
+        // ===================== DATA MAPEL =====================
         async function loadMapel() {
             const container = document.getElementById('mapel');
             try {
                 const snap = await db.ref('mapel').once('value');
                 const mapel = snap.val() || {};
-                let html = `<div class="mb-4 flex flex-wrap gap-2">
-                    <button id="tambahMapelBtn" class="bg-green-500 text-white px-3 py-1 rounded"><i class="fas fa-plus"></i> Tambah Mapel</button>
-                    <button id="importMapelBtn" class="bg-blue-600 text-white px-3 py-1 rounded"><i class="fas fa-file-import"></i> Import Data Mapel</button>
-                </div>
-                <div class="overflow-x-auto"><table class="min-w-full border"><thead class="bg-gray-100">对抗<th class="p-2">Mata Pelajaran</th><th class="p-2">Kode Mapel</th><th class="p-2">Jenis</th><th class="p-2">Aksi</th></thead><tbody>`;
+                let html = `<div class="mb-4 flex flex-wrap gap-2"><button id="tambahMapelBtn" class="bg-green-500 text-white px-3 py-1 rounded"><i class="fas fa-plus"></i> Tambah Mapel</button><button id="importMapelBtn" class="bg-blue-600 text-white px-3 py-1 rounded"><i class="fas fa-file-import"></i> Import Data Mapel</button></div>
+                <div class="overflow-x-auto"><table class="min-w-full border"><thead class="bg-gray-100"><tr><th class="p-2">Mata Pelajaran</th><th class="p-2">Kode Mapel</th><th class="p-2">Jenis</th><th class="p-2">Aksi</th></tr></thead><tbody>`;
                 for (let [id, val] of Object.entries(mapel)) {
-                    html += `<tr>
-                        <td class="p-2 border">${escapeHtml(val.nama)}</td>
-                        <td class="p-2 border">${escapeHtml(val.kode || '')}</td>
-                        <td class="p-2 border">${escapeHtml(val.jenis)}</td>
-                        <td class="p-2 border"><button class="editMapelBtn text-blue-500" data-id="${id}"><i class="fas fa-edit"></i></button> <button class="hapusMapelBtn text-red-500 ml-2" data-id="${id}"><i class="fas fa-trash"></i></button></td>
-                    </tr>`;
+                    html += `<tr><td class="p-2 border">${escapeHtml(val.nama)}</td><td class="p-2 border">${escapeHtml(val.kode || '')}</td><td class="p-2 border">${escapeHtml(val.jenis)}</td><td class="p-2 border"><button class="editMapelBtn text-blue-500" data-id="${id}"><i class="fas fa-edit"></i></button> <button class="hapusMapelBtn text-red-500 ml-2" data-id="${id}"><i class="fas fa-trash"></i></button></td></tr>`;
                 }
                 html += `</tbody></table></div>`;
                 container.innerHTML = html;
                 
-                // Tambah mapel manual (Nama, Kode, Jenis)
                 document.getElementById('tambahMapelBtn').onclick = () => {
                     const nama = prompt('Nama Mata Pelajaran:');
                     if (!nama) return;
@@ -545,86 +759,52 @@
                     if (kode === null) return;
                     const jenis = prompt('Jenis (inkul / eskul / pesantren):');
                     if (jenis && ['inkul','eskul','pesantren'].includes(jenis.toLowerCase())) {
-                        db.ref(`mapel/${Date.now()}`).set({ 
-                            nama: nama.trim(), 
-                            kode: kode.trim(), 
-                            jenis: jenis.toLowerCase() 
-                        }).then(()=>loadMapel()).catch(showError);
+                        db.ref(`mapel/${Date.now()}`).set({ nama: nama.trim(), kode: kode.trim(), jenis: jenis.toLowerCase() }).then(()=>loadMapel()).catch(showError);
                     } else alert('Jenis harus inkul, eskul, atau pesantren');
                 };
-                
-                // Import mapel dengan format: NAMA MAPEL, KODE MAPEL, JENIS
                 document.getElementById('importMapelBtn').onclick = async () => {
-                    const rawData = prompt(`Import Mata Pelajaran\n\nFormat per baris: NAMA MAPEL, KODE MAPEL, JENIS\nJenis yang valid: inkul, eskul, pesantren\nPemisah: koma atau tab\n\nContoh:\nMatematika,MTK,inkul\nBahasa Inggris,B.ING,inkul\nPramuka,PRM,eskul\nTahfidz,THF,pesantren`);
+                    const rawData = prompt(`Import Mata Pelajaran\n\nFormat per baris: NAMA MAPEL, KODE MAPEL, JENIS\nJenis: inkul, eskul, pesantren\nContoh:\nMatematika,MTK,inkul`);
                     if (!rawData) return;
                     const lines = rawData.split(/\r?\n/);
-                    let success = 0, error = 0;
-                    const promises = [];
-                    const jenisValid = ['inkul','eskul','pesantren'];
-                    for (let line of lines) {
-                        line = line.trim();
-                        if (line === "") continue;
-                        let parts;
-                        if (line.includes('\t')) parts = line.split('\t');
-                        else if (line.includes(',')) parts = line.split(',');
+                    let success=0, error=0, promises=[];
+                    for(let line of lines){
+                        line=line.trim(); if(!line) continue;
+                        let parts; if(line.includes('\t')) parts=line.split('\t'); else if(line.includes(',')) parts=line.split(',');
                         else { error++; continue; }
-                        parts = parts.map(p => p.trim());
-                        if (parts.length < 3) { error++; continue; }
-                        const namaMapel = parts[0];
-                        const kodeMapel = parts[1];
-                        let jenisMapel = parts[2].toLowerCase();
-                        if (!namaMapel || !kodeMapel || !jenisValid.includes(jenisMapel)) { error++; continue; }
-                        const idBaru = Date.now() + Math.random().toString(36).substr(2, 5) + success;
-                        promises.push(db.ref(`mapel/${idBaru}`).set({ 
-                            nama: namaMapel, 
-                            kode: kodeMapel, 
-                            jenis: jenisMapel 
-                        }).catch(() => error++));
+                        parts=parts.map(p=>p.trim());
+                        if(parts.length<3){ error++; continue; }
+                        const [nama, kode, jenis] = parts;
+                        if(!nama||!kode||!['inkul','eskul','pesantren'].includes(jenis.toLowerCase())){ error++; continue; }
+                        promises.push(db.ref(`mapel/${Date.now()+success}`).set({ nama, kode, jenis: jenis.toLowerCase() }).catch(()=>error++));
                         success++;
                     }
                     await Promise.all(promises);
-                    alert(`✅ Impor mapel selesai!\nBerhasil: ${success}\nGagal: ${error}`);
+                    alert(`Berhasil: ${success}, Gagal: ${error}`);
                     loadMapel();
                 };
-                
-                // Edit Mapel (bisa edit nama, kode, jenis)
                 document.querySelectorAll('.editMapelBtn').forEach(btn => {
                     btn.onclick = async () => {
                         const id = btn.dataset.id;
                         const snap = await db.ref(`mapel/${id}`).once('value');
                         const data = snap.val();
                         const newNama = prompt('Nama baru:', data.nama);
-                        if (newNama === null) return;
-                        const newKode = prompt('Kode baru:', data.kode || '');
-                        if (newKode === null) return;
+                        if(newNama===null) return;
+                        const newKode = prompt('Kode baru:', data.kode||'');
                         const newJenis = prompt('Jenis baru (inkul/eskul/pesantren):', data.jenis);
-                        if (newJenis && ['inkul','eskul','pesantren'].includes(newJenis.toLowerCase())) {
-                            const updates = {};
-                            if (newNama.trim()) updates['nama'] = newNama.trim();
-                            if (newKode.trim() !== undefined) updates['kode'] = newKode.trim();
-                            if (newJenis) updates['jenis'] = newJenis.toLowerCase();
-                            await db.ref(`mapel/${id}`).update(updates);
+                        if(newJenis && ['inkul','eskul','pesantren'].includes(newJenis.toLowerCase())){
+                            await db.ref(`mapel/${id}`).update({ nama: newNama.trim(), kode: newKode.trim(), jenis: newJenis.toLowerCase() });
                             loadMapel();
-                        } else if (newJenis) alert('Jenis harus inkul, eskul, atau pesantren');
+                        } else if(newJenis) alert('Jenis tidak valid');
                     };
                 });
-                
-                // Hapus Mapel
                 document.querySelectorAll('.hapusMapelBtn').forEach(btn => {
-                    btn.onclick = async () => { 
-                        if(confirm('Hapus mata pelajaran ini?')) {
-                            await db.ref(`mapel/${btn.dataset.id}`).remove();
-                            loadMapel();
-                        }
-                    };
+                    btn.onclick = async () => { if(confirm('Hapus mapel?')){ await db.ref(`mapel/${btn.dataset.id}`).remove(); loadMapel(); } };
                 });
-            } catch (err) {
-                container.innerHTML = `<p class="text-red-500">Error: ${err.message}</p>`;
-            }
+            } catch(err){ container.innerHTML=`<p class="text-red-500">Error: ${err.message}</p>`; }
         }
         
-        // ===================== PENUGASAN (tidak berubah) =====================
-        async function loadPenugasan() {
+        // ===================== PENUGASAN =====================
+        async function loadPenugasan() { /* (tidak diubah) */
             const container = document.getElementById('penugasan');
             try {
                 const [mapelSnap, guruSnap, siswaSnap, kelasSnap, penugasanSnap] = await Promise.all([
@@ -637,16 +817,7 @@
                 const daftarKelas = Object.keys(kelasSnap.val() || {});
                 const penugasan = penugasanSnap.val() || {};
                 
-                let formHtml = `<div class="border p-4 rounded mb-6 bg-gray-50">
-                    <h3 class="font-bold mb-2"><i class="fas fa-tasks"></i> Tambah Penugasan Baru</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
-                        <div><label>Mata Pelajaran</label><select id="pilihMapel" class="border p-1 rounded w-full"><option value="">-- Pilih --</option>${Object.entries(mapel).map(([id,m])=>`<option value="${id}" data-jenis="${m.jenis}">${escapeHtml(m.nama)} (${m.kode || '-'}) - ${m.jenis}</option>`).join('')}</select></div>
-                        <div><label>Guru</label><select id="pilihGuru" class="border p-1 rounded w-full"><option value="">-- Pilih --</option>${Object.keys(guru).map(g=>`<option value="${g}">${escapeHtml(g)}</option>`).join('')}</select></div>
-                        <div id="targetContainer"><label id="targetLabel">Target</label><div id="targetInput"></div></div>
-                    </div>
-                    <button id="simpanPenugasanBtn" class="bg-blue-600 text-white px-4 py-1 rounded">Simpan</button>
-                </div>`;
-                
+                let formHtml = `<div class="border p-4 rounded mb-6 bg-gray-50"><h3 class="font-bold mb-2"><i class="fas fa-tasks"></i> Tambah Penugasan Baru</h3><div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3"><div><label>Mata Pelajaran</label><select id="pilihMapel" class="border p-1 rounded w-full"><option value="">-- Pilih --</option>${Object.entries(mapel).map(([id,m])=>`<option value="${id}" data-jenis="${m.jenis}">${escapeHtml(m.nama)} (${m.kode || '-'}) - ${m.jenis}</option>`).join('')}</select></div><div><label>Guru</label><select id="pilihGuru" class="border p-1 rounded w-full"><option value="">-- Pilih --</option>${Object.keys(guru).map(g=>`<option value="${g}">${escapeHtml(g)}</option>`).join('')}</select></div><div id="targetContainer"><label id="targetLabel">Target</label><div id="targetInput"></div></div></div><button id="simpanPenugasanBtn" class="bg-blue-600 text-white px-4 py-1 rounded">Simpan</button></div>`;
                 let listHtml = `<h3 class="font-bold mt-4">Daftar Penugasan</h3><div class="overflow-x-auto"><table class="min-w-full border mt-2"><thead class="bg-gray-100"><tr><th>Mapel</th><th>Guru</th><th>Kelas / Murid Terlibat</th><th>Aksi</th></tr></thead><tbody>`;
                 for (let [id, pg] of Object.entries(penugasan)) {
                     const mapelData = mapel[pg.mapelId];
@@ -654,23 +825,15 @@
                     const jenisMapel = mapelData?.jenis || 'inkul';
                     let infoTerlibat = '';
                     const jumlahMurid = pg.siswaList?.length || 0;
-                    
                     if (jenisMapel === 'inkul') {
                         const kelasSet = new Set();
-                        for (let nis of (pg.siswaList || [])) {
-                            if (semuaMurid[nis]) kelasSet.add(semuaMurid[nis].kelas);
-                        }
-                        infoTerlibat = Array.from(kelasSet).map(k => `Kelas ${k}`).join(', ');
-                        if (!infoTerlibat) infoTerlibat = '(Tidak ada kelas)';
-                    } else {
-                        infoTerlibat = `${jumlahMurid} murid`;
-                    }
-                    
+                        for (let nis of (pg.siswaList || [])) if (semuaMurid[nis]) kelasSet.add(semuaMurid[nis].kelas);
+                        infoTerlibat = Array.from(kelasSet).map(k=>`Kelas ${k}`).join(', ') || '(Tidak ada kelas)';
+                    } else infoTerlibat = `${jumlahMurid} murid`;
                     listHtml += `<tr><td class="p-2">${escapeHtml(namaMapel)}</td><td class="p-2">${escapeHtml(pg.guruName)}</td><td class="p-2">${escapeHtml(infoTerlibat)}</td><td class="p-2"><button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i> Hapus</button></td></tr>`;
                 }
                 listHtml += `</tbody></table></div>`;
                 container.innerHTML = formHtml + listHtml;
-                
                 const mapelSelect = document.getElementById('pilihMapel');
                 const targetDiv = document.getElementById('targetInput');
                 const targetLabel = document.getElementById('targetLabel');
