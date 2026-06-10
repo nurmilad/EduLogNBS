@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>EduLogNBS — Sistem Perangkat Mengajar</title>
+    <title>Guru - EduLogNBS | Manajemen Mengajar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -11,298 +11,936 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Inter', system-ui, sans-serif; }
-        body {
-            background: linear-gradient(145deg, #0f172a 0%, #1e1b4b 50%, #2e1065 100%);
-            background-attachment: fixed;
+        body { background: #f1f5f9; }
+        .card-assignment {
+            background: white;
+            border-radius: 1.5rem;
+            border-left: 6px solid #4f46e5;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
-        .glass-card {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(0px);
-            border-radius: 2rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        .card-assignment:active { transform: scale(0.98); }
+        .modal-bg {
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
         }
-        .role-btn {
-            transition: all 0.2s;
+        select, input[type="number"] {
+            border-radius: 0.5rem;
+            border: 1px solid #e2e8f0;
+            padding: 0.25rem 0.5rem;
+            background: white;
+        }
+        .status-badge {
+            display: inline-block;
+            width: 40px;
+            text-align: center;
+            font-weight: bold;
+            padding: 6px 0;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            font-size: 0.85rem;
+            background-color: #f1f5f9;
+            color: #1e293b;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
         }
-        .role-btn.active {
-            background: linear-gradient(105deg, #4f46e5 0%, #7c3aed 100%);
+        .status-badge:active { transform: scale(0.94); }
+        .status-h { background-color: #dcfce7; color: #15803d; }
+        .status-i { background-color: #fed7aa; color: #9a3412; }
+        .status-s { background-color: #fef9c3; color: #854d0e; }
+        .status-a { background-color: #ffe4e6; color: #be123c; }
+        .nilai-input {
+            width: 70px;
+            text-align: center;
+        }
+        
+        /* ========== STICKY HEADER & FREEZE KOLOM ========== */
+        .table-scroll-wrapper {
+            overflow: auto;
+            max-height: 68vh;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+            position: relative;
+        }
+        
+        .sticky-table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 600px;
+        }
+        
+        .sticky-table thead tr th {
+            position: sticky;
+            top: 0;
+            background-color: #f8fafc;
+            z-index: 20;
+            border: 1px solid #e2e8f0;
+            padding: 8px 10px;
+        }
+        
+        .sticky-table thead tr:first-child th {
+            top: 0;
+        }
+        
+        .sticky-table tbody tr td {
+            border: 1px solid #e2e8f0;
+            padding: 8px 10px;
+        }
+        
+        .sticky-col-first {
+            position: sticky;
+            left: 0;
+            background-color: white;
+            z-index: 15;
+        }
+        
+        .sticky-col-second {
+            position: sticky;
+            left: 80px;
+            background-color: white;
+            z-index: 15;
+        }
+        
+        .sticky-table thead tr th.sticky-col-first,
+        .sticky-table thead tr th.sticky-col-second {
+            background-color: #f8fafc;
+            z-index: 30;
+        }
+        
+        @media (max-width: 640px) {
+            .nilai-input { width: 55px; font-size: 0.75rem; }
+            .status-badge { width: 36px; font-size: 0.75rem; padding: 4px 0; }
+            .sticky-col-second { left: 75px; }
+        }
+        
+        /* Tombol plus */
+        .btn-plus {
+            background-color: #4f46e5;
             color: white;
-            box-shadow: 0 8px 20px -6px #4f46e5;
+            width: 42px;
+            height: 42px;
+            border-radius: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            font-weight: 800;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
         }
-        .input-focus:focus {
-            box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
-            border-color: #4f46e5;
+        .btn-plus:hover {
+            background-color: #4338ca;
+            transform: scale(1.02);
         }
-        .login-btn {
-            background: linear-gradient(100deg, #4f46e5 0%, #7c3aed 100%);
+        .btn-plus:active {
+            transform: scale(0.96);
+        }
+        .btn-plus i {
+            font-size: 1.4rem;
+        }
+        
+        .icon-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            margin: 0 2px;
+            padding: 2px 4px;
+            border-radius: 8px;
+            transition: all 0.1s;
+        }
+        .icon-btn:hover { background-color: rgba(0,0,0,0.05); }
+        .icon-delete { color: #e11d48; }
+        .icon-edit { color: #4f46e5; }
+        
+        @media print {
+            @page {
+                size: landscape;
+                margin: 1.5cm;
+            }
+            body * {
+                visibility: hidden;
+            }
+            .print-area, .print-area * {
+                visibility: visible;
+            }
+            .print-area {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                margin: 0;
+                padding: 15px;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+        
+        .btn-print {
+            background-color: #059669;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
             transition: all 0.2s;
+            border: none;
         }
-        .login-btn:hover {
-            transform: scale(1.01);
-            box-shadow: 0 15px 25px -12px #5b21b6;
+        .btn-print:hover {
+            background-color: #047857;
+            transform: scale(1.02);
         }
-        .animate-float {
-            animation: float 6s ease-in-out infinite;
+        .btn-print:active {
+            transform: scale(0.98);
         }
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
-            100% { transform: translateY(0px); }
+        
+        /* Style untuk tabel cetak */
+        .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .print-table th, .print-table td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .print-table th {
+            background-color: #f3f4f6;
+            font-weight: bold;
+        }
+        .print-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .print-footer {
+            margin-top: 40px;
+            text-align: right;
+        }
+        
+        /* Perbaikan tabel penilaian */
+        .penilaian-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .penilaian-table th,
+        .penilaian-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .penilaian-table th {
+            background-color: #f8fafc;
+            font-weight: 600;
+        }
+        .penilaian-table td input {
+            width: 65px;
+            text-align: center;
+            padding: 4px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
         }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen p-5">
-    <div class="relative z-10 w-full max-w-md">
-        <!-- Header -->
-        <div class="text-center mb-6 animate-float">
-            <div class="inline-flex items-center justify-center bg-white/10 backdrop-blur-sm p-4 rounded-3xl shadow-lg border border-white/20 mb-2">
-                <i class="fas fa-chalkboard-user text-5xl text-white drop-shadow-md"></i>
-            </div>
-            <h1 class="text-4xl font-extrabold text-white tracking-tight mt-3">EduLog<span class="font-light">NBS</span></h1>
-            <p class="text-indigo-200 text-sm mt-1 font-medium">Sistem Perangkat Mengajar Digital</p>
+<body class="p-4 md:p-6">
+
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 no-print">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-chalkboard-user text-indigo-600"></i> Panel Guru</h1>
+            <p class="text-slate-500 text-sm" id="greeting">Memuat data guru...</p>
         </div>
-
-        <!-- Kartu Login -->
-        <div class="glass-card p-6 md:p-8 w-full border border-white/40">
-            <div class="text-center mb-5">
-                <span class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold"><i class="fas fa-lock mr-1"></i> PORTAL AKSES</span>
-                <h2 class="text-2xl font-bold text-gray-800 mt-3">Masuk ke Akun</h2>
-                <p class="text-gray-500 text-sm mt-1">Pilih peran dan masukkan kredensial</p>
-            </div>
-
-            <!-- Role Switcher -->
-            <div class="flex bg-gray-100/80 p-1.5 rounded-2xl gap-1.5 mb-6">
-                <button id="btnAdmin" class="role-btn flex-1 py-2.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 bg-white text-gray-700">
-                    <i class="fas fa-user-shield"></i> Admin
-                </button>
-                <button id="btnGuru" class="role-btn flex-1 py-2.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 bg-white text-gray-700">
-                    <i class="fas fa-chalkboard-user"></i> Guru
-                </button>
-                <button id="btnSiswa" class="role-btn flex-1 py-2.5 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2 bg-white text-gray-700">
-                    <i class="fas fa-graduation-cap"></i> Siswa
-                </button>
-            </div>
-
-            <!-- Form -->
-            <div class="space-y-4">
-                <div>
-                    <label id="usernameLabel" class="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
-                        <i class="fas fa-user-circle text-indigo-500"></i> Username (Admin)
-                    </label>
-                    <div id="usernameInputContainer" class="relative">
-                        <!-- Input akan diganti dinamis oleh JS -->
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1.5 flex items-center gap-2">
-                        <i class="fas fa-key text-indigo-500"></i> Password
-                    </label>
-                    <div class="relative">
-                        <i class="fas fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                        <input type="password" id="password" placeholder="Masukkan password" 
-                               class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white">
-                    </div>
-                </div>
-
-                <button id="loginBtn" class="login-btn w-full text-white font-bold py-3 rounded-xl mt-2 shadow-lg flex items-center justify-center gap-2 transition-all">
-                    <i class="fas fa-arrow-right-to-bracket"></i> Masuk ke Dashboard
-                </button>
-                
-                <p id="errorMsg" class="text-red-600 text-sm text-center mt-3 hidden bg-red-50 py-2 rounded-lg border border-red-100"></p>
-            </div>
-            
-            <div class="mt-6 text-center text-xs text-gray-400 border-t pt-4">
-                <i class="far fa-shield-alt mr-1"></i> Sistem aman & terenkripsi
-            </div>
+        <div class="flex gap-3">
+            <button id="btnTambahPenugasan" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl shadow-md transition flex items-center gap-2"><i class="fas fa-plus-circle"></i> + Penugasan</button>
+            <a href="index.html" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl shadow-md transition flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </div>
 
-    <script>
-        // ========== KONFIGURASI FIREBASE ==========
-        const firebaseConfig = {
-            apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
-            authDomain: "edulognbs.firebaseapp.com",
-            databaseURL: "https://edulognbs-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "edulognbs",
-            storageBucket: "edulognbs.firebasestorage.app",
-            messagingSenderId: "759345868898",
-            appId: "1:759345868898:web:40487df20ab4f43045213b",
-            measurementId: "G-SV83KDGZTS"
-        };
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        const db = firebase.database();
+    <!-- Daftar Semua Card Penugasan -->
+    <div id="assignmentsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 no-print">
+        <div class="col-span-full text-center py-10 text-slate-400"><i class="fas fa-spinner fa-pulse"></i> Memuat penugasan...</div>
+    </div>
 
-        let selectedRole = 'admin';
-        let guruOptionsLoaded = false;
-        let guruNames = []; // daftar nama guru
+    <!-- Panel Detail Penugasan -->
+    <div id="detailContainer" class="hidden bg-white rounded-2xl shadow-lg p-4">
+        <div class="flex items-center justify-between gap-3 mb-4 pb-2 border-b no-print">
+            <div class="flex items-center gap-3">
+                <button id="backToListBtn" class="bg-gray-200 hover:bg-gray-300 p-2 rounded-full w-10 h-10 flex items-center justify-center"><i class="fas fa-arrow-left"></i></button>
+                <h2 id="detailTitle" class="text-xl font-bold text-indigo-800">Detail Penugasan</h2>
+            </div>
+            <div class="flex gap-2" id="printButtonsContainer"></div>
+        </div>
+        <div id="detailContent"></div>
+    </div>
+</div>
 
-        // Ambil elemen
-        const btnAdmin = document.getElementById('btnAdmin');
-        const btnGuru = document.getElementById('btnGuru');
-        const btnSiswa = document.getElementById('btnSiswa');
-        const usernameLabel = document.getElementById('usernameLabel');
-        const usernameInputContainer = document.getElementById('usernameInputContainer');
-        const passwordInput = document.getElementById('password');
-        const loginBtn = document.getElementById('loginBtn');
-        const errorMsg = document.getElementById('errorMsg');
+<!-- MODAL TAMBAH PENUGASAN -->
+<div id="modalPenugasan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
+    <div class="bg-white rounded-2xl max-w-lg w-full mx-4 p-6 shadow-2xl">
+        <h3 class="text-xl font-bold mb-4"><i class="fas fa-tasks text-indigo-500"></i> Buat Penugasan Baru</h3>
+        <div class="space-y-4">
+            <div><label class="block font-semibold mb-1">Mata Pelajaran</label><select id="modalMapel" class="w-full border rounded-xl p-2 bg-gray-50"><option value="">-- Pilih Mapel --</option></select></div>
+            <div><label class="block font-semibold mb-1">Target (Kelas / Siswa)</label><div id="modalTargetInput" class="border rounded-xl p-3 bg-gray-50 min-h-[120px]">Pilih mapel terlebih dahulu</div></div>
+            <div class="flex justify-end gap-3"><button id="modalBatalBtn" class="px-4 py-2 border rounded-xl">Batal</button><button id="modalSimpanBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Simpan</button></div>
+        </div>
+    </div>
+</div>
 
-        // Fungsi untuk mengambil daftar guru dari Firebase
-        async function loadGuruList() {
-            try {
-                const snapshot = await db.ref('guru').once('value');
-                const guruData = snapshot.val() || {};
-                guruNames = Object.keys(guruData);
-                return guruNames;
-            } catch (err) {
-                console.error("Gagal load guru:", err);
-                return [];
-            }
-        }
+<!-- MODAL EDIT TANGGAL KEHADIRAN -->
+<div id="modalEditTanggal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
+        <h4 class="text-lg font-bold mb-3">Edit Tanggal Sesi Kehadiran</h4>
+        <input type="date" id="editTanggalInput" class="w-full border rounded-xl p-2 mb-4">
+        <div class="flex justify-end gap-3"><button id="cancelEditTanggal" class="px-4 py-2 border rounded-xl">Batal</button><button id="saveEditTanggal" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Simpan</button></div>
+    </div>
+</div>
 
-        // Fungsi untuk membuat input/dropdown sesuai role
-        async function setActiveRole(role) {
-            selectedRole = role;
-            // Reset class active
-            [btnAdmin, btnGuru, btnSiswa].forEach(btn => btn.classList.remove('active'));
-            if (role === 'admin') {
-                btnAdmin.classList.add('active');
-                usernameLabel.innerHTML = '<i class="fas fa-user-cog text-indigo-500"></i> Username (Admin)';
-                usernameInputContainer.innerHTML = `
-                    <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                    <input type="text" id="username" placeholder="admin" 
-                           class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white">
-                `;
-            } else if (role === 'guru') {
-                btnGuru.classList.add('active');
-                usernameLabel.innerHTML = '<i class="fas fa-chalkboard-user text-indigo-500"></i> Pilih Nama Guru';
-                // Tampilkan dropdown, isi dengan data dari Firebase
-                usernameInputContainer.innerHTML = `
-                    <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                    <select id="username" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white appearance-none">
-                        <option value="">-- Pilih Guru --</option>
-                    </select>
-                    <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
-                `;
-                // Isi dropdown jika belum pernah
-                if (guruNames.length === 0) {
-                    // Tampilkan loading sementara
-                    const select = document.getElementById('username');
-                    if (select) select.innerHTML = '<option value="">Memuat data guru...</option>';
-                    const namaGuru = await loadGuruList();
-                    const selectEl = document.getElementById('username');
-                    if (selectEl) {
-                        selectEl.innerHTML = '<option value="">-- Pilih Guru --</option>';
-                        namaGuru.forEach(nama => {
-                            const option = document.createElement('option');
-                            option.value = nama;
-                            option.textContent = nama;
-                            selectEl.appendChild(option);
-                        });
-                    }
-                } else {
-                    const select = document.getElementById('username');
-                    if (select) {
-                        select.innerHTML = '<option value="">-- Pilih Guru --</option>';
-                        guruNames.forEach(nama => {
-                            const option = document.createElement('option');
-                            option.value = nama;
-                            option.textContent = nama;
-                            select.appendChild(option);
-                        });
-                    }
-                }
-            } else { // siswa
-                btnSiswa.classList.add('active');
-                usernameLabel.innerHTML = '<i class="fas fa-id-card text-indigo-500"></i> NIS (Nomor Induk Siswa)';
-                usernameInputContainer.innerHTML = `
-                    <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
-                    <input type="text" id="username" placeholder="Masukkan NIS" 
-                           class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white">
-                `;
-            }
-            errorMsg.classList.add('hidden');
-            passwordInput.value = '';
-        }
+<!-- MODAL TAMBAH KEHADIRAN -->
+<div id="modalTambahKehadiran" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
+        <h4 class="text-lg font-bold mb-3"><i class="fas fa-calendar-plus"></i> Tambah Sesi Kehadiran</h4>
+        <label class="block font-medium mb-1">Tanggal</label>
+        <input type="date" id="kehadiranDate" class="w-full border rounded-xl p-2 mb-4">
+        <div class="flex justify-end gap-3"><button id="batalKehadiran" class="px-4 py-2 border rounded-xl">Batal</button><button id="simpanKehadiran" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Simpan</button></div>
+    </div>
+</div>
 
-        // Fungsi login
-        async function handleLogin() {
-            let usernameValue;
-            // Ambil nilai username (bisa dari input atau select)
-            const usernameField = document.getElementById('username');
-            if (!usernameField) return;
-            if (selectedRole === 'guru') {
-                usernameValue = usernameField.value;
-            } else {
-                usernameValue = usernameField.value.trim();
-            }
-            const password = passwordInput.value.trim();
-            errorMsg.classList.add('hidden');
-            
-            if (!usernameValue || !password) {
-                errorMsg.innerText = '❌ Semua field harus diisi!';
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-            
-            if (selectedRole === 'admin') {
-                if (usernameValue === 'admin' && password === 'admin123') {
-                    window.location.href = 'admin.html';
-                } else {
-                    errorMsg.innerText = '❌ Username atau password admin salah!';
-                    errorMsg.classList.remove('hidden');
-                }
-            } 
-            else if (selectedRole === 'guru') {
-                try {
-                    const snapshot = await db.ref(`guru/${usernameValue}`).once('value');
-                    const guru = snapshot.val();
-                    if (guru && guru.password === password) {
-                        localStorage.setItem('guruLogin', usernameValue);
-                        window.location.href = 'guru.html';
-                    } else {
-                        errorMsg.innerText = '❌ Nama Guru atau password tidak cocok!';
-                        errorMsg.classList.remove('hidden');
-                    }
-                } catch (err) {
-                    console.error(err);
-                    errorMsg.innerText = '⚠️ Gagal koneksi database. Coba lagi.';
-                    errorMsg.classList.remove('hidden');
+<!-- MODAL TAMBAH PENILAIAN -->
+<div id="modalTambahPenilaian" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
+        <h4 class="text-lg font-bold mb-3"><i class="fas fa-clipboard-list"></i> Tambah Penilaian</h4>
+        <label class="block font-medium mb-1">Tanggal</label>
+        <input type="date" id="penilaianDate" class="w-full border rounded-xl p-2 mb-3">
+        <label class="block font-medium mb-1">Topik / Materi</label>
+        <input type="text" id="penilaianTopik" class="w-full border rounded-xl p-2 mb-4" placeholder="e.g. UTS Bab 1">
+        <div class="flex justify-end gap-3"><button id="batalPenilaian" class="px-4 py-2 border rounded-xl">Batal</button><button id="simpanPenilaian" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Simpan</button></div>
+    </div>
+</div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
+        authDomain: "edulognbs.firebaseapp.com",
+        databaseURL: "https://edulognbs-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "edulognbs",
+        storageBucket: "edulognbs.firebasestorage.app",
+        messagingSenderId: "759345868898",
+        appId: "1:759345868898:web:40487df20ab4f43045213b"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let currentTeacher = null;
+    let allMapel = {}, allKelas = [], allSiswa = {}, penugasanList = [];
+
+    function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+    function toYMD(date) { return date.toISOString().slice(0,10); }
+    function toDMY(ymd) { if (!ymd) return ''; let [y,m,d] = ymd.split('-'); return `${d}/${m}/${y}`; }
+    function formatDateToDMY(date) { return toDMY(toYMD(date)); }
+    function parseDMY(dateStr) { if(!dateStr) return null; let parts = dateStr.split('/'); if(parts.length===3){ let d=parseInt(parts[0]), m=parseInt(parts[1])-1, y=parseInt(parts[2]); return new Date(y,m,d); } return null; }
+
+    async function fetchInitialData() {
+        try {
+            const [mapelSnap, kelasSnap, siswaSnap, penugasanSnap] = await Promise.all([
+                db.ref('mapel').once('value'), db.ref('kelas').once('value'), db.ref('siswa').once('value'), db.ref('penugasan').once('value')
+            ]);
+            allMapel = mapelSnap.val() || {};
+            allKelas = Object.keys(kelasSnap.val() || {});
+            allSiswa = siswaSnap.val() || {};
+            const allPenugasan = penugasanSnap.val() || {};
+            penugasanList = [];
+            for (let [id, pg] of Object.entries(allPenugasan)) {
+                if (pg.guruName === currentTeacher) {
+                    const mapelData = allMapel[pg.mapelId] || { nama: 'Mapel Dihapus', jenis: 'inkul' };
+                    const kelasSet = new Set();
+                    for (let nis of (pg.siswaList || [])) if (allSiswa[nis]) kelasSet.add(allSiswa[nis].kelas);
+                    penugasanList.push({
+                        id, mapelId: pg.mapelId, guruName: pg.guruName, siswaList: pg.siswaList || [],
+                        mapelNama: mapelData.nama, mapelJenis: mapelData.jenis,
+                        kelasDisplay: kelasSet.size ? Array.from(kelasSet).join(', ') : 'Tanpa Kelas'
+                    });
                 }
             }
-            else if (selectedRole === 'siswa') {
-                try {
-                    const snapshot = await db.ref(`siswa/${usernameValue}`).once('value');
-                    const siswa = snapshot.val();
-                    if (siswa && siswa.password === password) {
-                        localStorage.setItem('siswaLogin', usernameValue);
-                        window.location.href = 'murid.html';
-                    } else {
-                        errorMsg.innerText = '❌ NIS atau password salah!';
-                        errorMsg.classList.remove('hidden');
-                    }
-                } catch (err) {
-                    console.error(err);
-                    errorMsg.innerText = '⚠️ Gagal memverifikasi data siswa.';
-                    errorMsg.classList.remove('hidden');
-                }
-            }
+        } catch(e) { console.error(e); alert('Gagal muat data: '+e.message); }
+    }
+
+    async function renderAllCards() {
+        const container = document.getElementById('assignmentsContainer');
+        if (!penugasanList.length) { container.innerHTML = `<div class="col-span-full bg-white rounded-2xl shadow p-8 text-center"><i class="fas fa-folder-open text-4xl text-gray-300 mb-2"></i><p class="text-gray-500">Belum ada penugasan. Klik "+ Penugasan" untuk memulai.</p></div>`; return; }
+        let html = '';
+        for (let task of penugasanList) {
+            html += `<div class="card-assignment p-5 cursor-pointer hover:shadow-lg transition" data-id="${task.id}">
+                        <div class="flex justify-between items-start">
+                            <div><h3 class="font-bold text-lg text-indigo-800">${escapeHtml(task.mapelNama)}</h3>
+                            <p class="text-sm text-gray-500 mt-1"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                            <p class="text-xs text-gray-400 mt-2">${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p></div>
+                            <i class="fas fa-chevron-right text-indigo-400 text-xl"></i>
+                        </div>
+                    </div>`;
         }
+        container.innerHTML = html;
+        document.querySelectorAll('.card-assignment').forEach(card => {
+            card.addEventListener('click', () => {
+                const selectedTask = penugasanList.find(t => t.id === card.dataset.id);
+                if (selectedTask) showDetailAssignment(selectedTask);
+            });
+        });
+    }
 
-        // Event listeners
-        btnAdmin.onclick = () => setActiveRole('admin');
-        btnGuru.onclick = () => setActiveRole('guru');
-        btnSiswa.onclick = () => setActiveRole('siswa');
-        loginBtn.onclick = handleLogin;
-
-        // Enter key pada password
-        const enterHandler = (e) => { if (e.key === 'Enter') handleLogin(); };
-        passwordInput.addEventListener('keypress', enterHandler);
+    function showDetailAssignment(task) {
+        document.getElementById('assignmentsContainer').classList.add('hidden');
+        document.getElementById('detailContainer').classList.remove('hidden');
+        document.getElementById('detailTitle').innerHTML = `<i class="fas fa-book-open mr-2"></i> ${escapeHtml(task.mapelNama)} · ${escapeHtml(task.kelasDisplay)}`;
         
-        // Set default role admin
-        setActiveRole('admin');
-    </script>
+        const printContainer = document.getElementById('printButtonsContainer');
+        printContainer.innerHTML = `
+            <button class="btn-print" id="printAttendanceBtn"><i class="fas fa-print"></i> Cetak Daftar Hadir</button>
+            <button class="btn-print" id="printGradesBtn"><i class="fas fa-print"></i> Cetak Nilai</button>
+        `;
+        document.getElementById('printAttendanceBtn').onclick = () => printAttendance(task);
+        document.getElementById('printGradesBtn').onclick = () => printGrades(task);
+        
+        loadDetailTabs(task);
+    }
+
+    function backToList() {
+        document.getElementById('detailContainer').classList.add('hidden');
+        document.getElementById('assignmentsContainer').classList.remove('hidden');
+    }
+
+    async function loadDetailTabs(task) {
+        const container = document.getElementById('detailContent');
+        container.innerHTML = `<div class="flex gap-2 border-b mb-4"><button class="tab-kehadiran-btn py-2 px-5 rounded-t-xl font-semibold bg-indigo-600 text-white shadow">📋 Kehadiran</button><button class="tab-penilaian-btn py-2 px-5 rounded-t-xl font-semibold text-gray-600 bg-gray-100">📝 Penilaian</button></div>
+                                <div class="tab-pane-kehadiran w-full"></div><div class="tab-pane-penilaian hidden w-full"></div>`;
+        const kehadiranPane = container.querySelector('.tab-pane-kehadiran');
+        const penilaianPane = container.querySelector('.tab-pane-penilaian');
+        const btnKehadiran = container.querySelector('.tab-kehadiran-btn');
+        const btnPenilaian = container.querySelector('.tab-penilaian-btn');
+        btnKehadiran.onclick = () => { btnKehadiran.classList.add('bg-indigo-600','text-white'); btnKehadiran.classList.remove('bg-gray-100','text-gray-600'); btnPenilaian.classList.add('bg-gray-100','text-gray-600'); btnPenilaian.classList.remove('bg-indigo-600','text-white'); kehadiranPane.classList.remove('hidden'); penilaianPane.classList.add('hidden'); renderKehadiranTab(kehadiranPane, task); };
+        btnPenilaian.onclick = () => { btnPenilaian.classList.add('bg-indigo-600','text-white'); btnPenilaian.classList.remove('bg-gray-100','text-gray-600'); btnKehadiran.classList.add('bg-gray-100','text-gray-600'); btnKehadiran.classList.remove('bg-indigo-600','text-white'); penilaianPane.classList.remove('hidden'); kehadiranPane.classList.add('hidden'); renderPenilaianTab(penilaianPane, task); };
+        renderKehadiranTab(kehadiranPane, task);
+    }
+
+    async function refreshWithScroll(wrapperElement, refreshFn, ...args) {
+        if (!wrapperElement) { await refreshFn(...args); return; }
+        const oldLeft = wrapperElement.scrollLeft;
+        const oldTop = wrapperElement.scrollTop;
+        await refreshFn(...args);
+        wrapperElement.scrollLeft = oldLeft;
+        wrapperElement.scrollTop = oldTop;
+    }
+
+    // ================= KEHADIRAN =================
+    async function renderKehadiranTab(container, task) {
+        container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-kehadiran" title="Tambah sesi kehadiran"><i class="fas fa-plus"></i></button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
+        container.querySelector('.btn-add-kehadiran').onclick = () => openAddKehadiranModal(task);
+        await refreshKehadiranTable(container, task);
+    }
+
+    async function deleteAttendanceSession(assignmentId, sessionId) {
+        if (!confirm("Hapus sesi kehadiran ini? Seluruh data status kehadiran akan hilang.")) return;
+        await db.ref(`attendance/${assignmentId}/${sessionId}`).remove();
+    }
+
+    async function refreshKehadiranTable(container, task) {
+        const wrapperDiv = container.querySelector('#kehadiranTableWrapper');
+        if (!wrapperDiv) return;
+        const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
+        const sessions = sessionsSnap.val() || {};
+        let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, records: val.records || {} }));
+        sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        
+        let html = `<table class="sticky-table">`;
+        html += `<thead><tr>
+                    <th class="sticky-col-first">NIS</th>
+                    <th class="sticky-col-second">Nama</th>`;
+        for (let ses of sessionsList) {
+            let shortDate = ses.date.split('/').slice(0,2).join('/');
+            html += `<th class="text-center whitespace-nowrap">
+                        <div>${escapeHtml(shortDate)}</div>
+                        <div class="flex items-center justify-center gap-1 mt-1">
+                            <button class="icon-btn icon-edit edit-session-date" data-session-id="${ses.id}" data-current-date="${ses.date}"><i class="fas fa-pen"></i></button>
+                            <button class="icon-btn icon-delete delete-session" data-session-id="${ses.id}"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                     </th>`;
+        }
+        html += `<th class="bg-gray-50 text-center">Jml H</th>`;
+        html += `</tr></thead><tbody>`;
+        
+        for (let siswa of siswaArray) {
+            let hadirCount = 0;
+            html += `<tr>
+                        <td class="sticky-col-first">${escapeHtml(siswa.nis)}</td>
+                        <td class="sticky-col-second">${escapeHtml(siswa.nama)}</td>`;
+            for (let ses of sessionsList) {
+                let status = ses.records[siswa.nis] || 'H';
+                if (status === 'H') hadirCount++;
+                let statusClass = '';
+                if (status === 'H') statusClass = 'status-h';
+                else if (status === 'I') statusClass = 'status-i';
+                else if (status === 'S') statusClass = 'status-s';
+                else if (status === 'A') statusClass = 'status-a';
+                html += `<td class="text-center">
+                            <div class="status-badge ${statusClass} kehadiran-status" data-session="${ses.id}" data-nis="${siswa.nis}" data-status="${status}">${status}</div>
+                          </td>`;
+            }
+            html += `<td class="font-bold text-center">${hadirCount}</td>`;
+            html += `</tr>`;
+        }
+        html += `</tbody><table>`;
+        wrapperDiv.innerHTML = html;
+        
+        wrapperDiv.querySelectorAll('.edit-session-date').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                openEditTanggalModal(task.id, btn.dataset.sessionId, btn.dataset.currentDate, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
+            };
+        });
+        wrapperDiv.querySelectorAll('.delete-session').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                await deleteAttendanceSession(task.id, btn.dataset.sessionId);
+                await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task);
+            };
+        });
+        wrapperDiv.querySelectorAll('.kehadiran-status').forEach(badge => {
+            badge.onclick = async (e) => {
+                e.stopPropagation();
+                const sessionId = badge.dataset.session;
+                const nis = badge.dataset.nis;
+                const currentStatus = badge.dataset.status;
+                const statusCycle = { 'H': 'I', 'I': 'S', 'S': 'A', 'A': 'H' };
+                const newStatus = statusCycle[currentStatus] || 'H';
+                await db.ref(`attendance/${task.id}/${sessionId}/records/${nis}`).set(newStatus);
+                await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task);
+            };
+        });
+    }
+
+    async function openAddKehadiranModal(task) {
+        const todayYMD = toYMD(new Date());
+        document.getElementById('kehadiranDate').value = todayYMD;
+        const modal = document.getElementById('modalTambahKehadiran');
+        modal.style.display = 'flex';
+        const simpan = document.getElementById('simpanKehadiran');
+        const batal = document.getElementById('batalKehadiran');
+        const onSimpan = async () => {
+            let ymd = document.getElementById('kehadiranDate').value;
+            if (!ymd) return alert("Pilih tanggal");
+            let dateDMY = formatDateToDMY(new Date(ymd));
+            const newSessionId = Date.now().toString();
+            await db.ref(`attendance/${task.id}/${newSessionId}`).set({ date: dateDMY, records: {} });
+            modal.style.display = 'none';
+            const container = document.querySelector('#detailContent .tab-pane-kehadiran');
+            if (container) {
+                const wrap = container.querySelector('#kehadiranTableWrapper');
+                if(wrap) await refreshWithScroll(wrap, refreshKehadiranTable, container, task);
+                else await refreshKehadiranTable(container, task);
+            }
+            cleanup();
+        };
+        const cleanup = () => { simpan.removeEventListener('click', onSimpan); batal.removeEventListener('click', closeModal); };
+        const closeModal = () => { modal.style.display = 'none'; cleanup(); };
+        simpan.addEventListener('click', onSimpan);
+        batal.addEventListener('click', closeModal);
+    }
+
+    async function openEditTanggalModal(assignmentId, sessionId, oldDateDMY, callback) {
+        let oldDate = parseDMY(oldDateDMY);
+        let ymd = oldDate ? toYMD(oldDate) : '';
+        const modal = document.getElementById('modalEditTanggal');
+        const dateInput = document.getElementById('editTanggalInput');
+        dateInput.value = ymd;
+        modal.style.display = 'flex';
+        const saveBtn = document.getElementById('saveEditTanggal');
+        const cancelBtn = document.getElementById('cancelEditTanggal');
+        const onSave = async () => {
+            let newYmd = dateInput.value;
+            if (!newYmd) return alert("Pilih tanggal");
+            let newDateDMY = formatDateToDMY(new Date(newYmd));
+            await db.ref(`attendance/${assignmentId}/${sessionId}/date`).set(newDateDMY);
+            modal.style.display = 'none';
+            if (callback) callback();
+            cleanup();
+        };
+        const onCancel = () => { modal.style.display = 'none'; cleanup(); };
+        const cleanup = () => { saveBtn.removeEventListener('click', onSave); cancelBtn.removeEventListener('click', onCancel); };
+        saveBtn.addEventListener('click', onSave);
+        cancelBtn.addEventListener('click', onCancel);
+    }
+
+    // ================= PENILAIAN =================
+    async function renderPenilaianTab(container, task) {
+        container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-penilaian" title="Tambah penilaian"><i class="fas fa-plus"></i></button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
+        container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
+        await refreshPenilaianTable(container, task);
+    }
+
+    async function deleteAssessment(assignmentId, assessId) {
+        if (!confirm("Hapus kolom penilaian ini? Semua nilai siswa untuk penilaian ini akan hilang.")) return;
+        await db.ref(`penilaian/${assignmentId}/${assessId}`).remove();
+    }
+
+    async function refreshPenilaianTable(container, task) {
+        const wrapperDiv = container.querySelector('#penilaianTableWrapper');
+        if (!wrapperDiv) return;
+        
+        const assessmentsSnap = await db.ref(`penilaian/${task.id}`).once('value');
+        const assessments = assessmentsSnap.val() || {};
+        let assessList = Object.entries(assessments).map(([id, val]) => ({ id, date: val.date, topic: val.topic, scores: val.scores || {} }));
+        assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        
+        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        
+        if (assessList.length === 0) {
+            wrapperDiv.innerHTML = `<div class="text-center py-10 text-gray-400"><i class="fas fa-clipboard-list text-3xl mb-2"></i><p>Belum ada data penilaian</p><p class="text-xs">Klik tombol + untuk menambah penilaian</p></div>`;
+            return;
+        }
+        
+        let html = `<table class="sticky-table penilaian-table">`;
+        html += `<thead>`;
+        // Header baris 1 - dengan tombol edit/hapus (menggunakan N1, N2, N3, dst)
+        html += `<tr>
+                    <th rowspan="2" class="sticky-col-first">NIS</th>
+                    <th rowspan="2" class="sticky-col-second">Nama</th>`;
+        for (let i = 0; i < assessList.length; i++) {
+            html += `<th class="text-center">
+                        <div><strong>N${i+1}</strong></div>
+                        <div class="flex items-center justify-center gap-1 mt-1">
+                            <button class="icon-btn icon-edit edit-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-pen"></i></button>
+                            <button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                     </th>`;
+        }
+        html += `<th rowspan="2" class="bg-gray-50">Rata-Rata</th>`;
+        html += `</tr>`;
+        // Header baris 2 - tanggal dan topik
+        html += `<tr>`;
+        for (let as of assessList) {
+            html += `<th class="text-center text-xs font-normal bg-gray-50">
+                        <div>${escapeHtml(as.date)}</div>
+                        <div class="text-gray-500 text-xs">${escapeHtml(as.topic || '-')}</div>
+                     </th>`;
+        }
+        html += `</tr>`;
+        html += `</thead><tbody>`;
+        
+        for (let siswa of siswaArray) {
+            let totalNilai = 0;
+            let countValid = 0;
+            html += `<tr>
+                        <td class="sticky-col-first">${escapeHtml(siswa.nis)}</td>
+                        <td class="sticky-col-second text-left">${escapeHtml(siswa.nama)}</td>`;
+            for (let as of assessList) {
+                let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
+                if (nilai > 0) { totalNilai += nilai; countValid++; }
+                html += `<td class="text-center">
+                            <input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100">
+                           </td>`;
+            }
+            let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
+            html += `<td class="font-bold text-center bg-gray-50">${rata}</td>`;
+            html += `</tr>`;
+        }
+        html += `</tbody></tr>`;
+        wrapperDiv.innerHTML = html;
+        
+        // Event handlers
+        wrapperDiv.querySelectorAll('.edit-assessment').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                const assessId = btn.dataset.assessId;
+                const assessment = assessList.find(a => a.id === assessId);
+                if (assessment) {
+                    let oldYMD = assessment.date?.split('/').reverse().join('-') || '';
+                    let newDate = prompt("Edit Tanggal (yyyy-mm-dd):", oldYMD);
+                    if (newDate) {
+                        let newDateObj = new Date(newDate);
+                        if (!isNaN(newDateObj)) {
+                            let newDateDMY = formatDateToDMY(newDateObj);
+                            let newTopic = prompt("Edit Topik:", assessment.topic);
+                            if (newTopic !== null) {
+                                await db.ref(`penilaian/${task.id}/${assessId}/date`).set(newDateDMY);
+                                await db.ref(`penilaian/${task.id}/${assessId}/topic`).set(newTopic || "Penilaian");
+                                await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
+                            }
+                        } else {
+                            alert("Format tanggal salah!");
+                        }
+                    }
+                }
+            };
+        });
+        
+        wrapperDiv.querySelectorAll('.delete-assessment').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                await deleteAssessment(task.id, btn.dataset.assessId);
+                await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
+            };
+        });
+        
+        wrapperDiv.querySelectorAll('.nilai-siswa').forEach(inp => {
+            inp.onchange = async () => {
+                let val = parseInt(inp.value, 10);
+                if (isNaN(val)) val = 0;
+                val = Math.min(100, Math.max(0, val));
+                inp.value = val;
+                await db.ref(`penilaian/${task.id}/${inp.dataset.assess}/scores/${inp.dataset.nis}`).set(val);
+                await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
+            };
+        });
+    }
+
+    async function openAddPenilaianModal(task) {
+        const todayYMD = toYMD(new Date());
+        document.getElementById('penilaianDate').value = todayYMD;
+        document.getElementById('penilaianTopik').value = '';
+        const modal = document.getElementById('modalTambahPenilaian');
+        modal.style.display = 'flex';
+        const simpan = document.getElementById('simpanPenilaian');
+        const batal = document.getElementById('batalPenilaian');
+        const onSimpan = async () => {
+            let ymd = document.getElementById('penilaianDate').value;
+            if (!ymd) return alert("Pilih tanggal");
+            let dateDMY = formatDateToDMY(new Date(ymd));
+            let topic = document.getElementById('penilaianTopik').value.trim() || "Penilaian";
+            let newId = Date.now().toString();
+            await db.ref(`penilaian/${task.id}/${newId}`).set({ date: dateDMY, topic, scores: {} });
+            modal.style.display = 'none';
+            const container = document.querySelector('#detailContent .tab-pane-penilaian');
+            if (container) {
+                const wrap = container.querySelector('#penilaianTableWrapper');
+                if(wrap) await refreshWithScroll(wrap, refreshPenilaianTable, container, task);
+                else await refreshPenilaianTable(container, task);
+            }
+            cleanup();
+        };
+        const cleanup = () => { simpan.removeEventListener('click', onSimpan); batal.removeEventListener('click', onBatal); };
+        const onBatal = () => { modal.style.display = 'none'; cleanup(); };
+        simpan.addEventListener('click', onSimpan);
+        batal.addEventListener('click', onBatal);
+    }
+
+    // ========== FUNGSI CETAK ==========
+    async function printAttendance(task) {
+        const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
+        const sessions = sessionsSnap.val() || {};
+        let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, records: val.records || {} }));
+        sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        
+        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        
+        let printHtml = `
+            <div class="print-area">
+                <div class="print-header">
+                    <h1 style="font-size: 22px;">LAPORAN DAFTAR HADIR</h1>
+                    <h2>${escapeHtml(task.mapelNama)}</h2>
+                    <p>Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                    <p>Guru: ${escapeHtml(currentTeacher)}</p>
+                    <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+                </div>
+                <table class="print-table">
+                    <thead>
+                        <tr><th>No</th><th>NIS</th><th>Nama</th>`;
+        for (let ses of sessionsList) {
+            printHtml += `<th>${escapeHtml(ses.date)}</th>`;
+        }
+        printHtml += `<th>Total H</th></tr>
+                    </thead>
+                    <tbody>`;
+        
+        let no = 1;
+        for (let siswa of siswaArray) {
+            let hadirCount = 0;
+            printHtml += `<tr>
+                            <td>${no++}</td>
+                            <td>${escapeHtml(siswa.nis)}</td>
+                            <td style="text-align:left">${escapeHtml(siswa.nama)}</td>`;
+            for (let ses of sessionsList) {
+                let status = ses.records[siswa.nis] || 'H';
+                if (status === 'H') hadirCount++;
+                printHtml += `<td>${status}</td>`;
+            }
+            printHtml += `<td><strong>${hadirCount}</strong></td>
+                         </tr>`;
+        }
+        
+        printHtml += `
+                    </tbody>
+                 </table>
+                <div class="print-footer">
+                    <p>Mengetahui,</p>
+                    <p style="margin-top: 40px;">(_____________________)</p>
+                </div>
+            </div>`;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Daftar Hadir - ${task.mapelNama}</title>
+                <style>
+                    body { font-family: 'Inter', Arial, sans-serif; margin: 0; padding: 15px; }
+                    .print-header { text-align: center; margin-bottom: 20px; }
+                    .print-table { width: 100%; border-collapse: collapse; }
+                    .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
+                    .print-table th { background: #f3f4f6; }
+                    .print-footer { margin-top: 40px; text-align: right; }
+                    @media print { @page { size: landscape; margin: 1.2cm; } }
+                </style>
+            </head>
+            <body>${printHtml}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+    
+    async function printGrades(task) {
+        const assessmentsSnap = await db.ref(`penilaian/${task.id}`).once('value');
+        const assessments = assessmentsSnap.val() || {};
+        let assessList = Object.entries(assessments).map(([id, val]) => ({ id, date: val.date, topic: val.topic, scores: val.scores || {} }));
+        assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        
+        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        
+        let printHtml = `
+            <div class="print-area">
+                <div class="print-header">
+                    <h1 style="font-size: 22px;">LAPORAN NILAI</h1>
+                    <h2>${escapeHtml(task.mapelNama)}</h2>
+                    <p>Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                    <p>Guru: ${escapeHtml(currentTeacher)}</p>
+                    <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+                </div>
+                <table class="print-table">
+                    <thead>
+                        <tr><th>No</th><th>NIS</th><th>Nama</th>`;
+        for (let i = 0; i < assessList.length; i++) {
+            printHtml += `<th>N${i+1}<br><small>${escapeHtml(assessList[i].topic || '-')}</small></th>`;
+        }
+        printHtml += `<th>Rata-Rata</th>`;
+        printHtml += `</tr></thead>
+                    <tbody>`;
+        
+        let no = 1;
+        for (let siswa of siswaArray) {
+            let totalNilai = 0;
+            let countValid = 0;
+            printHtml += `<tr>
+                            <td>${no++}</td>
+                            <td>${escapeHtml(siswa.nis)}</td>
+                            <td style="text-align:left">${escapeHtml(siswa.nama)}</td>`;
+            for (let as of assessList) {
+                let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
+                if (nilai > 0) { totalNilai += nilai; countValid++; }
+                printHtml += `<td>${nilai || '-'}</td>`;
+            }
+            let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
+            printHtml += `<td><strong>${rata}</strong></td>
+                         </tr>`;
+        }
+        
+        printHtml += `
+                    </tbody>
+                 </table>
+                <div class="print-footer">
+                    <p>Mengetahui,</p>
+                    <p style="margin-top: 40px;">(_____________________)</p>
+                </div>
+            </div>`;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Laporan Nilai - ${task.mapelNama}</title>
+                <style>
+                    body { font-family: 'Inter', Arial, sans-serif; margin: 0; padding: 15px; }
+                    .print-header { text-align: center; margin-bottom: 20px; }
+                    .print-table { width: 100%; border-collapse: collapse; }
+                    .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
+                    .print-table th { background: #f3f4f6; }
+                    .print-footer { margin-top: 40px; text-align: right; }
+                    @media print { @page { size: landscape; margin: 1.2cm; } }
+                </style>
+            </head>
+            <body>${printHtml}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+
+    // ========== TAMBAH PENUGASAN ==========
+    async function prepareModalPenugasan() {
+        const mapelSelect = document.getElementById('modalMapel');
+        mapelSelect.innerHTML = '<option value="">-- Pilih Mapel --</option>';
+        for (let [id, m] of Object.entries(allMapel)) mapelSelect.innerHTML += `<option value="${id}" data-jenis="${m.jenis}">${escapeHtml(m.nama)} (${m.jenis})</option>`;
+        const targetDiv = document.getElementById('modalTargetInput');
+        const updateTarget = () => {
+            let jenis = mapelSelect.options[mapelSelect.selectedIndex]?.dataset?.jenis;
+            if (!jenis) { targetDiv.innerHTML = '<div class="text-gray-500">Pilih mata pelajaran dahulu</div>'; return; }
+            if (jenis === 'inkul') {
+                targetDiv.innerHTML = `<p class="text-xs mb-2">Pilih Kelas (bisa lebih dari satu)</p><select multiple size="5" class="w-full border rounded p-1" id="targetKelasSelect">${allKelas.map(k=>`<option value="${k}">${escapeHtml(k)}</option>`).join('')}</select>`;
+            } else {
+                targetDiv.innerHTML = `<p class="text-xs mb-2">Pilih Siswa (bisa lebih)</p><select multiple size="8" class="w-full border rounded p-1" id="targetSiswaSelect">${Object.entries(allSiswa).map(([nis,s])=>`<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(s.nama)} (${s.kelas})</option>`).join('')}</select>`;
+            }
+        };
+        mapelSelect.onchange = updateTarget;
+        updateTarget();
+    }
+    document.getElementById('btnTambahPenugasan').onclick = async () => { await prepareModalPenugasan(); document.getElementById('modalPenugasan').style.display = 'flex'; };
+    document.getElementById('modalBatalBtn').onclick = () => document.getElementById('modalPenugasan').style.display = 'none';
+    document.getElementById('modalSimpanBtn').onclick = async () => {
+        const mapelSelect = document.getElementById('modalMapel');
+        const mapelId = mapelSelect.value;
+        if (!mapelId) { alert("Pilih Mata Pelajaran"); return; }
+        const jenis = mapelSelect.options[mapelSelect.selectedIndex]?.dataset?.jenis;
+        let siswaList = [];
+        if (jenis === 'inkul') {
+            const kelasSelect = document.getElementById('targetKelasSelect');
+            if (!kelasSelect) return;
+            const selectedKelas = Array.from(kelasSelect.selectedOptions).map(o=>o.value);
+            if (!selectedKelas.length) { alert("Pilih minimal 1 kelas"); return; }
+            for (let k of selectedKelas) for (let [nis,s] of Object.entries(allSiswa)) if (s.kelas === k) siswaList.push(nis);
+            siswaList = [...new Set(siswaList)];
+        } else {
+            const siswaSelect = document.getElementById('targetSiswaSelect');
+            if (!siswaSelect) return;
+            siswaList = Array.from(siswaSelect.selectedOptions).map(o=>o.value);
+            if (!siswaList.length) { alert("Pilih minimal 1 siswa"); return; }
+        }
+        if (!siswaList.length) { alert("Tidak ada siswa yang dipilih"); return; }
+        await db.ref('penugasan').push({ mapelId, guruName: currentTeacher, siswaList });
+        alert("Penugasan berhasil ditambahkan!");
+        document.getElementById('modalPenugasan').style.display = 'none';
+        await fetchInitialData();
+        await renderAllCards();
+    };
+
+    window.onload = async () => {
+        const guruLogin = localStorage.getItem('guruLogin');
+        if (!guruLogin) { window.location.href = 'index.html'; return; }
+        currentTeacher = guruLogin;
+        document.getElementById('greeting').innerHTML = `<i class="fas fa-user-check"></i> ${escapeHtml(currentTeacher)} · Guru Aktif`;
+        await fetchInitialData();
+        await renderAllCards();
+        document.getElementById('backToListBtn').onclick = backToList;
+    };
+</script>
 </body>
 </html>
