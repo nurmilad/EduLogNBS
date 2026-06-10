@@ -182,6 +182,10 @@
         .icon-print { color: #059669; }
         
         @media print {
+            @page {
+                size: landscape;
+                margin: 1.5cm;
+            }
             body * {
                 visibility: hidden;
             }
@@ -194,7 +198,7 @@
                 left: 0;
                 width: 100%;
                 margin: 0;
-                padding: 20px;
+                padding: 15px;
             }
             .no-print {
                 display: none !important;
@@ -205,6 +209,18 @@
             .table-scroll-wrapper {
                 overflow: visible !important;
                 max-height: none !important;
+            }
+            table {
+                width: 100% !important;
+                table-layout: auto !important;
+            }
+            th, td {
+                text-align: center !important;
+                vertical-align: middle !important;
+                padding: 8px !important;
+            }
+            th:first-child, td:first-child {
+                text-align: center !important;
             }
         }
         
@@ -228,6 +244,35 @@
         }
         .btn-print:active {
             transform: scale(0.98);
+        }
+        
+        /* Style untuk tabel cetak */
+        .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .print-table th, .print-table td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .print-table th {
+            background-color: #f3f4f6;
+            font-weight: bold;
+        }
+        .print-table td:first-child,
+        .print-table th:first-child {
+            text-align: center;
+        }
+        .print-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .print-footer {
+            margin-top: 40px;
+            text-align: right;
         }
     </style>
 </head>
@@ -384,7 +429,6 @@
         document.getElementById('detailContainer').classList.remove('hidden');
         document.getElementById('detailTitle').innerHTML = `<i class="fas fa-book-open mr-2"></i> ${escapeHtml(task.mapelNama)} · ${escapeHtml(task.kelasDisplay)}`;
         
-        // Tambahkan tombol cetak
         const printContainer = document.getElementById('printButtonsContainer');
         printContainer.innerHTML = `
             <button class="btn-print" id="printAttendanceBtn"><i class="fas fa-print"></i> Cetak Daftar Hadir</button>
@@ -619,7 +663,7 @@
             }
             let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
             html += `<td class="font-bold text-center">${rata}</td>`;
-            html += `</tr>`;
+            html += `</table>`;
         }
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
@@ -693,67 +737,67 @@
         batal.addEventListener('click', onBatal);
     }
 
-    // ========== FUNGSI CETAK ==========
+    // ========== FUNGSI CETAK (LANDSCAPE, SIMBOL H/I/S/A, RATA TENGAH) ==========
     async function printAttendance(task) {
-        // Ambil data kehadiran
         const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
         const sessions = sessionsSnap.val() || {};
         let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, records: val.records || {} }));
         sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         
-        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?', kelas: allSiswa[nis]?.kelas || '-' })).filter(s => s.nama !== '?');
+        const siswaArray = task.siswaList.map(nis => ({ 
+            nis, 
+            nama: allSiswa[nis]?.nama || '?', 
+            kelas: allSiswa[nis]?.kelas || '-' 
+        })).filter(s => s.nama !== '?');
         
         let printHtml = `
-            <div class="print-area" style="padding: 20px; font-family: 'Inter', sans-serif;">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h1 style="font-size: 24px; margin-bottom: 8px;">LAPORAN DAFTAR HADIR</h1>
-                    <h2 style="font-size: 18px; color: #4f46e5; margin-bottom: 4px;">${escapeHtml(task.mapelNama)}</h2>
-                    <p style="font-size: 14px; color: #666;">Kelas: ${escapeHtml(task.kelasDisplay)}</p>
-                    <p style="font-size: 12px; color: #999;">Guru: ${escapeHtml(currentTeacher)}</p>
-                    <p style="font-size: 12px; color: #999;">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+            <div class="print-area">
+                <div class="print-header">
+                    <h1 style="font-size: 22px; margin-bottom: 6px;">LAPORAN DAFTAR HADIR</h1>
+                    <h2 style="font-size: 16px; color: #4f46e5; margin-bottom: 4px;">${escapeHtml(task.mapelNama)}</h2>
+                    <p style="font-size: 12px; margin: 2px 0;">Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                    <p style="font-size: 11px; margin: 2px 0;">Guru: ${escapeHtml(currentTeacher)}</p>
+                    <p style="font-size: 10px; margin: 2px 0;">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
                 </div>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <table class="print-table">
                     <thead>
-                        <tr style="background-color: #f3f4f6;">
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">No</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">NIS</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Nama</th>`;
+                        <tr>
+                            <th style="width: 40px;">No</th>
+                            <th style="width: 90px;">NIS</th>
+                            <th style="width: 180px;">Nama</th>`;
         
         for (let ses of sessionsList) {
-            printHtml += `<th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${escapeHtml(ses.date)}</th>`;
+            printHtml += `<th style="min-width: 70px;">${escapeHtml(ses.date)}</th>`;
         }
-        printHtml += `<th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Total Hadir</th>
-                    </tr>
-                </thead>
-                <tbody>`;
+        printHtml += `<th style="width: 80px;">Total H</th>
+                     </tr>
+                    </thead>
+                    <tbody>`;
         
         let no = 1;
         for (let siswa of siswaArray) {
             let hadirCount = 0;
             printHtml += `<tr>
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${no++}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(siswa.nis)}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(siswa.nama)}</td>`;
+                            <td>${no++}</td>
+                            <td>${escapeHtml(siswa.nis)}</td>
+                            <td style="text-align: left;">${escapeHtml(siswa.nama)}</td>`;
             for (let ses of sessionsList) {
                 let status = ses.records[siswa.nis] || 'H';
                 if (status === 'H') hadirCount++;
-                let statusText = status === 'H' ? 'Hadir' : (status === 'I' ? 'Izin' : (status === 'S' ? 'Sakit' : 'Alpa'));
-                printHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${statusText}</td>`;
+                printHtml += `<td>${status}</td>`;
             }
-            printHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${hadirCount}</td>
-                        </tr>`;
+            printHtml += `<td><strong>${hadirCount}</strong></td>
+                         </tr>`;
         }
         
         printHtml += `
-                </tbody>
-            </table>
-            <div style="margin-top: 40px;">
-                <div style="float: right; text-align: center;">
+                    </tbody>
+                </table>
+                <div class="print-footer">
                     <p>Mengetahui,</p>
-                    <p style="margin-top: 40px;">(_____________________)</p>
+                    <p style="margin-top: 50px;">(_____________________)</p>
                 </div>
-            </div>
-        </div>`;
+            </div>`;
         
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
@@ -761,9 +805,67 @@
             <head>
                 <title>Daftar Hadir - ${task.mapelNama}</title>
                 <style>
-                    body { font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
+                    body {
+                        font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+                        font-size: 12px;
+                        margin: 0;
+                        padding: 15px;
+                    }
+                    .print-area {
+                        max-width: 100%;
+                        margin: 0 auto;
+                    }
+                    .print-header {
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }
+                    .print-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 10px;
+                    }
+                    .print-table th, .print-table td {
+                        border: 1px solid #000;
+                        padding: 6px 8px;
+                        text-align: center;
+                        vertical-align: middle;
+                    }
+                    .print-table th {
+                        background-color: #f3f4f6;
+                        font-weight: bold;
+                        font-size: 11px;
+                    }
+                    .print-table td {
+                        font-size: 11px;
+                    }
+                    .print-table td:first-child,
+                    .print-table th:first-child {
+                        text-align: center;
+                    }
+                    .print-table td:nth-child(3) {
+                        text-align: left;
+                    }
+                    .print-footer {
+                        margin-top: 40px;
+                        text-align: right;
+                    }
                     @media print {
-                        body { margin: 0; padding: 0; }
+                        @page {
+                            size: landscape;
+                            margin: 1.2cm;
+                        }
+                        body {
+                            margin: 0;
+                            padding: 0;
+                        }
+                        .print-table th, .print-table td {
+                            border-color: #000;
+                        }
                     }
                 </style>
             </head>
@@ -775,66 +877,67 @@
     }
     
     async function printGrades(task) {
-        // Ambil data penilaian
         const assessmentsSnap = await db.ref(`penilaian/${task.id}`).once('value');
         const assessments = assessmentsSnap.val() || {};
         let assessList = Object.entries(assessments).map(([id, val]) => ({ id, date: val.date, topic: val.topic, scores: val.scores || {} }));
         assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         
-        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?', kelas: allSiswa[nis]?.kelas || '-' })).filter(s => s.nama !== '?');
+        const siswaArray = task.siswaList.map(nis => ({ 
+            nis, 
+            nama: allSiswa[nis]?.nama || '?', 
+            kelas: allSiswa[nis]?.kelas || '-' 
+        })).filter(s => s.nama !== '?');
         
         let printHtml = `
-            <div class="print-area" style="padding: 20px; font-family: 'Inter', sans-serif;">
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <h1 style="font-size: 24px; margin-bottom: 8px;">LAPORAN NILAI</h1>
-                    <h2 style="font-size: 18px; color: #4f46e5; margin-bottom: 4px;">${escapeHtml(task.mapelNama)}</h2>
-                    <p style="font-size: 14px; color: #666;">Kelas: ${escapeHtml(task.kelasDisplay)}</p>
-                    <p style="font-size: 12px; color: #999;">Guru: ${escapeHtml(currentTeacher)}</p>
-                    <p style="font-size: 12px; color: #999;">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+            <div class="print-area">
+                <div class="print-header">
+                    <h1 style="font-size: 22px; margin-bottom: 6px;">LAPORAN NILAI</h1>
+                    <h2 style="font-size: 16px; color: #4f46e5; margin-bottom: 4px;">${escapeHtml(task.mapelNama)}</h2>
+                    <p style="font-size: 12px; margin: 2px 0;">Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                    <p style="font-size: 11px; margin: 2px 0;">Guru: ${escapeHtml(currentTeacher)}</p>
+                    <p style="font-size: 10px; margin: 2px 0;">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
                 </div>
-                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <table class="print-table">
                     <thead>
-                        <tr style="background-color: #f3f4f6;">
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">No</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">NIS</th>
-                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Nama</th>`;
+                        <tr>
+                            <th style="width: 40px;">No</th>
+                            <th style="width: 90px;">NIS</th>
+                            <th style="width: 180px;">Nama</th>`;
         
         for (let i=0; i<assessList.length; i++) {
             let headerText = assessList[i].topic ? `${assessList[i].date}\n${assessList[i].topic}` : assessList[i].date;
-            printHtml += `<th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${escapeHtml(headerText)}</th>`;
+            printHtml += `<th style="min-width: 80px;">${escapeHtml(assessList[i].date)}<br><span style="font-weight:normal; font-size:9px;">${escapeHtml(assessList[i].topic || '-')}</span></th>`;
         }
-        printHtml += `<th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Rata-Rata</th>
-                    </tr>
-                </thead>
-                <tbody>`;
+        printHtml += `<th style="width: 80px;">Rata-Rata</th>
+                     </tr>
+                    </thead>
+                    <tbody>`;
         
         let no = 1;
         for (let siswa of siswaArray) {
             let totalNilai = 0, countValid = 0;
             printHtml += `<tr>
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${no++}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(siswa.nis)}</td>
-                            <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(siswa.nama)}</td>`;
+                            <td>${no++}</td>
+                            <td>${escapeHtml(siswa.nis)}</td>
+                            <td style="text-align: left;">${escapeHtml(siswa.nama)}</td>`;
             for (let as of assessList) {
                 let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
                 if (nilai !== 0) { totalNilai += nilai; countValid++; }
-                printHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${nilai || '-'}</td>`;
+                printHtml += `<td>${nilai || '-'}</td>`;
             }
             let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
-            printHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${rata}</td>
-                        </tr>`;
+            printHtml += `<td><strong>${rata}</strong></td>
+                         </tr>`;
         }
         
         printHtml += `
-                </tbody>
-            </table>
-            <div style="margin-top: 40px;">
-                <div style="float: right; text-align: center;">
+                    </tbody>
+                </table>
+                <div class="print-footer">
                     <p>Mengetahui,</p>
-                    <p style="margin-top: 40px;">(_____________________)</p>
+                    <p style="margin-top: 50px;">(_____________________)</p>
                 </div>
-            </div>
-        </div>`;
+            </div>`;
         
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
@@ -842,9 +945,67 @@
             <head>
                 <title>Laporan Nilai - ${task.mapelNama}</title>
                 <style>
-                    body { font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
+                    body {
+                        font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+                        font-size: 12px;
+                        margin: 0;
+                        padding: 15px;
+                    }
+                    .print-area {
+                        max-width: 100%;
+                        margin: 0 auto;
+                    }
+                    .print-header {
+                        text-align: center;
+                        margin-bottom: 20px;
+                    }
+                    .print-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 10px;
+                    }
+                    .print-table th, .print-table td {
+                        border: 1px solid #000;
+                        padding: 6px 8px;
+                        text-align: center;
+                        vertical-align: middle;
+                    }
+                    .print-table th {
+                        background-color: #f3f4f6;
+                        font-weight: bold;
+                        font-size: 11px;
+                    }
+                    .print-table td {
+                        font-size: 11px;
+                    }
+                    .print-table td:first-child,
+                    .print-table th:first-child {
+                        text-align: center;
+                    }
+                    .print-table td:nth-child(3) {
+                        text-align: left;
+                    }
+                    .print-footer {
+                        margin-top: 40px;
+                        text-align: right;
+                    }
                     @media print {
-                        body { margin: 0; padding: 0; }
+                        @page {
+                            size: landscape;
+                            margin: 1.2cm;
+                        }
+                        body {
+                            margin: 0;
+                            padding: 0;
+                        }
+                        .print-table th, .print-table td {
+                            border-color: #000;
+                        }
                     }
                 </style>
             </head>
