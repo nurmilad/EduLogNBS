@@ -179,13 +179,63 @@
         .icon-btn:hover { background-color: rgba(0,0,0,0.05); }
         .icon-delete { color: #e11d48; }
         .icon-edit { color: #4f46e5; }
+        .icon-print { color: #059669; }
+        
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .print-area, .print-area * {
+                visibility: visible;
+            }
+            .print-area {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                margin: 0;
+                padding: 20px;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .sticky-col-first, .sticky-col-second {
+                position: static !important;
+            }
+            .table-scroll-wrapper {
+                overflow: visible !important;
+                max-height: none !important;
+            }
+        }
+        
+        .btn-print {
+            background-color: #059669;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 12px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        .btn-print:hover {
+            background-color: #047857;
+            transform: scale(1.02);
+        }
+        .btn-print:active {
+            transform: scale(0.98);
+        }
     </style>
 </head>
 <body class="p-4 md:p-6">
 
 <div class="max-w-7xl mx-auto">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 no-print">
         <div>
             <h1 class="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-chalkboard-user text-indigo-600"></i> Panel Guru</h1>
             <p class="text-slate-500 text-sm" id="greeting">Memuat data guru...</p>
@@ -197,22 +247,25 @@
     </div>
 
     <!-- Daftar Semua Card Penugasan -->
-    <div id="assignmentsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div id="assignmentsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 no-print">
         <div class="col-span-full text-center py-10 text-slate-400"><i class="fas fa-spinner fa-pulse"></i> Memuat penugasan...</div>
     </div>
 
     <!-- Panel Detail Penugasan -->
     <div id="detailContainer" class="hidden bg-white rounded-2xl shadow-lg p-4">
-        <div class="flex items-center gap-3 mb-4 pb-2 border-b">
-            <button id="backToListBtn" class="bg-gray-200 hover:bg-gray-300 p-2 rounded-full w-10 h-10 flex items-center justify-center"><i class="fas fa-arrow-left"></i></button>
-            <h2 id="detailTitle" class="text-xl font-bold text-indigo-800">Detail Penugasan</h2>
+        <div class="flex items-center justify-between gap-3 mb-4 pb-2 border-b no-print">
+            <div class="flex items-center gap-3">
+                <button id="backToListBtn" class="bg-gray-200 hover:bg-gray-300 p-2 rounded-full w-10 h-10 flex items-center justify-center"><i class="fas fa-arrow-left"></i></button>
+                <h2 id="detailTitle" class="text-xl font-bold text-indigo-800">Detail Penugasan</h2>
+            </div>
+            <div class="flex gap-2" id="printButtonsContainer"></div>
         </div>
         <div id="detailContent"></div>
     </div>
 </div>
 
 <!-- MODAL TAMBAH PENUGASAN -->
-<div id="modalPenugasan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg">
+<div id="modalPenugasan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
     <div class="bg-white rounded-2xl max-w-lg w-full mx-4 p-6 shadow-2xl">
         <h3 class="text-xl font-bold mb-4"><i class="fas fa-tasks text-indigo-500"></i> Buat Penugasan Baru</h3>
         <div class="space-y-4">
@@ -224,7 +277,7 @@
 </div>
 
 <!-- MODAL EDIT TANGGAL KEHADIRAN -->
-<div id="modalEditTanggal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg">
+<div id="modalEditTanggal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
         <h4 class="text-lg font-bold mb-3">Edit Tanggal Sesi Kehadiran</h4>
         <input type="date" id="editTanggalInput" class="w-full border rounded-xl p-2 mb-4">
@@ -233,7 +286,7 @@
 </div>
 
 <!-- MODAL TAMBAH KEHADIRAN -->
-<div id="modalTambahKehadiran" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg">
+<div id="modalTambahKehadiran" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
         <h4 class="text-lg font-bold mb-3"><i class="fas fa-calendar-plus"></i> Tambah Sesi Kehadiran</h4>
         <label class="block font-medium mb-1">Tanggal</label>
@@ -243,7 +296,7 @@
 </div>
 
 <!-- MODAL TAMBAH PENILAIAN -->
-<div id="modalTambahPenilaian" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg">
+<div id="modalTambahPenilaian" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
         <h4 class="text-lg font-bold mb-3"><i class="fas fa-clipboard-list"></i> Tambah Penilaian</h4>
         <label class="block font-medium mb-1">Tanggal</label>
@@ -269,6 +322,7 @@
 
     let currentTeacher = null;
     let allMapel = {}, allKelas = [], allSiswa = {}, penugasanList = [];
+    let currentTask = null;
 
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
     function toYMD(date) { return date.toISOString().slice(0,10); }
@@ -325,15 +379,27 @@
     }
 
     function showDetailAssignment(task) {
+        currentTask = task;
         document.getElementById('assignmentsContainer').classList.add('hidden');
         document.getElementById('detailContainer').classList.remove('hidden');
         document.getElementById('detailTitle').innerHTML = `<i class="fas fa-book-open mr-2"></i> ${escapeHtml(task.mapelNama)} · ${escapeHtml(task.kelasDisplay)}`;
+        
+        // Tambahkan tombol cetak
+        const printContainer = document.getElementById('printButtonsContainer');
+        printContainer.innerHTML = `
+            <button class="btn-print" id="printAttendanceBtn"><i class="fas fa-print"></i> Cetak Daftar Hadir</button>
+            <button class="btn-print" id="printGradesBtn"><i class="fas fa-print"></i> Cetak Nilai</button>
+        `;
+        document.getElementById('printAttendanceBtn').onclick = () => printAttendance(task);
+        document.getElementById('printGradesBtn').onclick = () => printGrades(task);
+        
         loadDetailTabs(task);
     }
 
     function backToList() {
         document.getElementById('detailContainer').classList.add('hidden');
         document.getElementById('assignmentsContainer').classList.remove('hidden');
+        currentTask = null;
     }
 
     async function loadDetailTabs(task) {
@@ -411,7 +477,7 @@
                 else if (status === 'A') statusClass = 'status-a';
                 html += `<td class="text-center">
                             <div class="status-badge ${statusClass} kehadiran-status" data-session="${ses.id}" data-nis="${siswa.nis}" data-status="${status}">${status}</div>
-                          </td>`;
+                           </td>`;
             }
             html += `<td class="font-bold text-center">${hadirCount}</td>`;
             html += `</tr>`;
@@ -419,14 +485,12 @@
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        // Edit tanggal
         wrapperDiv.querySelectorAll('.edit-session-date').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
                 openEditTanggalModal(task.id, btn.dataset.sessionId, btn.dataset.currentDate, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
             };
         });
-        // Hapus sesi
         wrapperDiv.querySelectorAll('.delete-session').forEach(btn => {
             btn.onclick = async (e) => {
                 e.stopPropagation();
@@ -434,7 +498,6 @@
                 await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task);
             };
         });
-        // Klik status
         wrapperDiv.querySelectorAll('.kehadiran-status').forEach(badge => {
             badge.onclick = async (e) => {
                 e.stopPropagation();
@@ -524,7 +587,6 @@
         
         let html = `<table class="sticky-table w-full text-sm">`;
         html += `<thead>`;
-        // baris 1: header dengan edit & hapus
         html += `<tr>
                     <th rowspan="2" class="sticky-col-first align-middle">NIS</th>
                     <th rowspan="2" class="sticky-col-second align-middle">Nama</th>`;
@@ -562,7 +624,6 @@
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        // Edit assessment (tanggal/topik)
         wrapperDiv.querySelectorAll('.edit-assessment').forEach(btn => {
             btn.onclick = async (e) => {
                 e.stopPropagation();
@@ -583,7 +644,6 @@
                 }
             };
         });
-        // Hapus assessment
         wrapperDiv.querySelectorAll('.delete-assessment').forEach(btn => {
             btn.onclick = async (e) => {
                 e.stopPropagation();
@@ -591,7 +651,6 @@
                 await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
             };
         });
-        // Input nilai onchange
         wrapperDiv.querySelectorAll('.nilai-siswa').forEach(inp => {
             inp.onchange = async () => {
                 let val = parseInt(inp.value,10);
@@ -632,6 +691,168 @@
         const onBatal = () => { modal.style.display = 'none'; cleanup(); };
         simpan.addEventListener('click', onSimpan);
         batal.addEventListener('click', onBatal);
+    }
+
+    // ========== FUNGSI CETAK ==========
+    async function printAttendance(task) {
+        // Ambil data kehadiran
+        const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
+        const sessions = sessionsSnap.val() || {};
+        let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, records: val.records || {} }));
+        sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        
+        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?', kelas: allSiswa[nis]?.kelas || '-' })).filter(s => s.nama !== '?');
+        
+        let printHtml = `
+            <div class="print-area" style="padding: 20px; font-family: 'Inter', sans-serif;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="font-size: 24px; margin-bottom: 8px;">LAPORAN DAFTAR HADIR</h1>
+                    <h2 style="font-size: 18px; color: #4f46e5; margin-bottom: 4px;">${escapeHtml(task.mapelNama)}</h2>
+                    <p style="font-size: 14px; color: #666;">Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                    <p style="font-size: 12px; color: #999;">Guru: ${escapeHtml(currentTeacher)}</p>
+                    <p style="font-size: 12px; color: #999;">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead>
+                        <tr style="background-color: #f3f4f6;">
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">No</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">NIS</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Nama</th>`;
+        
+        for (let ses of sessionsList) {
+            printHtml += `<th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${escapeHtml(ses.date)}</th>`;
+        }
+        printHtml += `<th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Total Hadir</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+        
+        let no = 1;
+        for (let siswa of siswaArray) {
+            let hadirCount = 0;
+            printHtml += `<tr>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${no++}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(siswa.nis)}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(siswa.nama)}</td>`;
+            for (let ses of sessionsList) {
+                let status = ses.records[siswa.nis] || 'H';
+                if (status === 'H') hadirCount++;
+                let statusText = status === 'H' ? 'Hadir' : (status === 'I' ? 'Izin' : (status === 'S' ? 'Sakit' : 'Alpa'));
+                printHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${statusText}</td>`;
+            }
+            printHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${hadirCount}</td>
+                        </tr>`;
+        }
+        
+        printHtml += `
+                </tbody>
+            </table>
+            <div style="margin-top: 40px;">
+                <div style="float: right; text-align: center;">
+                    <p>Mengetahui,</p>
+                    <p style="margin-top: 40px;">(_____________________)</p>
+                </div>
+            </div>
+        </div>`;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Daftar Hadir - ${task.mapelNama}</title>
+                <style>
+                    body { font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
+                    @media print {
+                        body { margin: 0; padding: 0; }
+                    }
+                </style>
+            </head>
+            <body>${printHtml}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+    
+    async function printGrades(task) {
+        // Ambil data penilaian
+        const assessmentsSnap = await db.ref(`penilaian/${task.id}`).once('value');
+        const assessments = assessmentsSnap.val() || {};
+        let assessList = Object.entries(assessments).map(([id, val]) => ({ id, date: val.date, topic: val.topic, scores: val.scores || {} }));
+        assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        
+        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?', kelas: allSiswa[nis]?.kelas || '-' })).filter(s => s.nama !== '?');
+        
+        let printHtml = `
+            <div class="print-area" style="padding: 20px; font-family: 'Inter', sans-serif;">
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <h1 style="font-size: 24px; margin-bottom: 8px;">LAPORAN NILAI</h1>
+                    <h2 style="font-size: 18px; color: #4f46e5; margin-bottom: 4px;">${escapeHtml(task.mapelNama)}</h2>
+                    <p style="font-size: 14px; color: #666;">Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                    <p style="font-size: 12px; color: #999;">Guru: ${escapeHtml(currentTeacher)}</p>
+                    <p style="font-size: 12px; color: #999;">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                    <thead>
+                        <tr style="background-color: #f3f4f6;">
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: center;">No</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">NIS</th>
+                            <th style="border: 1px solid #ddd; padding: 10px; text-align: left;">Nama</th>`;
+        
+        for (let i=0; i<assessList.length; i++) {
+            let headerText = assessList[i].topic ? `${assessList[i].date}\n${assessList[i].topic}` : assessList[i].date;
+            printHtml += `<th style="border: 1px solid #ddd; padding: 10px; text-align: center;">${escapeHtml(headerText)}</th>`;
+        }
+        printHtml += `<th style="border: 1px solid #ddd; padding: 10px; text-align: center;">Rata-Rata</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+        
+        let no = 1;
+        for (let siswa of siswaArray) {
+            let totalNilai = 0, countValid = 0;
+            printHtml += `<tr>
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${no++}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(siswa.nis)}</td>
+                            <td style="border: 1px solid #ddd; padding: 8px;">${escapeHtml(siswa.nama)}</td>`;
+            for (let as of assessList) {
+                let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
+                if (nilai !== 0) { totalNilai += nilai; countValid++; }
+                printHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${nilai || '-'}</td>`;
+            }
+            let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
+            printHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center; font-weight: bold;">${rata}</td>
+                        </tr>`;
+        }
+        
+        printHtml += `
+                </tbody>
+            </table>
+            <div style="margin-top: 40px;">
+                <div style="float: right; text-align: center;">
+                    <p>Mengetahui,</p>
+                    <p style="margin-top: 40px;">(_____________________)</p>
+                </div>
+            </div>
+        </div>`;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Laporan Nilai - ${task.mapelNama}</title>
+                <style>
+                    body { font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
+                    @media print {
+                        body { margin: 0; padding: 0; }
+                    }
+                </style>
+            </head>
+            <body>${printHtml}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
     }
 
     // ========== TAMBAH PENUGASAN ==========
