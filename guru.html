@@ -494,7 +494,7 @@
                 else if (status === 'A') statusClass = 'status-a';
                 html += `<td class="text-center">
                             <div class="status-badge ${statusClass} kehadiran-status" data-session="${ses.id}" data-nis="${siswa.nis}" data-status="${status}">${status}</div>
-                         </td>`;
+                          </td>`;
             }
             html += `<td class="font-bold text-center">${hadirCount}</td>`;
             html += `</tr>`;
@@ -611,13 +611,13 @@
         
         let html = `<table class="sticky-table penilaian-table">`;
         html += `<thead>`;
-        // Header baris 1 - dengan tombol edit/hapus
+        // Header baris 1 - dengan tombol edit/hapus menggunakan N1, N2, ...
         html += `<tr>
                     <th rowspan="2" class="sticky-col-first">NIS</th>
                     <th rowspan="2" class="sticky-col-second">Nama</th>`;
         for (let i = 0; i < assessList.length; i++) {
             html += `<th class="text-center">
-                        <div>Penilaian ${i+1}</div>
+                        <div><strong>N${i+1}</strong></div>
                         <div class="flex items-center justify-center gap-1 mt-1">
                             <button class="icon-btn icon-edit edit-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-pen"></i></button>
                             <button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-trash-alt"></i></button>
@@ -648,7 +648,7 @@
                 if (nilai > 0) { totalNilai += nilai; countValid++; }
                 html += `<td class="text-center">
                             <input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100">
-                         </td>`;
+                           </td>`;
             }
             let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
             html += `<td class="font-bold text-center bg-gray-50">${rata}</td>`;
@@ -699,7 +699,6 @@
                 val = Math.min(100, Math.max(0, val));
                 inp.value = val;
                 await db.ref(`penilaian/${task.id}/${inp.dataset.assess}/scores/${inp.dataset.nis}`).set(val);
-                // Refresh hanya baris yang diubah atau seluruh tabel?
                 await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
             };
         });
@@ -766,13 +765,17 @@
         let no = 1;
         for (let siswa of siswaArray) {
             let hadirCount = 0;
-            printHtml += `<tr><td>${no++}</td><td>${escapeHtml(siswa.nis)}</td><td style="text-align:left">${escapeHtml(siswa.nama)}</td>`;
+            printHtml += `<tr>
+                            <td>${no++}</td>
+                            <td>${escapeHtml(siswa.nis)}</td>
+                            <td style="text-align:left">${escapeHtml(siswa.nama)}</td>`;
             for (let ses of sessionsList) {
                 let status = ses.records[siswa.nis] || 'H';
                 if (status === 'H') hadirCount++;
                 printHtml += `<td>${status}</td>`;
             }
-            printHtml += `<td><strong>${hadirCount}</strong></td></tr>`;
+            printHtml += `<td><strong>${hadirCount}</strong></td>
+                         </tr>`;
         }
         printHtml += `
                     </tbody>
@@ -825,25 +828,29 @@
                 <table class="print-table">
                     <thead>
                         <tr><th>No</th><th>NIS</th><th>Nama</th>`;
-        for (let as of assessList) {
-            printHtml += `<th>${escapeHtml(as.date)}<br><small>${escapeHtml(as.topic || '-')}</small></th>`;
+        for (let i = 0; i < assessList.length; i++) {
+            printHtml += `<th>N${i+1}<br><small>${escapeHtml(assessList[i].topic || '-')}</small></th>`;
         }
-        printHtml += `<th>Rata-Rata</th></tr>
-                    </thead>
+        printHtml += `<th>Rata-Rata</th>`;
+        printHtml += `</tr></thead>
                     <tbody>`;
         
         let no = 1;
         for (let siswa of siswaArray) {
             let totalNilai = 0;
             let countValid = 0;
-            printHtml += `<tr><td>${no++}</td><td>${escapeHtml(siswa.nis)}</td><td style="text-align:left">${escapeHtml(siswa.nama)}</td>`;
+            printHtml += `<tr>
+                            <td>${no++}</td>
+                            <td>${escapeHtml(siswa.nis)}</td>
+                            <td style="text-align:left">${escapeHtml(siswa.nama)}</td>`;
             for (let as of assessList) {
                 let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
                 if (nilai > 0) { totalNilai += nilai; countValid++; }
                 printHtml += `<td>${nilai || '-'}</td>`;
             }
             let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
-            printHtml += `<td><strong>${rata}</strong></td></tr>`;
+            printHtml += `<td><strong>${rata}</strong></td>
+                         </tr>`;
         }
         printHtml += `
                     </tbody>
