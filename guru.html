@@ -263,7 +263,7 @@
         </div>
         <div class="flex gap-3">
             <button id="btnTambahPenugasan" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl shadow-md transition flex items-center gap-2"><i class="fas fa-plus-circle"></i> + Penugasan</button>
-            <a href="index.html" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl shadow-md transition flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</a>
+            <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl shadow-md transition flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
     </div>
 
@@ -497,7 +497,7 @@
                           </td>`;
             }
             html += `<td class="font-bold text-center">${hadirCount}</td>`;
-            html += `</tr>`;
+            html += `</td>`;
         }
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
@@ -832,7 +832,7 @@
             printHtml += `<th>N${i+1}<br><small>${escapeHtml(assessList[i].topic || '-')}</small></th>`;
         }
         printHtml += `<th>Rata-Rata</th>`;
-        printHtml += `</tr></thead>
+        printHtml += `</table></thead>
                     <tbody>`;
         
         let no = 1;
@@ -938,6 +938,16 @@
         await fetchInitialData();
         await renderAllCards();
         document.getElementById('backToListBtn').onclick = backToList;
+
+        // Tombol logout yang benar
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('guruLogin');
+                window.location.href = 'index.html';
+            });
+        }
     };
 </script>
 </body>
