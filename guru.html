@@ -159,7 +159,7 @@
         @media print {
             @page {
                 size: landscape;
-                margin: 1.5cm;
+                margin: 1.2cm;
             }
             body * {
                 visibility: hidden;
@@ -173,10 +173,40 @@
                 left: 0;
                 width: 100%;
                 margin: 0;
-                padding: 15px;
+                padding: 10px;
             }
             .no-print {
                 display: none !important;
+            }
+            .print-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 10pt;
+            }
+            .print-table th, .print-table td {
+                border: 1px solid #000;
+                padding: 5px;
+                text-align: center;
+                vertical-align: middle;
+            }
+            .print-table th {
+                background-color: #f3f4f6;
+                font-weight: bold;
+            }
+            .print-table td:first-child,
+            .print-table th:first-child {
+                text-align: center;
+            }
+            .print-table td:nth-child(3) {
+                text-align: left;
+            }
+            .print-header {
+                text-align: center;
+                margin-bottom: 15px;
+            }
+            .print-footer {
+                margin-top: 30px;
+                text-align: right;
             }
         }
         
@@ -497,7 +527,7 @@
                           </td>`;
             }
             html += `<td class="font-bold text-center">${hadirCount}</td>`;
-            html += `</td>`;
+            html += `</tr>`;
         }
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
@@ -816,6 +846,11 @@
         
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
+        if (assessList.length === 0) {
+            alert("Belum ada data penilaian untuk dicetak.");
+            return;
+        }
+        
         let printHtml = `
             <div class="print-area">
                 <div class="print-header">
@@ -827,13 +862,18 @@
                 </div>
                 <table class="print-table">
                     <thead>
-                        <tr><th>No</th><th>NIS</th><th>Nama</th>`;
+                        <tr>
+                            <th rowspan="2">No</th>
+                            <th rowspan="2">NIS</th>
+                            <th rowspan="2">Nama</th>`;
         for (let i = 0; i < assessList.length; i++) {
-            printHtml += `<th>N${i+1}<br><small>${escapeHtml(assessList[i].topic || '-')}</small></th>`;
+            printHtml += `<th rowspan="2">N${i+1}</th>`;
         }
-        printHtml += `<th>Rata-Rata</th>`;
-        printHtml += `</table></thead>
-                    <tbody>`;
+        printHtml += `<th rowspan="2">Rata-Rata</th>
+                    </tr>
+                    <tr></tr>
+                </thead>
+                <tbody>`;
         
         let no = 1;
         for (let siswa of siswaArray) {
@@ -850,11 +890,11 @@
             }
             let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
             printHtml += `<td><strong>${rata}</strong></td>
-                         </tr>`;
+                        </tr>`;
         }
         printHtml += `
                     </tbody>
-                 </table>
+                </table>
                 <div class="print-footer">
                     <p>Mengetahui,</p>
                     <p style="margin-top: 40px;">(_____________________)</p>
@@ -872,8 +912,12 @@
                     .print-table { width: 100%; border-collapse: collapse; }
                     .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
                     .print-table th { background: #f3f4f6; }
+                    .print-table td:nth-child(3) { text-align: left; }
                     .print-footer { margin-top: 40px; text-align: right; }
-                    @media print { @page { size: landscape; margin: 1.2cm; } }
+                    @media print {
+                        @page { size: landscape; margin: 1.2cm; }
+                        body { margin: 0; padding: 0; }
+                    }
                 </style>
             </head>
             <body>${printHtml}</body>
@@ -939,7 +983,6 @@
         await renderAllCards();
         document.getElementById('backToListBtn').onclick = backToList;
 
-        // Tombol logout yang benar
         const logoutBtn = document.getElementById('logoutBtn');
         if (logoutBtn) {
             logoutBtn.addEventListener('click', (e) => {
