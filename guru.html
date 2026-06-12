@@ -32,14 +32,14 @@
         }
         .status-badge {
             display: inline-block;
-            width: 40px;
+            width: 36px;
             text-align: center;
             font-weight: bold;
-            padding: 6px 0;
+            padding: 4px 0;
             border-radius: 40px;
             cursor: pointer;
             transition: all 0.1s ease;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             background-color: #f1f5f9;
             color: #1e293b;
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -50,24 +50,57 @@
         .status-s { background-color: #fef9c3; color: #854d0e; }
         .status-a { background-color: #ffe4e6; color: #be123c; }
         .nilai-input {
-            width: 70px;
+            width: 50px;
             text-align: center;
+            font-size: 0.75rem;
+            padding: 0.2rem 0;
         }
         
         /* ========== STICKY HEADER & FREEZE KOLOM ========== */
         .table-scroll-wrapper {
-            overflow: auto;
+            overflow-x: auto;
+            overflow-y: auto;
             max-height: 68vh;
             border-radius: 1rem;
             border: 1px solid #e2e8f0;
             background: white;
             position: relative;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        /* Indikator scroll horizontal */
+        .table-scroll-wrapper::after {
+            content: '';
+            position: sticky;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #cbd5e1 0%, #cbd5e1 50%, transparent 100%);
+            display: block;
+            opacity: 0.5;
+            pointer-events: none;
         }
         
         .sticky-table {
             border-collapse: collapse;
             width: 100%;
-            min-width: 600px;
+            min-width: 550px;
+            font-size: 0.7rem;
+        }
+        
+        @media (min-width: 640px) {
+            .sticky-table {
+                font-size: 0.75rem;
+            }
+            .nilai-input {
+                width: 60px;
+            }
+            .status-badge {
+                width: 40px;
+                font-size: 0.8rem;
+                padding: 5px 0;
+            }
         }
         
         .sticky-table thead tr th {
@@ -76,16 +109,13 @@
             background-color: #f8fafc;
             z-index: 20;
             border: 1px solid #e2e8f0;
-            padding: 8px 10px;
-        }
-        
-        .sticky-table thead tr:first-child th {
-            top: 0;
+            padding: 6px 4px;
+            font-size: inherit;
         }
         
         .sticky-table tbody tr td {
             border: 1px solid #e2e8f0;
-            padding: 8px 10px;
+            padding: 4px 4px;
         }
         
         .sticky-col-first {
@@ -97,7 +127,7 @@
         
         .sticky-col-second {
             position: sticky;
-            left: 80px;
+            left: 65px;
             background-color: white;
             z-index: 15;
         }
@@ -109,22 +139,27 @@
         }
         
         @media (max-width: 640px) {
-            .nilai-input { width: 55px; font-size: 0.75rem; }
-            .status-badge { width: 36px; font-size: 0.75rem; padding: 4px 0; }
-            .sticky-col-second { left: 75px; }
+            .sticky-col-first {
+                left: 0;
+                min-width: 55px;
+            }
+            .sticky-col-second {
+                left: 55px;
+                min-width: 85px;
+            }
         }
         
         /* Tombol plus */
         .btn-plus {
             background-color: #4f46e5;
             color: white;
-            width: 42px;
-            height: 42px;
-            border-radius: 42px;
+            width: 40px;
+            height: 40px;
+            border-radius: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.6rem;
+            font-size: 1.4rem;
             font-weight: 800;
             box-shadow: 0 4px 8px rgba(0,0,0,0.1);
             transition: all 0.2s ease;
@@ -139,18 +174,17 @@
             transform: scale(0.96);
         }
         .btn-plus i {
-            font-size: 1.4rem;
+            font-size: 1.2rem;
         }
         
         .icon-btn {
             background: transparent;
             border: none;
             cursor: pointer;
-            font-size: 0.9rem;
-            margin: 0 2px;
-            padding: 2px 4px;
-            border-radius: 8px;
-            transition: all 0.1s;
+            font-size: 0.75rem;
+            margin: 0 1px;
+            padding: 2px;
+            border-radius: 6px;
         }
         .icon-btn:hover { background-color: rgba(0,0,0,0.05); }
         .icon-delete { color: #e11d48; }
@@ -213,20 +247,20 @@
         .btn-print {
             background-color: #059669;
             color: white;
-            padding: 8px 16px;
+            padding: 6px 12px;
             border-radius: 12px;
-            font-size: 0.875rem;
+            font-size: 0.75rem;
             font-weight: 500;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             cursor: pointer;
             transition: all 0.2s;
             border: none;
         }
         .btn-print:hover {
             background-color: #047857;
-            transform: scale(1.02);
+            transform: scale(1.01);
         }
         .btn-print:active {
             transform: scale(0.98);
@@ -265,7 +299,7 @@
         .penilaian-table th,
         .penilaian-table td {
             border: 1px solid #e2e8f0;
-            padding: 8px;
+            padding: 4px;
             text-align: center;
             vertical-align: middle;
         }
@@ -274,42 +308,66 @@
             font-weight: 600;
         }
         .penilaian-table td input {
-            width: 65px;
+            width: 45px;
             text-align: center;
-            padding: 4px;
+            padding: 2px;
             border: 1px solid #cbd5e1;
             border-radius: 6px;
+            font-size: 0.7rem;
+        }
+        @media (min-width: 640px) {
+            .penilaian-table td input {
+                width: 55px;
+            }
+        }
+        
+        /* Tombol logout dan tambah penugasan di mobile */
+        @media (max-width: 640px) {
+            .btn-print {
+                padding: 4px 8px;
+                font-size: 0.7rem;
+            }
+            .btn-print i {
+                font-size: 0.7rem;
+            }
+            h1 {
+                font-size: 1.3rem;
+            }
+            .container {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
         }
     </style>
 </head>
-<body class="p-4 md:p-6">
+<body class="p-2 md:p-6">
 
 <div class="max-w-7xl mx-auto">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6 no-print">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 no-print">
         <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-chalkboard-user text-indigo-600"></i> Panel Guru</h1>
-            <p class="text-slate-500 text-sm" id="greeting">Memuat data guru...</p>
+            <h1 class="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-chalkboard-user text-indigo-600"></i> Panel Guru</h1>
+            <p class="text-slate-500 text-xs md:text-sm" id="greeting">Memuat data guru...</p>
         </div>
-        <div class="flex gap-3">
-            <button id="btnTambahPenugasan" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl shadow-md transition flex items-center gap-2"><i class="fas fa-plus-circle"></i> + Penugasan</button>
-            <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl shadow-md transition flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        <div class="flex gap-2 w-full sm:w-auto">
+            <button id="btnTambahPenugasan" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl shadow-md transition flex items-center gap-1 text-sm"><i class="fas fa-plus-circle"></i> + Penugasan</button>
+            <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl shadow-md transition flex items-center gap-1 text-sm"><i class="fas fa-sign-out-alt"></i> Logout</button>
         </div>
     </div>
 
     <!-- Daftar Semua Card Penugasan -->
-    <div id="assignmentsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 no-print">
+    <div id="assignmentsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 no-print">
         <div class="col-span-full text-center py-10 text-slate-400"><i class="fas fa-spinner fa-pulse"></i> Memuat penugasan...</div>
     </div>
 
     <!-- Panel Detail Penugasan -->
-    <div id="detailContainer" class="hidden bg-white rounded-2xl shadow-lg p-4">
-        <div class="flex items-center justify-between gap-3 mb-4 pb-2 border-b no-print">
-            <div class="flex items-center gap-3">
-                <button id="backToListBtn" class="bg-gray-200 hover:bg-gray-300 p-2 rounded-full w-10 h-10 flex items-center justify-center"><i class="fas fa-arrow-left"></i></button>
-                <h2 id="detailTitle" class="text-xl font-bold text-indigo-800">Detail Penugasan</h2>
+    <div id="detailContainer" class="hidden bg-white rounded-2xl shadow-lg p-2">
+        <div class="flex items-center justify-between gap-2 mb-3 pb-2 border-b no-print">
+            <div class="flex items-center gap-2">
+                <button id="backToListBtn" class="bg-gray-200 hover:bg-gray-300 p-1.5 rounded-full w-8 h-8 flex items-center justify-center"><i class="fas fa-arrow-left text-sm"></i></button>
+                <h2 id="detailTitle" class="text-lg font-bold text-indigo-800">Detail Penugasan</h2>
             </div>
-            <div class="flex gap-2" id="printButtonsContainer"></div>
+            <div class="flex gap-1" id="printButtonsContainer"></div>
         </div>
         <div id="detailContent"></div>
     </div>
@@ -317,44 +375,44 @@
 
 <!-- MODAL TAMBAH PENUGASAN -->
 <div id="modalPenugasan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
-    <div class="bg-white rounded-2xl max-w-lg w-full mx-4 p-6 shadow-2xl">
-        <h3 class="text-xl font-bold mb-4"><i class="fas fa-tasks text-indigo-500"></i> Buat Penugasan Baru</h3>
-        <div class="space-y-4">
-            <div><label class="block font-semibold mb-1">Mata Pelajaran</label><select id="modalMapel" class="w-full border rounded-xl p-2 bg-gray-50"><option value="">-- Pilih Mapel --</option></select></div>
-            <div><label class="block font-semibold mb-1">Target (Kelas / Siswa)</label><div id="modalTargetInput" class="border rounded-xl p-3 bg-gray-50 min-h-[120px]">Pilih mapel terlebih dahulu</div></div>
-            <div class="flex justify-end gap-3"><button id="modalBatalBtn" class="px-4 py-2 border rounded-xl">Batal</button><button id="modalSimpanBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Simpan</button></div>
+    <div class="bg-white rounded-2xl max-w-lg w-full mx-4 p-5 shadow-2xl">
+        <h3 class="text-lg font-bold mb-3"><i class="fas fa-tasks text-indigo-500"></i> Buat Penugasan Baru</h3>
+        <div class="space-y-3">
+            <div><label class="block font-semibold mb-1 text-sm">Mata Pelajaran</label><select id="modalMapel" class="w-full border rounded-xl p-2 bg-gray-50 text-sm"><option value="">-- Pilih Mapel --</option></select></div>
+            <div><label class="block font-semibold mb-1 text-sm">Target (Kelas / Siswa)</label><div id="modalTargetInput" class="border rounded-xl p-2 bg-gray-50 min-h-[100px] text-sm">Pilih mapel terlebih dahulu</div></div>
+            <div class="flex justify-end gap-3"><button id="modalBatalBtn" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="modalSimpanBtn" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
         </div>
     </div>
 </div>
 
 <!-- MODAL EDIT TANGGAL KEHADIRAN -->
 <div id="modalEditTanggal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
-    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
-        <h4 class="text-lg font-bold mb-3">Edit Tanggal Sesi Kehadiran</h4>
-        <input type="date" id="editTanggalInput" class="w-full border rounded-xl p-2 mb-4">
-        <div class="flex justify-end gap-3"><button id="cancelEditTanggal" class="px-4 py-2 border rounded-xl">Batal</button><button id="saveEditTanggal" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Simpan</button></div>
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
+        <h4 class="text-md font-bold mb-3">Edit Tanggal Sesi Kehadiran</h4>
+        <input type="date" id="editTanggalInput" class="w-full border rounded-xl p-2 mb-4 text-sm">
+        <div class="flex justify-end gap-3"><button id="cancelEditTanggal" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="saveEditTanggal" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
     </div>
 </div>
 
 <!-- MODAL TAMBAH KEHADIRAN -->
 <div id="modalTambahKehadiran" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
-    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
-        <h4 class="text-lg font-bold mb-3"><i class="fas fa-calendar-plus"></i> Tambah Sesi Kehadiran</h4>
-        <label class="block font-medium mb-1">Tanggal</label>
-        <input type="date" id="kehadiranDate" class="w-full border rounded-xl p-2 mb-4">
-        <div class="flex justify-end gap-3"><button id="batalKehadiran" class="px-4 py-2 border rounded-xl">Batal</button><button id="simpanKehadiran" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Simpan</button></div>
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
+        <h4 class="text-md font-bold mb-3"><i class="fas fa-calendar-plus"></i> Tambah Sesi Kehadiran</h4>
+        <label class="block font-medium mb-1 text-sm">Tanggal</label>
+        <input type="date" id="kehadiranDate" class="w-full border rounded-xl p-2 mb-4 text-sm">
+        <div class="flex justify-end gap-3"><button id="batalKehadiran" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="simpanKehadiran" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
     </div>
 </div>
 
 <!-- MODAL TAMBAH PENILAIAN -->
 <div id="modalTambahPenilaian" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
-    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6">
-        <h4 class="text-lg font-bold mb-3"><i class="fas fa-clipboard-list"></i> Tambah Penilaian</h4>
-        <label class="block font-medium mb-1">Tanggal</label>
-        <input type="date" id="penilaianDate" class="w-full border rounded-xl p-2 mb-3">
-        <label class="block font-medium mb-1">Topik / Materi</label>
-        <input type="text" id="penilaianTopik" class="w-full border rounded-xl p-2 mb-4" placeholder="e.g. UTS Bab 1">
-        <div class="flex justify-end gap-3"><button id="batalPenilaian" class="px-4 py-2 border rounded-xl">Batal</button><button id="simpanPenilaian" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Simpan</button></div>
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
+        <h4 class="text-md font-bold mb-3"><i class="fas fa-clipboard-list"></i> Tambah Penilaian</h4>
+        <label class="block font-medium mb-1 text-sm">Tanggal</label>
+        <input type="date" id="penilaianDate" class="w-full border rounded-xl p-2 mb-3 text-sm">
+        <label class="block font-medium mb-1 text-sm">Topik / Materi</label>
+        <input type="text" id="penilaianTopik" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="e.g. UTS Bab 1">
+        <div class="flex justify-end gap-3"><button id="batalPenilaian" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="simpanPenilaian" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
     </div>
 </div>
 
@@ -407,15 +465,15 @@
 
     async function renderAllCards() {
         const container = document.getElementById('assignmentsContainer');
-        if (!penugasanList.length) { container.innerHTML = `<div class="col-span-full bg-white rounded-2xl shadow p-8 text-center"><i class="fas fa-folder-open text-4xl text-gray-300 mb-2"></i><p class="text-gray-500">Belum ada penugasan. Klik "+ Penugasan" untuk memulai.</p></div>`; return; }
+        if (!penugasanList.length) { container.innerHTML = `<div class="col-span-full bg-white rounded-2xl shadow p-6 text-center"><i class="fas fa-folder-open text-3xl text-gray-300 mb-2"></i><p class="text-gray-500 text-sm">Belum ada penugasan. Klik "+ Penugasan" untuk memulai.</p></div>`; return; }
         let html = '';
         for (let task of penugasanList) {
-            html += `<div class="card-assignment p-5 cursor-pointer hover:shadow-lg transition" data-id="${task.id}">
+            html += `<div class="card-assignment p-3 cursor-pointer hover:shadow-lg transition" data-id="${task.id}">
                         <div class="flex justify-between items-start">
-                            <div><h3 class="font-bold text-lg text-indigo-800">${escapeHtml(task.mapelNama)}</h3>
-                            <p class="text-sm text-gray-500 mt-1"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
-                            <p class="text-xs text-gray-400 mt-2">${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p></div>
-                            <i class="fas fa-chevron-right text-indigo-400 text-xl"></i>
+                            <div><h3 class="font-bold text-md text-indigo-800">${escapeHtml(task.mapelNama)}</h3>
+                            <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p></div>
+                            <i class="fas fa-chevron-right text-indigo-400 text-md"></i>
                         </div>
                     </div>`;
         }
@@ -431,12 +489,12 @@
     function showDetailAssignment(task) {
         document.getElementById('assignmentsContainer').classList.add('hidden');
         document.getElementById('detailContainer').classList.remove('hidden');
-        document.getElementById('detailTitle').innerHTML = `<i class="fas fa-book-open mr-2"></i> ${escapeHtml(task.mapelNama)} · ${escapeHtml(task.kelasDisplay)}`;
+        document.getElementById('detailTitle').innerHTML = `<i class="fas fa-book-open mr-1"></i> ${escapeHtml(task.mapelNama)} · ${escapeHtml(task.kelasDisplay)}`;
         
         const printContainer = document.getElementById('printButtonsContainer');
         printContainer.innerHTML = `
-            <button class="btn-print" id="printAttendanceBtn"><i class="fas fa-print"></i> Cetak Daftar Hadir</button>
-            <button class="btn-print" id="printGradesBtn"><i class="fas fa-print"></i> Cetak Nilai</button>
+            <button class="btn-print" id="printAttendanceBtn"><i class="fas fa-print"></i> Hadir</button>
+            <button class="btn-print" id="printGradesBtn"><i class="fas fa-print"></i> Nilai</button>
         `;
         document.getElementById('printAttendanceBtn').onclick = () => printAttendance(task);
         document.getElementById('printGradesBtn').onclick = () => printGrades(task);
@@ -451,7 +509,7 @@
 
     async function loadDetailTabs(task) {
         const container = document.getElementById('detailContent');
-        container.innerHTML = `<div class="flex gap-2 border-b mb-4"><button class="tab-kehadiran-btn py-2 px-5 rounded-t-xl font-semibold bg-indigo-600 text-white shadow">📋 Kehadiran</button><button class="tab-penilaian-btn py-2 px-5 rounded-t-xl font-semibold text-gray-600 bg-gray-100">📝 Penilaian</button></div>
+        container.innerHTML = `<div class="flex gap-1 border-b mb-2"><button class="tab-kehadiran-btn py-1 px-3 rounded-t-lg text-sm font-semibold bg-indigo-600 text-white shadow">📋 Kehadiran</button><button class="tab-penilaian-btn py-1 px-3 rounded-t-lg text-sm font-semibold text-gray-600 bg-gray-100">📝 Penilaian</button></div>
                                 <div class="tab-pane-kehadiran w-full"></div><div class="tab-pane-penilaian hidden w-full"></div>`;
         const kehadiranPane = container.querySelector('.tab-pane-kehadiran');
         const penilaianPane = container.querySelector('.tab-pane-penilaian');
@@ -473,7 +531,7 @@
 
     // ================= KEHADIRAN =================
     async function renderKehadiranTab(container, task) {
-        container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-kehadiran" title="Tambah sesi kehadiran"><i class="fas fa-plus"></i></button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
+        container.innerHTML = `<div class="flex justify-end mb-2"><button class="btn-plus btn-add-kehadiran" title="Tambah sesi kehadiran"><i class="fas fa-plus"></i></button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6 text-sm">Memuat data...</div></div>`;
         container.querySelector('.btn-add-kehadiran').onclick = () => openAddKehadiranModal(task);
         await refreshKehadiranTable(container, task);
     }
@@ -500,9 +558,9 @@
             let shortDate = ses.date.split('/').slice(0,2).join('/');
             html += `<th class="text-center whitespace-nowrap">
                         <div>${escapeHtml(shortDate)}</div>
-                        <div class="flex items-center justify-center gap-1 mt-1">
-                            <button class="icon-btn icon-edit edit-session-date" data-session-id="${ses.id}" data-current-date="${ses.date}"><i class="fas fa-pen"></i></button>
-                            <button class="icon-btn icon-delete delete-session" data-session-id="${ses.id}"><i class="fas fa-trash-alt"></i></button>
+                        <div class="flex items-center justify-center gap-0.5 mt-0.5">
+                            <button class="icon-btn icon-edit edit-session-date" data-session-id="${ses.id}" data-current-date="${ses.date}"><i class="fas fa-pen fa-xs"></i></button>
+                            <button class="icon-btn icon-delete delete-session" data-session-id="${ses.id}"><i class="fas fa-trash-alt fa-xs"></i></button>
                         </div>
                      </th>`;
         }
@@ -524,9 +582,9 @@
                 else if (status === 'A') statusClass = 'status-a';
                 html += `<td class="text-center">
                             <div class="status-badge ${statusClass} kehadiran-status" data-session="${ses.id}" data-nis="${siswa.nis}" data-status="${status}">${status}</div>
-                          </td>`;
+                           </td>`;
             }
-            html += `<td class="font-bold text-center">${hadirCount}</td>`;
+            html += `<td class="font-bold text-center text-sm">${hadirCount}</td>`;
             html += `</tr>`;
         }
         html += `</tbody></table>`;
@@ -613,7 +671,7 @@
 
     // ================= PENILAIAN =================
     async function renderPenilaianTab(container, task) {
-        container.innerHTML = `<div class="flex justify-end mb-3"><button class="btn-plus btn-add-penilaian" title="Tambah penilaian"><i class="fas fa-plus"></i></button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6">Memuat data...</div></div>`;
+        container.innerHTML = `<div class="flex justify-end mb-2"><button class="btn-plus btn-add-penilaian" title="Tambah penilaian"><i class="fas fa-plus"></i></button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6 text-sm">Memuat data...</div></div>`;
         container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
         await refreshPenilaianTable(container, task);
     }
@@ -635,33 +693,31 @@
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
         if (assessList.length === 0) {
-            wrapperDiv.innerHTML = `<div class="text-center py-10 text-gray-400"><i class="fas fa-clipboard-list text-3xl mb-2"></i><p>Belum ada data penilaian</p><p class="text-xs">Klik tombol + untuk menambah penilaian</p></div>`;
+            wrapperDiv.innerHTML = `<div class="text-center py-8 text-gray-400"><i class="fas fa-clipboard-list text-2xl mb-2"></i><p class="text-sm">Belum ada data penilaian</p><p class="text-xs">Klik tombol + untuk menambah penilaian</p></div>`;
             return;
         }
         
         let html = `<table class="sticky-table penilaian-table">`;
         html += `<thead>`;
-        // Header baris 1 - dengan tombol edit/hapus menggunakan N1, N2, ...
         html += `<tr>
                     <th rowspan="2" class="sticky-col-first">NIS</th>
                     <th rowspan="2" class="sticky-col-second">Nama</th>`;
         for (let i = 0; i < assessList.length; i++) {
             html += `<th class="text-center">
                         <div><strong>N${i+1}</strong></div>
-                        <div class="flex items-center justify-center gap-1 mt-1">
-                            <button class="icon-btn icon-edit edit-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-pen"></i></button>
-                            <button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-trash-alt"></i></button>
+                        <div class="flex items-center justify-center gap-0.5 mt-0.5">
+                            <button class="icon-btn icon-edit edit-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-pen fa-xs"></i></button>
+                            <button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-trash-alt fa-xs"></i></button>
                         </div>
                      </th>`;
         }
-        html += `<th rowspan="2" class="bg-gray-50">Rata-Rata</th>`;
+        html += `<th rowspan="2" class="bg-gray-50">Rata</th>`;
         html += `</tr>`;
-        // Header baris 2 - tanggal dan topik
         html += `<tr>`;
         for (let as of assessList) {
             html += `<th class="text-center text-xs font-normal bg-gray-50">
                         <div>${escapeHtml(as.date)}</div>
-                        <div class="text-gray-500 text-xs">${escapeHtml(as.topic || '-')}</div>
+                        <div class="text-gray-500 text-xs">${escapeHtml(as.topic ? as.topic.substring(0,10) : '-')}</div>
                      </th>`;
         }
         html += `</tr>`;
@@ -678,16 +734,15 @@
                 if (nilai > 0) { totalNilai += nilai; countValid++; }
                 html += `<td class="text-center">
                             <input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100">
-                           </td>`;
+                            </td>`;
             }
             let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
-            html += `<td class="font-bold text-center bg-gray-50">${rata}</td>`;
+            html += `<td class="font-bold text-center bg-gray-50 text-sm">${rata}</td>`;
             html += `</tr>`;
         }
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        // Event handlers
         wrapperDiv.querySelectorAll('.edit-assessment').forEach(btn => {
             btn.onclick = async (e) => {
                 e.stopPropagation();
@@ -805,11 +860,11 @@
                 printHtml += `<td>${status}</td>`;
             }
             printHtml += `<td><strong>${hadirCount}</strong></td>
-                         </tr>`;
+                        </tr>`;
         }
         printHtml += `
                     </tbody>
-                 </table>
+                </table>
                 <div class="print-footer">
                     <p>Mengetahui,</p>
                     <p style="margin-top: 40px;">(_____________________)</p>
@@ -871,9 +926,8 @@
         }
         printHtml += `<th rowspan="2">Rata-Rata</th>
                     </tr>
-                    <tr></tr>
-                </thead>
-                <tbody>`;
+                    <tr></thead>
+                    <tbody>`;
         
         let no = 1;
         for (let siswa of siswaArray) {
@@ -890,7 +944,7 @@
             }
             let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
             printHtml += `<td><strong>${rata}</strong></td>
-                        </tr>`;
+                        </table>`;
         }
         printHtml += `
                     </tbody>
@@ -935,11 +989,11 @@
         const targetDiv = document.getElementById('modalTargetInput');
         const updateTarget = () => {
             let jenis = mapelSelect.options[mapelSelect.selectedIndex]?.dataset?.jenis;
-            if (!jenis) { targetDiv.innerHTML = '<div class="text-gray-500">Pilih mata pelajaran dahulu</div>'; return; }
+            if (!jenis) { targetDiv.innerHTML = '<div class="text-gray-500 text-sm">Pilih mata pelajaran dahulu</div>'; return; }
             if (jenis === 'inkul') {
-                targetDiv.innerHTML = `<p class="text-xs mb-2">Pilih Kelas (bisa lebih dari satu)</p><select multiple size="5" class="w-full border rounded p-1" id="targetKelasSelect">${allKelas.map(k=>`<option value="${k}">${escapeHtml(k)}</option>`).join('')}</select>`;
+                targetDiv.innerHTML = `<p class="text-xs mb-1">Pilih Kelas (bisa lebih dari satu)</p><select multiple size="4" class="w-full border rounded p-1 text-sm" id="targetKelasSelect">${allKelas.map(k=>`<option value="${k}">${escapeHtml(k)}</option>`).join('')}</select>`;
             } else {
-                targetDiv.innerHTML = `<p class="text-xs mb-2">Pilih Siswa (bisa lebih)</p><select multiple size="8" class="w-full border rounded p-1" id="targetSiswaSelect">${Object.entries(allSiswa).map(([nis,s])=>`<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(s.nama)} (${s.kelas})</option>`).join('')}</select>`;
+                targetDiv.innerHTML = `<p class="text-xs mb-1">Pilih Siswa (bisa lebih)</p><select multiple size="5" class="w-full border rounded p-1 text-sm" id="targetSiswaSelect">${Object.entries(allSiswa).map(([nis,s])=>`<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(s.nama)} (${s.kelas})</option>`).join('')}</select>`;
             }
         };
         mapelSelect.onchange = updateTarget;
