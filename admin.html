@@ -69,6 +69,36 @@
             .modal-container table { font-size: 0.7rem; }
             .modal-container td, .modal-container th { padding: 0.4rem 0.2rem; }
         }
+        /* Untuk modal edit penugasan */
+        .member-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .member-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 8px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .member-item:hover {
+            background-color: #f9fafb;
+        }
+        .remove-member {
+            color: #ef4444;
+            cursor: pointer;
+            font-weight: bold;
+            padding: 0 4px;
+        }
+        .remove-member:hover {
+            color: #b91c1c;
+        }
+        .add-member-select {
+            padding: 4px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            width: 100%;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -94,6 +124,38 @@
             <div id="guru" class="tab-content hidden">Loading Data Guru...</div>
             <div id="mapel" class="tab-content hidden">Loading Data Mapel...</div>
             <div id="penugasan" class="tab-content hidden">Loading Penugasan...</div>
+        </div>
+    </div>
+
+    <!-- MODAL EDIT PENUGASAN -->
+    <div id="modalEditPenugasan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print" style="background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);">
+        <div class="bg-white rounded-2xl max-w-2xl w-full mx-4 p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-lg font-bold mb-3"><i class="fas fa-edit text-indigo-500"></i> Edit Penugasan</h3>
+            <div class="space-y-3">
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block font-semibold text-sm">Mata Pelajaran</label><p id="editMapelNama" class="text-gray-700 text-sm">-</p></div>
+                    <div><label class="block font-semibold text-sm">Guru</label><p id="editGuruNama" class="text-gray-700 text-sm">-</p></div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-sm">Daftar Murid</label>
+                    <div id="editMemberList" class="member-list border rounded p-2 bg-gray-50 min-h-[80px]">
+                        <p class="text-gray-400 text-sm">Memuat...</p>
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-sm">Tambah Murid</label>
+                    <div class="flex gap-2">
+                        <select id="editAddMemberSelect" class="add-member-select flex-1">
+                            <option value="">-- Pilih Murid --</option>
+                        </select>
+                        <button id="editAddMemberBtn" class="bg-green-600 text-white px-4 py-1 rounded text-sm hover:bg-green-700">Tambah</button>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-3 mt-4">
+                    <button id="editBatalBtn" class="px-3 py-1.5 border rounded-lg text-sm">Tutup</button>
+                    <button id="editSimpanBtn" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700">Simpan Perubahan</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -158,7 +220,7 @@
             btn.onclick = () => showTab(btn.dataset.tab);
         });
         
-        // ===================== DATA MURID dengan sinkronisasi kehadiran & nilai (default H) =====================
+        // ===================== DATA MURID =====================
         async function hitungSemuaStatistikSiswa() {
             const [penugasanSnap, attendanceSnap, penilaianSnap] = await Promise.all([
                 db.ref('penugasan').once('value'),
@@ -430,7 +492,6 @@
                         let nis, nama, pass;
                         // Deteksi separator
                         if (line.includes('\t')) {
-                            // Pemisah tab
                             const parts = line.split('\t').map(s => s.trim());
                             if (parts.length >= 3) {
                                 nis = parts[0];
@@ -441,7 +502,6 @@
                                 continue;
                             }
                         } else if (line.includes(',')) {
-                            // Pemisah koma
                             const parts = line.split(',').map(s => s.trim());
                             if (parts.length >= 3) {
                                 nis = parts[0];
@@ -452,7 +512,6 @@
                                 continue;
                             }
                         } else {
-                            // Pemisah spasi: ambil NIS sebagai elemen pertama, password sebagai elemen terakhir, sisanya nama
                             const parts = line.split(/\s+/).filter(s => s.length > 0);
                             if (parts.length < 3) {
                                 error++;
@@ -463,13 +522,11 @@
                             nama = parts.slice(1, parts.length - 1).join(' ');
                         }
                         
-                        // Validasi dasar
                         if (!nis || !nama || !pass) {
                             error++;
                             continue;
                         }
                         
-                        // Simpan ke Firebase
                         promises.push(
                             db.ref(`siswa/${nis}`).set({
                                 nama: nama,
@@ -512,14 +569,12 @@
         
         // ========= MODAL NILAI MURID (Daftar Nilai Per Mapel) =========
         async function showNilaiMuridModal(kelas) {
-            // loading overlay
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
             overlay.innerHTML = `<div class="modal-container p-5 max-w-5xl"><div class="text-center py-8"><div class="loading-spinner mx-auto mb-2"></div><p>Memuat data nilai murid...</p></div></div>`;
             document.body.appendChild(overlay);
             
             try {
-                // fetch all needed data
                 const [siswaSnap, penugasanSnap, mapelSnap, penilaianSnap] = await Promise.all([
                     db.ref('siswa').once('value'),
                     db.ref('penugasan').once('value'),
@@ -532,7 +587,6 @@
                 const mapel = mapelSnap.val() || {};
                 const penilaian = penilaianSnap.val() || {};
                 
-                // filter siswa berdasarkan kelas
                 const siswaKelas = Object.entries(semuaMurid)
                     .filter(([_, data]) => data.kelas === kelas)
                     .map(([nis, data]) => ({ nis, nama: data.nama }));
@@ -543,28 +597,21 @@
                     return;
                 }
                 
-                // mapping mapelId -> kode & nama (prioritas kode untuk header)
                 const mapelInfo = {};
                 for (let [id, m] of Object.entries(mapel)) {
                     mapelInfo[id] = { kode: m.kode || m.nama.substring(0,5).toUpperCase(), nama: m.nama, jenis: m.jenis };
                 }
                 
-                // untuk setiap penugasan, ketahui mapelId, siswaList, lalu kumpulkan nilai dari penilaian
-                // struktur: per siswa per mapelId kumpulkan semua skor dari assessment
-                const studentScoresByMapel = {}; // { nis: { mapelId: [scores] } }
+                const studentScoresByMapel = {};
                 siswaKelas.forEach(s => { studentScoresByMapel[s.nis] = {}; });
                 
-                // iterasi penugasan
                 for (let [penId, pg] of Object.entries(penugasan)) {
                     const mapelId = pg.mapelId;
                     if (!mapelId || !mapelInfo[mapelId]) continue;
                     const siswaList = pg.siswaList || [];
-                    // ambil data penilaian untuk penugasan ini
                     const assessments = penilaian[penId] || {};
-                    // untuk setiap assessment di penugasan ini
                     for (let [assId, assData] of Object.entries(assessments)) {
                         const scores = assData.scores || {};
-                        // untuk setiap siswa dalam kelas yang juga ada di siswaList & punya nilai
                         for (let student of siswaKelas) {
                             const nis = student.nis;
                             if (!siswaList.includes(nis)) continue;
@@ -577,9 +624,8 @@
                     }
                 }
                 
-                // hitung rata2 per mapel per siswa, dan kumpulkan daftar mapel yang memiliki minimal 1 nilai di kelas ini
                 const subjectCodesSet = new Set();
-                const studentSubjectAvg = {}; // { nis: { mapelId: avg } }
+                const studentSubjectAvg = {};
                 for (let s of siswaKelas) {
                     const nis = s.nis;
                     studentSubjectAvg[nis] = {};
@@ -594,7 +640,6 @@
                     }
                 }
                 
-                // urutkan mapelId berdasarkan kode mapel
                 let mapelIdsWithData = Array.from(subjectCodesSet);
                 mapelIdsWithData.sort((a,b) => {
                     const kodeA = mapelInfo[a]?.kode || '';
@@ -602,10 +647,8 @@
                     return kodeA.localeCompare(kodeB);
                 });
                 
-                // jika tidak ada satupun nilai, tetap tampilkan tabel tanpa kolom mapel
                 const hasAnySubject = mapelIdsWithData.length > 0;
                 
-                // bangun modal tabel
                 let tableHtml = `
                     <div class="modal-header px-4 py-3 flex justify-between items-center">
                         <h3 class="text-lg font-bold"><i class="fas fa-chart-simple text-purple-600"></i> Daftar Nilai Murid - Kelas ${escapeHtml(kelas)}</h3>
@@ -643,7 +686,6 @@
                         }
                     }
                     
-                    // rata2 overall = total skor mapel / jumlah mapel yang memiliki nilai (jika ada)
                     let overallAvg = 0;
                     if (hasAnySubject && countMapelWithScore > 0) {
                         overallAvg = Math.round((totalMapelScore / countMapelWithScore) * 10) / 10;
@@ -856,8 +898,8 @@
             } catch(err){ container.innerHTML=`<p class="text-red-500">Error: ${err.message}</p>`; }
         }
         
-        // ===================== PENUGASAN =====================
-        async function loadPenugasan() { /* (tidak diubah) */
+        // ===================== PENUGASAN dengan fitur Edit =====================
+        async function loadPenugasan() {
             const container = document.getElementById('penugasan');
             try {
                 const [mapelSnap, guruSnap, siswaSnap, kelasSnap, penugasanSnap] = await Promise.all([
@@ -883,10 +925,16 @@
                         for (let nis of (pg.siswaList || [])) if (semuaMurid[nis]) kelasSet.add(semuaMurid[nis].kelas);
                         infoTerlibat = Array.from(kelasSet).map(k=>`Kelas ${k}`).join(', ') || '(Tidak ada kelas)';
                     } else infoTerlibat = `${jumlahMurid} murid`;
-                    listHtml += `<tr><td class="p-2">${escapeHtml(namaMapel)}</td><td class="p-2">${escapeHtml(pg.guruName)}</td><td class="p-2">${escapeHtml(infoTerlibat)}</td><td class="p-2"><button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i> Hapus</button></td></tr>`;
+                    listHtml += `<tr><td class="p-2">${escapeHtml(namaMapel)}</td><td class="p-2">${escapeHtml(pg.guruName)}</td><td class="p-2">${escapeHtml(infoTerlibat)}</td>
+                        <td class="p-2">
+                            <button class="editPenugasanBtn text-blue-500 mr-2" data-id="${id}" data-jenis="${jenisMapel}"><i class="fas fa-edit"></i></button>
+                            <button class="hapusPenugasanBtn text-red-500" data-id="${id}"><i class="fas fa-trash"></i></button>
+                        </td></tr>`;
                 }
                 listHtml += `</tbody></table></div>`;
                 container.innerHTML = formHtml + listHtml;
+                
+                // ===== LOGIKA TAMBAH PENUGASAN (tetap sama) =====
                 const mapelSelect = document.getElementById('pilihMapel');
                 const targetDiv = document.getElementById('targetInput');
                 const targetLabel = document.getElementById('targetLabel');
@@ -931,6 +979,114 @@
                 document.querySelectorAll('.hapusPenugasanBtn').forEach(btn=>{
                     btn.onclick = async () => { if(confirm('Hapus penugasan?')){ await db.ref(`penugasan/${btn.dataset.id}`).remove(); loadPenugasan(); } };
                 });
+                
+                // ===== FITUR EDIT PENUGASAN (khusus eskul/pesantren) =====
+                document.querySelectorAll('.editPenugasanBtn').forEach(btn => {
+                    btn.onclick = async () => {
+                        const penugasanId = btn.dataset.id;
+                        const jenis = btn.dataset.jenis;
+                        if (jenis === 'inkul') {
+                            alert('Penugasan intrakurikuler (inkul) tidak dapat diedit per murid. Silakan hapus dan buat ulang.');
+                            return;
+                        }
+                        // Ambil data penugasan
+                        const snap = await db.ref(`penugasan/${penugasanId}`).once('value');
+                        const data = snap.val();
+                        if (!data) { alert('Data penugasan tidak ditemukan'); return; }
+                        const mapelData = mapel[data.mapelId];
+                        const mapelNama = mapelData?.nama || '❌';
+                        const guruNama = data.guruName || '❌';
+                        const currentMembers = data.siswaList || [];
+                        
+                        // Isi modal
+                        document.getElementById('editMapelNama').textContent = mapelNama;
+                        document.getElementById('editGuruNama').textContent = guruNama;
+                        
+                        // Render daftar member
+                        const memberListDiv = document.getElementById('editMemberList');
+                        memberListDiv.innerHTML = '';
+                        if (currentMembers.length === 0) {
+                            memberListDiv.innerHTML = '<p class="text-gray-400 text-sm">Belum ada murid dalam penugasan ini.</p>';
+                        } else {
+                            for (let nis of currentMembers) {
+                                const siswa = semuaMurid[nis];
+                                const nama = siswa ? siswa.nama : '❌ (data hilang)';
+                                const div = document.createElement('div');
+                                div.className = 'member-item';
+                                div.innerHTML = `
+                                    <span>${escapeHtml(nis)} - ${escapeHtml(nama)}</span>
+                                    <span class="remove-member" data-nis="${nis}" title="Hapus murid">×</span>
+                                `;
+                                memberListDiv.appendChild(div);
+                            }
+                        }
+                        
+                        // Event hapus member
+                        memberListDiv.querySelectorAll('.remove-member').forEach(el => {
+                            el.onclick = async () => {
+                                const nis = el.dataset.nis;
+                                if (!confirm(`Hapus murid ${nis} dari penugasan ini?`)) return;
+                                const newList = currentMembers.filter(m => m !== nis);
+                                await db.ref(`penugasan/${penugasanId}/siswaList`).set(newList);
+                                alert('Murid berhasil dihapus.');
+                                loadPenugasan(); // refresh
+                                // tutup modal
+                                document.getElementById('modalEditPenugasan').style.display = 'none';
+                            };
+                        });
+                        
+                        // Isi dropdown tambah murid
+                        const selectAdd = document.getElementById('editAddMemberSelect');
+                        selectAdd.innerHTML = '<option value="">-- Pilih Murid --</option>';
+                        // Tampilkan murid yang belum terdaftar
+                        const allNis = Object.keys(semuaMurid);
+                        const available = allNis.filter(nis => !currentMembers.includes(nis));
+                        if (available.length === 0) {
+                            selectAdd.innerHTML = '<option value="">Semua murid sudah terdaftar</option>';
+                        } else {
+                            for (let nis of available) {
+                                const siswa = semuaMurid[nis];
+                                const nama = siswa ? siswa.nama : nis;
+                                const opt = document.createElement('option');
+                                opt.value = nis;
+                                opt.textContent = `${nis} - ${nama} (${siswa?.kelas || '-'})`;
+                                selectAdd.appendChild(opt);
+                            }
+                        }
+                        
+                        // Event tambah member
+                        document.getElementById('editAddMemberBtn').onclick = async () => {
+                            const nis = selectAdd.value;
+                            if (!nis) { alert('Pilih murid yang akan ditambahkan'); return; }
+                            if (currentMembers.includes(nis)) { alert('Murid sudah terdaftar'); return; }
+                            const newList = [...currentMembers, nis];
+                            await db.ref(`penugasan/${penugasanId}/siswaList`).set(newList);
+                            alert('Murid berhasil ditambahkan.');
+                            loadPenugasan();
+                            document.getElementById('modalEditPenugasan').style.display = 'none';
+                        };
+                        
+                        // Tampilkan modal
+                        document.getElementById('modalEditPenugasan').style.display = 'flex';
+                    };
+                });
+                
+                // Tombol batal/tutup modal edit
+                document.getElementById('editBatalBtn').onclick = () => {
+                    document.getElementById('modalEditPenugasan').style.display = 'none';
+                };
+                document.getElementById('editSimpanBtn').onclick = () => {
+                    // Simpan perubahan (sebenarnya sudah otomatis via tambah/hapus, tapi kita tutup modal)
+                    document.getElementById('modalEditPenugasan').style.display = 'none';
+                    loadPenugasan();
+                };
+                // Tutup modal jika klik di luar
+                document.getElementById('modalEditPenugasan').addEventListener('click', (e) => {
+                    if (e.target === e.currentTarget) {
+                        e.currentTarget.style.display = 'none';
+                    }
+                });
+                
             } catch(err) { container.innerHTML = `<p class="text-red-500">Error: ${err.message}</p>`; }
         }
         
