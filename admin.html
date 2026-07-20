@@ -414,21 +414,74 @@
                     const nis = prompt('NIS:'), nama = prompt('Nama:'), pass = prompt('Password:');
                     if (nis && nama && pass) db.ref(`siswa/${nis}`).set({ nama, password: pass, kelas, kehadiranGlobal: 0, nilaiGlobal: 0 }).then(()=>openClassDetail(kelas)).catch(showError);
                 };
+                
+                // ===== PERBAIKAN IMPORT MURID =====
                 document.getElementById('importMuridDetailBtn').onclick = async () => {
-                    const rawData = prompt(`Impor banyak murid ke kelas ${kelas}\n\nFormat: NIS, NAMA, PASSWORD\nPemisah: koma, tab, atau spasi.\nContoh:\n2526001,Ahmad,1234\n2526002,Budi,5678`);
+                    const rawData = prompt(`Impor banyak murid ke kelas ${kelas}\n\nFormat:\n- Untuk pemisah koma atau tab: NIS, NAMA, PASSWORD\n- Untuk pemisah spasi: NIS NAMA... PASSWORD (nama boleh lebih dari 1 kata, password adalah kata terakhir)\n\nContoh:\n2526001, Ahmad, 1234\n2526002\tBudi\t5678\n2627001 ABDUL SYARIEF SAFAR 1234`);
                     if (!rawData) return;
+                    
                     const lines = rawData.split(/\r?\n/);
-                    let success=0, error=0, promises=[];
-                    for(let line of lines){
-                        line=line.trim(); if(!line) continue;
-                        let parts; if(line.includes('\t')) parts=line.split('\t'); else if(line.includes(',')) parts=line.split(','); else parts=line.split(/\s+/);
-                        parts=parts.map(p=>p.trim());
-                        if(parts.length<3){ error++; continue; }
-                        const [nis, nama, pass] = parts;
-                        if(!nis||!nama||!pass){ error++; continue; }
-                        promises.push(db.ref(`siswa/${nis}`).set({ nama, password: pass, kelas, kehadiranGlobal:0, nilaiGlobal:0 }).catch(()=>error++));
+                    let success = 0, error = 0, promises = [];
+                    
+                    for (let line of lines) {
+                        line = line.trim();
+                        if (!line) continue;
+                        
+                        let nis, nama, pass;
+                        // Deteksi separator
+                        if (line.includes('\t')) {
+                            // Pemisah tab
+                            const parts = line.split('\t').map(s => s.trim());
+                            if (parts.length >= 3) {
+                                nis = parts[0];
+                                nama = parts[1];
+                                pass = parts[2];
+                            } else {
+                                error++;
+                                continue;
+                            }
+                        } else if (line.includes(',')) {
+                            // Pemisah koma
+                            const parts = line.split(',').map(s => s.trim());
+                            if (parts.length >= 3) {
+                                nis = parts[0];
+                                nama = parts[1];
+                                pass = parts[2];
+                            } else {
+                                error++;
+                                continue;
+                            }
+                        } else {
+                            // Pemisah spasi: ambil NIS sebagai elemen pertama, password sebagai elemen terakhir, sisanya nama
+                            const parts = line.split(/\s+/).filter(s => s.length > 0);
+                            if (parts.length < 3) {
+                                error++;
+                                continue;
+                            }
+                            nis = parts[0];
+                            pass = parts[parts.length - 1];
+                            nama = parts.slice(1, parts.length - 1).join(' ');
+                        }
+                        
+                        // Validasi dasar
+                        if (!nis || !nama || !pass) {
+                            error++;
+                            continue;
+                        }
+                        
+                        // Simpan ke Firebase
+                        promises.push(
+                            db.ref(`siswa/${nis}`).set({
+                                nama: nama,
+                                password: pass,
+                                kelas: kelas,
+                                kehadiranGlobal: 0,
+                                nilaiGlobal: 0
+                            }).catch(() => error++)
+                        );
                         success++;
                     }
+                    
                     await Promise.all(promises);
                     alert(`✅ Selesai! Berhasil: ${success}, Gagal: ${error}`);
                     openClassDetail(kelas);
