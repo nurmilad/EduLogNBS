@@ -411,12 +411,15 @@
     </div>
 </div>
 
-<!-- MODAL EDIT TANGGAL KEHADIRAN -->
-<div id="modalEditTanggal" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
+<!-- MODAL EDIT SESI KEHADIRAN (Tanggal + Topik) -->
+<div id="modalEditSesi" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
-        <h4 class="text-md font-bold mb-3">Edit Tanggal Sesi Kehadiran</h4>
-        <input type="date" id="editTanggalInput" class="w-full border rounded-xl p-2 mb-4 text-sm">
-        <div class="flex justify-end gap-3"><button id="cancelEditTanggal" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="saveEditTanggal" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
+        <h4 class="text-md font-bold mb-3">Edit Sesi Kehadiran</h4>
+        <label class="block font-medium mb-1 text-sm">Tanggal</label>
+        <input type="date" id="editTanggalInput" class="w-full border rounded-xl p-2 mb-3 text-sm">
+        <label class="block font-medium mb-1 text-sm">Topik / Materi</label>
+        <input type="text" id="editTopikInput" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="Masukkan topik pertemuan">
+        <div class="flex justify-end gap-3"><button id="cancelEditSesi" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="saveEditSesi" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
     </div>
 </div>
 
@@ -425,7 +428,9 @@
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
         <h4 class="text-md font-bold mb-3"><i class="fas fa-calendar-plus"></i> Tambah Sesi Kehadiran</h4>
         <label class="block font-medium mb-1 text-sm">Tanggal</label>
-        <input type="date" id="kehadiranDate" class="w-full border rounded-xl p-2 mb-4 text-sm">
+        <input type="date" id="kehadiranDate" class="w-full border rounded-xl p-2 mb-3 text-sm">
+        <label class="block font-medium mb-1 text-sm">Topik / Materi</label>
+        <input type="text" id="kehadiranTopik" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="e.g. Bab 1 Pengenalan">
         <div class="flex justify-end gap-3"><button id="batalKehadiran" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="simpanKehadiran" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
     </div>
 </div>
@@ -572,7 +577,7 @@
         if (!wrapperDiv) return;
         const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
         const sessions = sessionsSnap.val() || {};
-        let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, records: val.records || {} }));
+        let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, topic: val.topic || '', records: val.records || {} }));
         sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
         
@@ -582,10 +587,12 @@
                     <th class="sticky-col-second">Nama</th>`;
         for (let ses of sessionsList) {
             let shortDate = ses.date.split('/').slice(0,2).join('/');
+            let shortTopic = ses.topic ? ses.topic.substring(0, 12) : '';
             html += `<th class="text-center whitespace-nowrap">
                         <div>${escapeHtml(shortDate)}</div>
+                        <div class="text-gray-500 text-xs" style="font-weight:normal;">${escapeHtml(shortTopic)}</div>
                         <div class="flex items-center justify-center gap-0.5 mt-0.5">
-                            <button class="icon-btn icon-edit edit-session-date" data-session-id="${ses.id}" data-current-date="${ses.date}"><i class="fas fa-pen fa-xs"></i></button>
+                            <button class="icon-btn icon-edit edit-session" data-session-id="${ses.id}" data-current-date="${ses.date}" data-current-topic="${escapeHtml(ses.topic)}"><i class="fas fa-pen fa-xs"></i></button>
                             <button class="icon-btn icon-delete delete-session" data-session-id="${ses.id}"><i class="fas fa-trash-alt fa-xs"></i></button>
                         </div>
                      </th>`;
@@ -616,10 +623,14 @@
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        wrapperDiv.querySelectorAll('.edit-session-date').forEach(btn => {
+        // Event edit session (tanggal + topik)
+        wrapperDiv.querySelectorAll('.edit-session').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
-                openEditTanggalModal(task.id, btn.dataset.sessionId, btn.dataset.currentDate, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
+                const sessionId = btn.dataset.sessionId;
+                const currentDate = btn.dataset.currentDate;
+                const currentTopic = btn.dataset.currentTopic || '';
+                openEditSesiModal(task.id, sessionId, currentDate, currentTopic, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
             };
         });
         wrapperDiv.querySelectorAll('.delete-session').forEach(btn => {
@@ -646,6 +657,7 @@
     async function openAddKehadiranModal(task) {
         const todayYMD = toYMD(new Date());
         document.getElementById('kehadiranDate').value = todayYMD;
+        document.getElementById('kehadiranTopik').value = '';
         const modal = document.getElementById('modalTambahKehadiran');
         modal.style.display = 'flex';
         const simpan = document.getElementById('simpanKehadiran');
@@ -654,8 +666,9 @@
             let ymd = document.getElementById('kehadiranDate').value;
             if (!ymd) return alert("Pilih tanggal");
             let dateDMY = formatDateToDMY(new Date(ymd));
+            let topic = document.getElementById('kehadiranTopik').value.trim() || '';
             const newSessionId = Date.now().toString();
-            await db.ref(`attendance/${task.id}/${newSessionId}`).set({ date: dateDMY, records: {} });
+            await db.ref(`attendance/${task.id}/${newSessionId}`).set({ date: dateDMY, topic: topic, records: {} });
             modal.style.display = 'none';
             const container = document.querySelector('#detailContent .tab-pane-kehadiran');
             if (container) {
@@ -671,20 +684,25 @@
         batal.addEventListener('click', closeModal);
     }
 
-    async function openEditTanggalModal(assignmentId, sessionId, oldDateDMY, callback) {
+    // Fungsi edit sesi (tanggal + topik) - menggantikan openEditTanggalModal
+    async function openEditSesiModal(assignmentId, sessionId, oldDateDMY, oldTopic, callback) {
         let oldDate = parseDMY(oldDateDMY);
         let ymd = oldDate ? toYMD(oldDate) : '';
-        const modal = document.getElementById('modalEditTanggal');
-        const dateInput = document.getElementById('editTanggalInput');
-        dateInput.value = ymd;
+        const modal = document.getElementById('modalEditSesi');
+        document.getElementById('editTanggalInput').value = ymd;
+        document.getElementById('editTopikInput').value = oldTopic || '';
         modal.style.display = 'flex';
-        const saveBtn = document.getElementById('saveEditTanggal');
-        const cancelBtn = document.getElementById('cancelEditTanggal');
+        
+        const saveBtn = document.getElementById('saveEditSesi');
+        const cancelBtn = document.getElementById('cancelEditSesi');
+        
         const onSave = async () => {
-            let newYmd = dateInput.value;
+            let newYmd = document.getElementById('editTanggalInput').value;
             if (!newYmd) return alert("Pilih tanggal");
             let newDateDMY = formatDateToDMY(new Date(newYmd));
+            let newTopic = document.getElementById('editTopikInput').value.trim() || '';
             await db.ref(`attendance/${assignmentId}/${sessionId}/date`).set(newDateDMY);
+            await db.ref(`attendance/${assignmentId}/${sessionId}/topic`).set(newTopic);
             modal.style.display = 'none';
             if (callback) callback();
             cleanup();
@@ -849,7 +867,7 @@
     async function printAttendance(task) {
         const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
         const sessions = sessionsSnap.val() || {};
-        let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, records: val.records || {} }));
+        let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, topic: val.topic || '', records: val.records || {} }));
         sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         
         const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
@@ -867,7 +885,7 @@
                     <thead>
                         <tr><th>No</th><th>NIS</th><th>Nama</th>`;
         for (let ses of sessionsList) {
-            printHtml += `<th>${escapeHtml(ses.date)}</th>`;
+            printHtml += `<th>${escapeHtml(ses.date)}${ses.topic ? '<br><small>'+escapeHtml(ses.topic)+'</small>' : ''}</th>`;
         }
         printHtml += `<th>Total H</th></tr>
                     </thead>
