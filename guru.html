@@ -24,7 +24,7 @@
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(4px);
         }
-        select, input[type="number"] {
+        select, input[type="number"], input[type="text"] {
             border-radius: 0.5rem;
             border: 1px solid #e2e8f0;
             padding: 0.25rem 0.5rem;
@@ -55,6 +55,11 @@
             font-size: 0.7rem;
             padding: 0.15rem 0;
         }
+        /* Tambahan untuk siswa tidak aktif */
+        .siswa-tidak-aktif {
+            color: #dc2626 !important;
+            font-weight: 600;
+        }
         
         /* ========== STICKY HEADER & FREEZE KOLOM ========== */
         .table-scroll-wrapper {
@@ -67,7 +72,6 @@
             position: relative;
             -webkit-overflow-scrolling: touch;
         }
-        
         .table-scroll-wrapper::after {
             content: '';
             position: sticky;
@@ -80,31 +84,17 @@
             opacity: 0.5;
             pointer-events: none;
         }
-        
         .sticky-table {
             border-collapse: collapse;
             width: 100%;
             min-width: 480px;
             font-size: 0.65rem;
         }
-        
         @media (min-width: 640px) {
-            .sticky-table {
-                font-size: 0.7rem;
-                min-width: 520px;
-            }
-            .nilai-input {
-                width: 50px;
-                font-size: 0.75rem;
-                padding: 0.2rem 0;
-            }
-            .status-badge {
-                width: 36px;
-                font-size: 0.75rem;
-                padding: 4px 0;
-            }
+            .sticky-table { font-size: 0.7rem; min-width: 520px; }
+            .nilai-input { width: 50px; font-size: 0.75rem; padding: 0.2rem 0; }
+            .status-badge { width: 36px; font-size: 0.75rem; padding: 4px 0; }
         }
-        
         .sticky-table thead tr th {
             position: sticky;
             top: 0;
@@ -114,12 +104,10 @@
             padding: 4px 3px;
             font-size: inherit;
         }
-        
         .sticky-table tbody tr td {
             border: 1px solid #e2e8f0;
             padding: 2px 3px;
         }
-        
         .sticky-col-first {
             position: sticky;
             left: 0;
@@ -128,7 +116,6 @@
             min-width: 42px;
             max-width: 52px;
         }
-        
         .sticky-col-second {
             position: sticky;
             left: 52px;
@@ -137,33 +124,17 @@
             min-width: 50px;
             max-width: 70px;
         }
-        
         .sticky-table thead tr th.sticky-col-first,
         .sticky-table thead tr th.sticky-col-second {
             background-color: #f8fafc;
             z-index: 30;
         }
-        
         @media (max-width: 640px) {
-            .sticky-col-first {
-                left: 0;
-                min-width: 38px;
-                max-width: 46px;
-            }
-            .sticky-col-second {
-                left: 42px;
-                min-width: 44px;
-                max-width: 60px;
-            }
-            .sticky-table tbody tr td {
-                padding: 2px 2px;
-            }
-            .sticky-table thead tr th {
-                padding: 3px 2px;
-            }
+            .sticky-col-first { left: 0; min-width: 38px; max-width: 46px; }
+            .sticky-col-second { left: 42px; min-width: 44px; max-width: 60px; }
+            .sticky-table tbody tr td { padding: 2px 2px; }
+            .sticky-table thead tr th { padding: 3px 2px; }
         }
-        
-        /* Kolom sesi dinamis tetap punya ruang minimal */
         .sticky-table tbody tr td:not(.sticky-col-first):not(.sticky-col-second),
         .sticky-table thead tr th:not(.sticky-col-first):not(.sticky-col-second) {
             min-width: 36px;
@@ -177,8 +148,6 @@
                 max-width: 70px;
             }
         }
-        
-        /* Tombol plus */
         .btn-plus {
             background-color: #4f46e5;
             color: white;
@@ -195,17 +164,9 @@
             cursor: pointer;
             border: none;
         }
-        .btn-plus:hover {
-            background-color: #4338ca;
-            transform: scale(1.02);
-        }
-        .btn-plus:active {
-            transform: scale(0.96);
-        }
-        .btn-plus i {
-            font-size: 1rem;
-        }
-        
+        .btn-plus:hover { background-color: #4338ca; transform: scale(1.02); }
+        .btn-plus:active { transform: scale(0.96); }
+        .btn-plus i { font-size: 1rem; }
         .icon-btn {
             background: transparent;
             border: none;
@@ -220,59 +181,19 @@
         .icon-edit { color: #4f46e5; }
         
         @media print {
-            @page {
-                size: landscape;
-                margin: 1.2cm;
-            }
-            body * {
-                visibility: hidden;
-            }
-            .print-area, .print-area * {
-                visibility: visible;
-            }
-            .print-area {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                margin: 0;
-                padding: 10px;
-            }
-            .no-print {
-                display: none !important;
-            }
-            .print-table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 10pt;
-            }
-            .print-table th, .print-table td {
-                border: 1px solid #000;
-                padding: 5px;
-                text-align: center;
-                vertical-align: middle;
-            }
-            .print-table th {
-                background-color: #f3f4f6;
-                font-weight: bold;
-            }
-            .print-table td:first-child,
-            .print-table th:first-child {
-                text-align: center;
-            }
-            .print-table td:nth-child(3) {
-                text-align: left;
-            }
-            .print-header {
-                text-align: center;
-                margin-bottom: 15px;
-            }
-            .print-footer {
-                margin-top: 30px;
-                text-align: right;
-            }
+            @page { size: landscape; margin: 1.2cm; }
+            body * { visibility: hidden; }
+            .print-area, .print-area * { visibility: visible; }
+            .print-area { position: absolute; top: 0; left: 0; width: 100%; margin: 0; padding: 10px; }
+            .no-print { display: none !important; }
+            .print-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+            .print-table th, .print-table td { border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle; }
+            .print-table th { background-color: #f3f4f6; font-weight: bold; }
+            .print-table td:first-child, .print-table th:first-child { text-align: center; }
+            .print-table td:nth-child(3) { text-align: left; }
+            .print-header { text-align: center; margin-bottom: 15px; }
+            .print-footer { margin-top: 30px; text-align: right; }
         }
-        
         .btn-print {
             background-color: #059669;
             color: white;
@@ -287,82 +208,23 @@
             transition: all 0.2s;
             border: none;
         }
-        .btn-print:hover {
-            background-color: #047857;
-            transform: scale(1.01);
-        }
-        .btn-print:active {
-            transform: scale(0.98);
-        }
-        
-        .print-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-        }
-        .print-table th, .print-table td {
-            border: 1px solid #000;
-            padding: 6px 8px;
-            text-align: center;
-            vertical-align: middle;
-        }
-        .print-table th {
-            background-color: #f3f4f6;
-            font-weight: bold;
-        }
-        .print-header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        .print-footer {
-            margin-top: 40px;
-            text-align: right;
-        }
-        
-        .penilaian-table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        .penilaian-table th,
-        .penilaian-table td {
-            border: 1px solid #e2e8f0;
-            padding: 3px 2px;
-            text-align: center;
-            vertical-align: middle;
-        }
-        .penilaian-table th {
-            background-color: #f8fafc;
-            font-weight: 600;
-        }
-        .penilaian-table td input {
-            width: 40px;
-            text-align: center;
-            padding: 1px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 0.65rem;
-        }
-        @media (min-width: 640px) {
-            .penilaian-table td input {
-                width: 48px;
-            }
-        }
-        
+        .btn-print:hover { background-color: #047857; transform: scale(1.01); }
+        .btn-print:active { transform: scale(0.98); }
+        .print-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .print-table th, .print-table td { border: 1px solid #000; padding: 6px 8px; text-align: center; vertical-align: middle; }
+        .print-table th { background-color: #f3f4f6; font-weight: bold; }
+        .print-header { text-align: center; margin-bottom: 20px; }
+        .print-footer { margin-top: 40px; text-align: right; }
+        .penilaian-table { border-collapse: collapse; width: 100%; }
+        .penilaian-table th, .penilaian-table td { border: 1px solid #e2e8f0; padding: 3px 2px; text-align: center; vertical-align: middle; }
+        .penilaian-table th { background-color: #f8fafc; font-weight: 600; }
+        .penilaian-table td input { width: 40px; text-align: center; padding: 1px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.65rem; }
+        @media (min-width: 640px) { .penilaian-table td input { width: 48px; } }
         @media (max-width: 640px) {
-            .btn-print {
-                padding: 4px 8px;
-                font-size: 0.65rem;
-            }
-            .btn-print i {
-                font-size: 0.65rem;
-            }
-            h1 {
-                font-size: 1.2rem;
-            }
-            .container {
-                padding-left: 0.5rem;
-                padding-right: 0.5rem;
-            }
+            .btn-print { padding: 4px 8px; font-size: 0.65rem; }
+            .btn-print i { font-size: 0.65rem; }
+            h1 { font-size: 1.2rem; }
+            .container { padding-left: 0.5rem; padding-right: 0.5rem; }
         }
     </style>
 </head>
@@ -416,9 +278,9 @@
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
         <h4 class="text-md font-bold mb-3">Edit Sesi Kehadiran</h4>
         <label class="block font-medium mb-1 text-sm">Tanggal</label>
-        <input type="date" id="editTanggalInput" class="w-full border rounded-xl p-2 mb-3 text-sm">
+        <input type="date" id="editSesiTanggal" class="w-full border rounded-xl p-2 mb-3 text-sm">
         <label class="block font-medium mb-1 text-sm">Topik / Materi</label>
-        <input type="text" id="editTopikInput" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="Masukkan topik pertemuan">
+        <input type="text" id="editSesiTopik" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="Masukkan topik materi">
         <div class="flex justify-end gap-3"><button id="cancelEditSesi" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="saveEditSesi" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
     </div>
 </div>
@@ -430,7 +292,7 @@
         <label class="block font-medium mb-1 text-sm">Tanggal</label>
         <input type="date" id="kehadiranDate" class="w-full border rounded-xl p-2 mb-3 text-sm">
         <label class="block font-medium mb-1 text-sm">Topik / Materi</label>
-        <input type="text" id="kehadiranTopik" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="e.g. Bab 1 Pengenalan">
+        <input type="text" id="kehadiranTopik" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="e.g. Bab 1 - Pengenalan">
         <div class="flex justify-end gap-3"><button id="batalKehadiran" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="simpanKehadiran" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
     </div>
 </div>
@@ -472,18 +334,32 @@
     async function fetchInitialData() {
         try {
             const [mapelSnap, kelasSnap, siswaSnap, penugasanSnap] = await Promise.all([
-                db.ref('mapel').once('value'), db.ref('kelas').once('value'), db.ref('siswa').once('value'), db.ref('penugasan').once('value')
+                db.ref('mapel').once('value'),
+                db.ref('kelas').once('value'),
+                db.ref('siswa').once('value'),
+                db.ref('penugasan').once('value')
             ]);
             allMapel = mapelSnap.val() || {};
             allKelas = Object.keys(kelasSnap.val() || {});
-            allSiswa = siswaSnap.val() || {};
+            // Ambil data siswa termasuk status
+            const siswaData = siswaSnap.val() || {};
+            allSiswa = {};
+            for (let [nis, data] of Object.entries(siswaData)) {
+                allSiswa[nis] = {
+                    nama: data.nama || '?',
+                    kelas: data.kelas || '-',
+                    status: data.status || 'aktif'
+                };
+            }
             const allPenugasan = penugasanSnap.val() || {};
             penugasanList = [];
             for (let [id, pg] of Object.entries(allPenugasan)) {
                 if (pg.guruName === currentTeacher) {
                     const mapelData = allMapel[pg.mapelId] || { nama: 'Mapel Dihapus', jenis: 'inkul' };
                     const kelasSet = new Set();
-                    for (let nis of (pg.siswaList || [])) if (allSiswa[nis]) kelasSet.add(allSiswa[nis].kelas);
+                    for (let nis of (pg.siswaList || [])) {
+                        if (allSiswa[nis]) kelasSet.add(allSiswa[nis].kelas);
+                    }
                     penugasanList.push({
                         id, mapelId: pg.mapelId, guruName: pg.guruName, siswaList: pg.siswaList || [],
                         mapelNama: mapelData.nama, mapelJenis: mapelData.jenis,
@@ -499,11 +375,19 @@
         if (!penugasanList.length) { container.innerHTML = `<div class="col-span-full bg-white rounded-2xl shadow p-6 text-center"><i class="fas fa-folder-open text-3xl text-gray-300 mb-2"></i><p class="text-gray-500 text-sm">Belum ada penugasan. Klik "+ Penugasan" untuk memulai.</p></div>`; return; }
         let html = '';
         for (let task of penugasanList) {
+            // Hitung jumlah siswa tidak aktif di penugasan ini
+            let inactiveCount = 0;
+            for (let nis of task.siswaList) {
+                if (allSiswa[nis] && allSiswa[nis].status === 'tidak_aktif') inactiveCount++;
+            }
+            const inactiveBadge = inactiveCount > 0 ? `<span class="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">${inactiveCount} tidak aktif</span>` : '';
             html += `<div class="card-assignment p-3 cursor-pointer hover:shadow-lg transition" data-id="${task.id}">
                         <div class="flex justify-between items-start">
-                            <div><h3 class="font-bold text-md text-indigo-800">${escapeHtml(task.mapelNama)}</h3>
-                            <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
-                            <p class="text-xs text-gray-400 mt-0.5">${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p></div>
+                            <div>
+                                <h3 class="font-bold text-md text-indigo-800">${escapeHtml(task.mapelNama)} ${inactiveBadge}</h3>
+                                <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                                <p class="text-xs text-gray-400 mt-0.5">${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p>
+                            </div>
                             <i class="fas fa-chevron-right text-indigo-400 text-md"></i>
                         </div>
                     </div>`;
@@ -579,7 +463,12 @@
         const sessions = sessionsSnap.val() || {};
         let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, topic: val.topic || '', records: val.records || {} }));
         sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
-        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        
+        // Ambil data siswa termasuk status
+        const siswaArray = task.siswaList.map(nis => {
+            const data = allSiswa[nis] || { nama: '?', status: 'aktif' };
+            return { nis, nama: data.nama, status: data.status };
+        }).filter(s => s.nama !== '?');
         
         let html = `<table class="sticky-table">`;
         html += `<thead><tr>
@@ -587,12 +476,11 @@
                     <th class="sticky-col-second">Nama</th>`;
         for (let ses of sessionsList) {
             let shortDate = ses.date.split('/').slice(0,2).join('/');
-            let shortTopic = ses.topic ? ses.topic.substring(0, 12) : '';
             html += `<th class="text-center whitespace-nowrap">
                         <div>${escapeHtml(shortDate)}</div>
-                        <div class="text-gray-500 text-xs" style="font-weight:normal;">${escapeHtml(shortTopic)}</div>
+                        <div class="text-xs text-gray-400 font-light">${escapeHtml(ses.topic.length > 12 ? ses.topic.substring(0,12)+'…' : ses.topic)}</div>
                         <div class="flex items-center justify-center gap-0.5 mt-0.5">
-                            <button class="icon-btn icon-edit edit-session" data-session-id="${ses.id}" data-current-date="${ses.date}" data-current-topic="${escapeHtml(ses.topic)}"><i class="fas fa-pen fa-xs"></i></button>
+                            <button class="icon-btn icon-edit edit-session" data-session-id="${ses.id}" data-current-date="${ses.date}" data-current-topic="${ses.topic}"><i class="fas fa-pen fa-xs"></i></button>
                             <button class="icon-btn icon-delete delete-session" data-session-id="${ses.id}"><i class="fas fa-trash-alt fa-xs"></i></button>
                         </div>
                      </th>`;
@@ -602,9 +490,11 @@
         
         for (let siswa of siswaArray) {
             let hadirCount = 0;
+            const isTidakAktif = (siswa.status === 'tidak_aktif');
+            const rowClass = isTidakAktif ? 'siswa-tidak-aktif' : '';
             html += `<tr>
-                        <td class="sticky-col-first">${escapeHtml(siswa.nis)}</td>
-                        <td class="sticky-col-second">${escapeHtml(siswa.nama)}</td>`;
+                        <td class="sticky-col-first ${rowClass}">${escapeHtml(siswa.nis)}</td>
+                        <td class="sticky-col-second ${rowClass}">${escapeHtml(siswa.nama)}</td>`;
             for (let ses of sessionsList) {
                 let status = ses.records[siswa.nis] || 'H';
                 if (status === 'H') hadirCount++;
@@ -623,14 +513,10 @@
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        // Event edit session (tanggal + topik)
         wrapperDiv.querySelectorAll('.edit-session').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
-                const sessionId = btn.dataset.sessionId;
-                const currentDate = btn.dataset.currentDate;
-                const currentTopic = btn.dataset.currentTopic || '';
-                openEditSesiModal(task.id, sessionId, currentDate, currentTopic, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
+                openEditSesiModal(task.id, btn.dataset.sessionId, btn.dataset.currentDate, btn.dataset.currentTopic, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
             };
         });
         wrapperDiv.querySelectorAll('.delete-session').forEach(btn => {
@@ -654,6 +540,38 @@
         });
     }
 
+    // ===== MODAL EDIT SESI (Tanggal + Topik) =====
+    async function openEditSesiModal(assignmentId, sessionId, oldDateDMY, oldTopic, callback) {
+        let oldDate = parseDMY(oldDateDMY);
+        let ymd = oldDate ? toYMD(oldDate) : '';
+        const modal = document.getElementById('modalEditSesi');
+        document.getElementById('editSesiTanggal').value = ymd;
+        document.getElementById('editSesiTopik').value = oldTopic || '';
+        modal.style.display = 'flex';
+        
+        const saveBtn = document.getElementById('saveEditSesi');
+        const cancelBtn = document.getElementById('cancelEditSesi');
+        
+        const onSave = async () => {
+            let newYmd = document.getElementById('editSesiTanggal').value;
+            if (!newYmd) { alert("Pilih tanggal"); return; }
+            let newDateDMY = formatDateToDMY(new Date(newYmd));
+            let newTopic = document.getElementById('editSesiTopik').value.trim() || '';
+            await db.ref(`attendance/${assignmentId}/${sessionId}`).update({
+                date: newDateDMY,
+                topic: newTopic
+            });
+            modal.style.display = 'none';
+            if (callback) callback();
+            cleanup();
+        };
+        const onCancel = () => { modal.style.display = 'none'; cleanup(); };
+        const cleanup = () => { saveBtn.removeEventListener('click', onSave); cancelBtn.removeEventListener('click', onCancel); };
+        saveBtn.addEventListener('click', onSave);
+        cancelBtn.addEventListener('click', onCancel);
+    }
+
+    // ===== MODAL TAMBAH KEHADIRAN (dengan topik) =====
     async function openAddKehadiranModal(task) {
         const todayYMD = toYMD(new Date());
         document.getElementById('kehadiranDate').value = todayYMD;
@@ -664,11 +582,16 @@
         const batal = document.getElementById('batalKehadiran');
         const onSimpan = async () => {
             let ymd = document.getElementById('kehadiranDate').value;
-            if (!ymd) return alert("Pilih tanggal");
+            if (!ymd) { alert("Pilih tanggal"); return; }
+            let topik = document.getElementById('kehadiranTopik').value.trim();
+            if (!topik) { alert("Masukkan topik / materi"); return; }
             let dateDMY = formatDateToDMY(new Date(ymd));
-            let topic = document.getElementById('kehadiranTopik').value.trim() || '';
             const newSessionId = Date.now().toString();
-            await db.ref(`attendance/${task.id}/${newSessionId}`).set({ date: dateDMY, topic: topic, records: {} });
+            await db.ref(`attendance/${task.id}/${newSessionId}`).set({
+                date: dateDMY,
+                topic: topik,
+                records: {}
+            });
             modal.style.display = 'none';
             const container = document.querySelector('#detailContent .tab-pane-kehadiran');
             if (container) {
@@ -682,35 +605,6 @@
         const closeModal = () => { modal.style.display = 'none'; cleanup(); };
         simpan.addEventListener('click', onSimpan);
         batal.addEventListener('click', closeModal);
-    }
-
-    // Fungsi edit sesi (tanggal + topik) - menggantikan openEditTanggalModal
-    async function openEditSesiModal(assignmentId, sessionId, oldDateDMY, oldTopic, callback) {
-        let oldDate = parseDMY(oldDateDMY);
-        let ymd = oldDate ? toYMD(oldDate) : '';
-        const modal = document.getElementById('modalEditSesi');
-        document.getElementById('editTanggalInput').value = ymd;
-        document.getElementById('editTopikInput').value = oldTopic || '';
-        modal.style.display = 'flex';
-        
-        const saveBtn = document.getElementById('saveEditSesi');
-        const cancelBtn = document.getElementById('cancelEditSesi');
-        
-        const onSave = async () => {
-            let newYmd = document.getElementById('editTanggalInput').value;
-            if (!newYmd) return alert("Pilih tanggal");
-            let newDateDMY = formatDateToDMY(new Date(newYmd));
-            let newTopic = document.getElementById('editTopikInput').value.trim() || '';
-            await db.ref(`attendance/${assignmentId}/${sessionId}/date`).set(newDateDMY);
-            await db.ref(`attendance/${assignmentId}/${sessionId}/topic`).set(newTopic);
-            modal.style.display = 'none';
-            if (callback) callback();
-            cleanup();
-        };
-        const onCancel = () => { modal.style.display = 'none'; cleanup(); };
-        const cleanup = () => { saveBtn.removeEventListener('click', onSave); cancelBtn.removeEventListener('click', onCancel); };
-        saveBtn.addEventListener('click', onSave);
-        cancelBtn.addEventListener('click', onCancel);
     }
 
     // ================= PENILAIAN =================
@@ -734,7 +628,10 @@
         let assessList = Object.entries(assessments).map(([id, val]) => ({ id, date: val.date, topic: val.topic, scores: val.scores || {} }));
         assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         
-        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        const siswaArray = task.siswaList.map(nis => {
+            const data = allSiswa[nis] || { nama: '?', status: 'aktif' };
+            return { nis, nama: data.nama, status: data.status };
+        }).filter(s => s.nama !== '?');
         
         if (assessList.length === 0) {
             wrapperDiv.innerHTML = `<div class="text-center py-8 text-gray-400"><i class="fas fa-clipboard-list text-2xl mb-2"></i><p class="text-sm">Belum ada data penilaian</p><p class="text-xs">Klik tombol + untuk menambah penilaian</p></div>`;
@@ -770,9 +667,11 @@
         for (let siswa of siswaArray) {
             let totalNilai = 0;
             let countValid = 0;
+            const isTidakAktif = (siswa.status === 'tidak_aktif');
+            const rowClass = isTidakAktif ? 'siswa-tidak-aktif' : '';
             html += `<tr>
-                        <td class="sticky-col-first">${escapeHtml(siswa.nis)}</td>
-                        <td class="sticky-col-second">${escapeHtml(siswa.nama)}</td>`;
+                        <td class="sticky-col-first ${rowClass}">${escapeHtml(siswa.nis)}</td>
+                        <td class="sticky-col-second ${rowClass}">${escapeHtml(siswa.nama)}</td>`;
             for (let as of assessList) {
                 let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
                 if (nilai > 0) { totalNilai += nilai; countValid++; }
@@ -870,7 +769,10 @@
         let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, topic: val.topic || '', records: val.records || {} }));
         sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         
-        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        const siswaArray = task.siswaList.map(nis => {
+            const data = allSiswa[nis] || { nama: '?', status: 'aktif' };
+            return { nis, nama: data.nama, status: data.status };
+        }).filter(s => s.nama !== '?');
         
         let printHtml = `
             <div class="print-area">
@@ -885,7 +787,7 @@
                     <thead>
                         <tr><th>No</th><th>NIS</th><th>Nama</th>`;
         for (let ses of sessionsList) {
-            printHtml += `<th>${escapeHtml(ses.date)}${ses.topic ? '<br><small>'+escapeHtml(ses.topic)+'</small>' : ''}</th>`;
+            printHtml += `<th>${escapeHtml(ses.date)}<br><span style="font-weight:normal;font-size:8pt;">${escapeHtml(ses.topic)}</span></th>`;
         }
         printHtml += `<th>Total H</th></tr>
                     </thead>
@@ -894,10 +796,12 @@
         let no = 1;
         for (let siswa of siswaArray) {
             let hadirCount = 0;
+            const isTidakAktif = (siswa.status === 'tidak_aktif');
+            const styleNama = isTidakAktif ? 'color:#dc2626;font-weight:600;' : '';
             printHtml += `<tr>
                             <td>${no++}</td>
                             <td>${escapeHtml(siswa.nis)}</td>
-                            <td style="text-align:left">${escapeHtml(siswa.nama)}</td>`;
+                            <td style="text-align:left;${styleNama}">${escapeHtml(siswa.nama)}</td>`;
             for (let ses of sessionsList) {
                 let status = ses.records[siswa.nis] || 'H';
                 if (status === 'H') hadirCount++;
@@ -943,7 +847,10 @@
         let assessList = Object.entries(assessments).map(([id, val]) => ({ id, date: val.date, topic: val.topic, scores: val.scores || {} }));
         assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         
-        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        const siswaArray = task.siswaList.map(nis => {
+            const data = allSiswa[nis] || { nama: '?', status: 'aktif' };
+            return { nis, nama: data.nama, status: data.status };
+        }).filter(s => s.nama !== '?');
         
         if (assessList.length === 0) {
             alert("Belum ada data penilaian untuk dicetak.");
@@ -977,10 +884,12 @@
         for (let siswa of siswaArray) {
             let totalNilai = 0;
             let countValid = 0;
+            const isTidakAktif = (siswa.status === 'tidak_aktif');
+            const styleNama = isTidakAktif ? 'color:#dc2626;font-weight:600;' : '';
             printHtml += `<tr>
                             <td>${no++}</td>
                             <td>${escapeHtml(siswa.nis)}</td>
-                            <td style="text-align:left">${escapeHtml(siswa.nama)}</td>`;
+                            <td style="text-align:left;${styleNama}">${escapeHtml(siswa.nama)}</td>`;
             for (let as of assessList) {
                 let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
                 if (nilai > 0) { totalNilai += nilai; countValid++; }
