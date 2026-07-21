@@ -4,10 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>EduLogNBS — Sistem Perangkat Mengajar</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Google Fonts (Inter) -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Inter', system-ui, sans-serif; }
@@ -66,7 +70,9 @@
         <!-- Kartu Login -->
         <div class="glass-card p-6 md:p-8 w-full border border-white/40">
             <div class="text-center mb-5">
-                <span class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold"><i class="fas fa-lock mr-1"></i> PORTAL AKSES</span>
+                <span class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-700 text-xs font-semibold">
+                    <i class="fas fa-lock mr-1"></i> PORTAL AKSES
+                </span>
                 <h2 class="text-2xl font-bold text-gray-800 mt-3">Masuk ke Akun</h2>
                 <p class="text-gray-500 text-sm mt-1">Pilih peran dan masukkan kredensial</p>
             </div>
@@ -136,8 +142,7 @@
         const db = firebase.database();
 
         let selectedRole = 'admin';
-        let guruOptionsLoaded = false;
-        let guruNames = []; // daftar nama guru
+        let guruNames = [];
 
         // Ambil elemen
         const btnAdmin = document.getElementById('btnAdmin');
@@ -167,6 +172,7 @@
             selectedRole = role;
             // Reset class active
             [btnAdmin, btnGuru, btnSiswa].forEach(btn => btn.classList.remove('active'));
+            
             if (role === 'admin') {
                 btnAdmin.classList.add('active');
                 usernameLabel.innerHTML = '<i class="fas fa-user-cog text-indigo-500"></i> Username (Admin)';
@@ -175,10 +181,10 @@
                     <input type="text" id="username" placeholder="admin" 
                            class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white">
                 `;
-            } else if (role === 'guru') {
+            } 
+            else if (role === 'guru') {
                 btnGuru.classList.add('active');
                 usernameLabel.innerHTML = '<i class="fas fa-chalkboard-user text-indigo-500"></i> Pilih Nama Guru';
-                // Tampilkan dropdown, isi dengan data dari Firebase
                 usernameInputContainer.innerHTML = `
                     <i class="fas fa-user absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
                     <select id="username" class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none input-focus transition bg-gray-50 focus:bg-white appearance-none">
@@ -186,25 +192,20 @@
                     </select>
                     <i class="fas fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none"></i>
                 `;
-                // Isi dropdown jika belum pernah
-                if (guruNames.length === 0) {
-                    // Tampilkan loading sementara
-                    const select = document.getElementById('username');
-                    if (select) select.innerHTML = '<option value="">Memuat data guru...</option>';
-                    const namaGuru = await loadGuruList();
-                    const selectEl = document.getElementById('username');
-                    if (selectEl) {
-                        selectEl.innerHTML = '<option value="">-- Pilih Guru --</option>';
+                // Isi dropdown
+                const select = document.getElementById('username');
+                if (select) {
+                    if (guruNames.length === 0) {
+                        select.innerHTML = '<option value="">Memuat data guru...</option>';
+                        const namaGuru = await loadGuruList();
+                        select.innerHTML = '<option value="">-- Pilih Guru --</option>';
                         namaGuru.forEach(nama => {
                             const option = document.createElement('option');
                             option.value = nama;
                             option.textContent = nama;
-                            selectEl.appendChild(option);
+                            select.appendChild(option);
                         });
-                    }
-                } else {
-                    const select = document.getElementById('username');
-                    if (select) {
+                    } else {
                         select.innerHTML = '<option value="">-- Pilih Guru --</option>';
                         guruNames.forEach(nama => {
                             const option = document.createElement('option');
@@ -214,7 +215,8 @@
                         });
                     }
                 }
-            } else { // siswa
+            } 
+            else { // siswa
                 btnSiswa.classList.add('active');
                 usernameLabel.innerHTML = '<i class="fas fa-id-card text-indigo-500"></i> NIS (Nomor Induk Siswa)';
                 usernameInputContainer.innerHTML = `
@@ -229,10 +231,10 @@
 
         // Fungsi login
         async function handleLogin() {
-            let usernameValue;
-            // Ambil nilai username (bisa dari input atau select)
             const usernameField = document.getElementById('username');
             if (!usernameField) return;
+            
+            let usernameValue;
             if (selectedRole === 'guru') {
                 usernameValue = usernameField.value;
             } else {
@@ -247,14 +249,17 @@
                 return;
             }
             
+            // ADMIN
             if (selectedRole === 'admin') {
                 if (usernameValue === 'admin' && password === 'admin123') {
+                    localStorage.setItem('adminLogin', 'true'); // <-- PENTING: simpan sesi admin
                     window.location.href = 'admin.html';
                 } else {
                     errorMsg.innerText = '❌ Username atau password admin salah!';
                     errorMsg.classList.remove('hidden');
                 }
             } 
+            // GURU
             else if (selectedRole === 'guru') {
                 try {
                     const snapshot = await db.ref(`guru/${usernameValue}`).once('value');
@@ -272,6 +277,7 @@
                     errorMsg.classList.remove('hidden');
                 }
             }
+            // SISWA
             else if (selectedRole === 'siswa') {
                 try {
                     const snapshot = await db.ref(`siswa/${usernameValue}`).once('value');
@@ -298,9 +304,10 @@
         loginBtn.onclick = handleLogin;
 
         // Enter key pada password
-        const enterHandler = (e) => { if (e.key === 'Enter') handleLogin(); };
-        passwordInput.addEventListener('keypress', enterHandler);
-        
+        passwordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+
         // Set default role admin
         setActiveRole('admin');
     </script>
