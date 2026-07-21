@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>Murid - EduLogNBS | Portofolio Belajar</title>
+    <title>Guru - EduLogNBS | Manajemen Mengajar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -12,57 +12,442 @@
     <style>
         * { font-family: 'Inter', system-ui, sans-serif; }
         body { background: #f1f5f9; }
-        .card-mapel {
+        .card-assignment {
             background: white;
             border-radius: 1.5rem;
             border-left: 6px solid #4f46e5;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
-        .badge-hadir { background: #dcfce7; color: #166534; }
-        .badge-alpha { background: #fee2e2; color: #991b1b; }
-        .badge-izin { background: #fed7aa; color: #9a3412; }
-        .badge-sakit { background: #fef9c3; color: #854d0e; }
-        .table-wrapper { overflow-x: auto; border-radius: 0.75rem; }
-        .siswa-tidak-aktif {
-            color: #dc2626 !important;
+        .card-assignment:active { transform: scale(0.98); }
+        .modal-bg {
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+        }
+        select, input[type="number"] {
+            border-radius: 0.5rem;
+            border: 1px solid #e2e8f0;
+            padding: 0.25rem 0.5rem;
+            background: white;
+        }
+        .status-badge {
+            display: inline-block;
+            width: 32px;
+            text-align: center;
+            font-weight: bold;
+            padding: 3px 0;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            font-size: 0.7rem;
+            background-color: #f1f5f9;
+            color: #1e293b;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .status-badge:active { transform: scale(0.94); }
+        .status-h { background-color: #dcfce7; color: #15803d; }
+        .status-i { background-color: #fed7aa; color: #9a3412; }
+        .status-s { background-color: #fef9c3; color: #854d0e; }
+        .status-a { background-color: #ffe4e6; color: #be123c; }
+        .nilai-input {
+            width: 44px;
+            text-align: center;
+            font-size: 0.7rem;
+            padding: 0.15rem 0;
+        }
+        
+        /* ========== STICKY HEADER & FREEZE KOLOM ========== */
+        .table-scroll-wrapper {
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: 68vh;
+            border-radius: 1rem;
+            border: 1px solid #e2e8f0;
+            background: white;
+            position: relative;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .table-scroll-wrapper::after {
+            content: '';
+            position: sticky;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #cbd5e1 0%, #cbd5e1 50%, transparent 100%);
+            display: block;
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
+        .sticky-table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 480px;
+            font-size: 0.65rem;
+        }
+        
+        @media (min-width: 640px) {
+            .sticky-table {
+                font-size: 0.7rem;
+                min-width: 520px;
+            }
+            .nilai-input {
+                width: 50px;
+                font-size: 0.75rem;
+                padding: 0.2rem 0;
+            }
+            .status-badge {
+                width: 36px;
+                font-size: 0.75rem;
+                padding: 4px 0;
+            }
+        }
+        
+        .sticky-table thead tr th {
+            position: sticky;
+            top: 0;
+            background-color: #f8fafc;
+            z-index: 20;
+            border: 1px solid #e2e8f0;
+            padding: 4px 3px;
+            font-size: inherit;
+        }
+        
+        .sticky-table tbody tr td {
+            border: 1px solid #e2e8f0;
+            padding: 2px 3px;
+        }
+        
+        .sticky-col-first {
+            position: sticky;
+            left: 0;
+            background-color: white;
+            z-index: 15;
+            min-width: 42px;
+            max-width: 52px;
+        }
+        
+        .sticky-col-second {
+            position: sticky;
+            left: 52px;
+            background-color: white;
+            z-index: 15;
+            min-width: 50px;
+            max-width: 70px;
+        }
+        
+        .sticky-table thead tr th.sticky-col-first,
+        .sticky-table thead tr th.sticky-col-second {
+            background-color: #f8fafc;
+            z-index: 30;
+        }
+        
+        @media (max-width: 640px) {
+            .sticky-col-first {
+                left: 0;
+                min-width: 38px;
+                max-width: 46px;
+            }
+            .sticky-col-second {
+                left: 42px;
+                min-width: 44px;
+                max-width: 60px;
+            }
+            .sticky-table tbody tr td {
+                padding: 2px 2px;
+            }
+            .sticky-table thead tr th {
+                padding: 3px 2px;
+            }
+        }
+        
+        /* Kolom sesi dinamis tetap punya ruang minimal */
+        .sticky-table tbody tr td:not(.sticky-col-first):not(.sticky-col-second),
+        .sticky-table thead tr th:not(.sticky-col-first):not(.sticky-col-second) {
+            min-width: 36px;
+            max-width: 60px;
+            white-space: nowrap;
+        }
+        @media (min-width: 640px) {
+            .sticky-table tbody tr td:not(.sticky-col-first):not(.sticky-col-second),
+            .sticky-table thead tr th:not(.sticky-col-first):not(.sticky-col-second) {
+                min-width: 42px;
+                max-width: 70px;
+            }
+        }
+        
+        /* Tombol plus */
+        .btn-plus {
+            background-color: #4f46e5;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 800;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: none;
+        }
+        .btn-plus:hover {
+            background-color: #4338ca;
+            transform: scale(1.02);
+        }
+        .btn-plus:active {
+            transform: scale(0.96);
+        }
+        .btn-plus i {
+            font-size: 1rem;
+        }
+        
+        .icon-btn {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 0.65rem;
+            margin: 0 1px;
+            padding: 2px;
+            border-radius: 6px;
+        }
+        .icon-btn:hover { background-color: rgba(0,0,0,0.05); }
+        .icon-delete { color: #e11d48; }
+        .icon-edit { color: #4f46e5; }
+        
+        @media print {
+            @page {
+                size: landscape;
+                margin: 1.2cm;
+            }
+            body * {
+                visibility: hidden;
+            }
+            .print-area, .print-area * {
+                visibility: visible;
+            }
+            .print-area {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                margin: 0;
+                padding: 10px;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 10pt;
+            }
+            .print-table th, .print-table td {
+                border: 1px solid #000;
+                padding: 5px;
+                text-align: center;
+                vertical-align: middle;
+            }
+            .print-table th {
+                background-color: #f3f4f6;
+                font-weight: bold;
+            }
+            .print-table td:first-child,
+            .print-table th:first-child {
+                text-align: center;
+            }
+            .print-table td:nth-child(3) {
+                text-align: left;
+            }
+            .print-header {
+                text-align: center;
+                margin-bottom: 15px;
+            }
+            .print-footer {
+                margin-top: 30px;
+                text-align: right;
+            }
+        }
+        
+        .btn-print {
+            background-color: #059669;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        .btn-print:hover {
+            background-color: #047857;
+            transform: scale(1.01);
+        }
+        .btn-print:active {
+            transform: scale(0.98);
+        }
+        
+        .print-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .print-table th, .print-table td {
+            border: 1px solid #000;
+            padding: 6px 8px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .print-table th {
+            background-color: #f3f4f6;
+            font-weight: bold;
+        }
+        .print-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .print-footer {
+            margin-top: 40px;
+            text-align: right;
+        }
+        
+        .penilaian-table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .penilaian-table th,
+        .penilaian-table td {
+            border: 1px solid #e2e8f0;
+            padding: 3px 2px;
+            text-align: center;
+            vertical-align: middle;
+        }
+        .penilaian-table th {
+            background-color: #f8fafc;
             font-weight: 600;
         }
+        .penilaian-table td input {
+            width: 40px;
+            text-align: center;
+            padding: 1px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.65rem;
+        }
+        @media (min-width: 640px) {
+            .penilaian-table td input {
+                width: 48px;
+            }
+        }
+        
         @media (max-width: 640px) {
-            .container { padding-left: 0.75rem; padding-right: 0.75rem; }
-            .table-wrapper table { font-size: 0.75rem; }
-            .card-mapel { padding: 0.75rem; }
+            .btn-print {
+                padding: 4px 8px;
+                font-size: 0.65rem;
+            }
+            .btn-print i {
+                font-size: 0.65rem;
+            }
+            h1 {
+                font-size: 1.2rem;
+            }
+            .container {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
         }
     </style>
 </head>
-<body class="p-4 md:p-6">
+<body class="p-2 md:p-6">
 
-<div class="max-w-6xl mx-auto">
+<div class="max-w-7xl mx-auto">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4 no-print">
         <div>
-            <h1 class="text-2xl md:text-3xl font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-graduation-cap text-indigo-600"></i> Panel Murid</h1>
-            <p id="infoSiswa" class="text-slate-500 text-sm">Memuat data...</p>
+            <h1 class="text-xl md:text-2xl font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-chalkboard-user text-indigo-600"></i> Panel Guru</h1>
+            <p class="text-slate-500 text-xs md:text-sm" id="greeting">Memuat data guru...</p>
         </div>
-        <a href="index.html" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl shadow-md transition flex items-center gap-2"><i class="fas fa-sign-out-alt"></i> Logout</a>
+        <div class="flex gap-2 w-full sm:w-auto">
+            <button id="btnTambahPenugasan" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-xl shadow-md transition flex items-center gap-1 text-sm"><i class="fas fa-plus-circle"></i> + Penugasan</button>
+            <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-xl shadow-md transition flex items-center gap-1 text-sm"><i class="fas fa-sign-out-alt"></i> Logout</button>
+        </div>
     </div>
 
-    <!-- Ringkasan -->
-    <div id="ringkasan" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Total Mapel</p><p id="totalMapel" class="text-2xl font-bold text-indigo-600">-</p></div>
-        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Total Kehadiran</p><p id="totalKehadiran" class="text-2xl font-bold text-green-600">-</p></div>
-        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Rata-rata Nilai</p><p id="rataNilai" class="text-2xl font-bold text-blue-600">-</p></div>
-        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Keseluruhan Sesi</p><p id="totalSesi" class="text-2xl font-bold text-gray-700">-</p></div>
+    <!-- Daftar Semua Card Penugasan -->
+    <div id="assignmentsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 no-print">
+        <div class="col-span-full text-center py-10 text-slate-400"><i class="fas fa-spinner fa-pulse"></i> Memuat penugasan...</div>
     </div>
 
-    <!-- Daftar Mapel (Card) -->
-    <div id="mapelContainer" class="space-y-4">
-        <div class="text-center py-10 text-slate-400"><i class="fas fa-spinner fa-pulse"></i> Memuat data pembelajaran...</div>
+    <!-- Panel Detail Penugasan -->
+    <div id="detailContainer" class="hidden bg-white rounded-2xl shadow-lg p-2">
+        <div class="flex items-center justify-between gap-2 mb-3 pb-2 border-b no-print">
+            <div class="flex items-center gap-2">
+                <button id="backToListBtn" class="bg-gray-200 hover:bg-gray-300 p-1.5 rounded-full w-8 h-8 flex items-center justify-center"><i class="fas fa-arrow-left text-sm"></i></button>
+                <h2 id="detailTitle" class="text-lg font-bold text-indigo-800">Detail Penugasan</h2>
+            </div>
+            <div class="flex gap-1" id="printButtonsContainer"></div>
+        </div>
+        <div id="detailContent"></div>
+    </div>
+</div>
+
+<!-- MODAL TAMBAH PENUGASAN -->
+<div id="modalPenugasan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
+    <div class="bg-white rounded-2xl max-w-lg w-full mx-4 p-5 shadow-2xl">
+        <h3 class="text-lg font-bold mb-3"><i class="fas fa-tasks text-indigo-500"></i> Buat Penugasan Baru</h3>
+        <div class="space-y-3">
+            <div><label class="block font-semibold mb-1 text-sm">Mata Pelajaran</label><select id="modalMapel" class="w-full border rounded-xl p-2 bg-gray-50 text-sm"><option value="">-- Pilih Mapel --</option></select></div>
+            <div><label class="block font-semibold mb-1 text-sm">Target (Kelas / Siswa)</label><div id="modalTargetInput" class="border rounded-xl p-2 bg-gray-50 min-h-[100px] text-sm">Pilih mapel terlebih dahulu</div></div>
+            <div class="flex justify-end gap-3"><button id="modalBatalBtn" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="modalSimpanBtn" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDIT SESI KEHADIRAN (Tanggal + Topik) -->
+<div id="modalEditSesi" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
+        <h4 class="text-md font-bold mb-3">Edit Sesi Kehadiran</h4>
+        <label class="block font-medium mb-1 text-sm">Tanggal</label>
+        <input type="date" id="editTanggalInput" class="w-full border rounded-xl p-2 mb-3 text-sm">
+        <label class="block font-medium mb-1 text-sm">Topik / Materi</label>
+        <input type="text" id="editTopikInput" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="Masukkan topik pertemuan">
+        <div class="flex justify-end gap-3"><button id="cancelEditSesi" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="saveEditSesi" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
+    </div>
+</div>
+
+<!-- MODAL TAMBAH KEHADIRAN -->
+<div id="modalTambahKehadiran" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
+        <h4 class="text-md font-bold mb-3"><i class="fas fa-calendar-plus"></i> Tambah Sesi Kehadiran</h4>
+        <label class="block font-medium mb-1 text-sm">Tanggal</label>
+        <input type="date" id="kehadiranDate" class="w-full border rounded-xl p-2 mb-3 text-sm">
+        <label class="block font-medium mb-1 text-sm">Topik / Materi</label>
+        <input type="text" id="kehadiranTopik" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="e.g. Bab 1 Pengenalan">
+        <div class="flex justify-end gap-3"><button id="batalKehadiran" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="simpanKehadiran" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
+    </div>
+</div>
+
+<!-- MODAL TAMBAH PENILAIAN -->
+<div id="modalTambahPenilaian" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
+        <h4 class="text-md font-bold mb-3"><i class="fas fa-clipboard-list"></i> Tambah Penilaian</h4>
+        <label class="block font-medium mb-1 text-sm">Tanggal</label>
+        <input type="date" id="penilaianDate" class="w-full border rounded-xl p-2 mb-3 text-sm">
+        <label class="block font-medium mb-1 text-sm">Topik / Materi</label>
+        <input type="text" id="penilaianTopik" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="e.g. UTS Bab 1">
+        <div class="flex justify-end gap-3"><button id="batalPenilaian" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="simpanPenilaian" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
     </div>
 </div>
 
 <script>
-    // Firebase Config
     const firebaseConfig = {
         apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
         authDomain: "edulognbs.firebaseapp.com",
@@ -75,295 +460,635 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    let nisSiswa = null;
-    let namaSiswa = "", kelasSiswa = "";
-    let siswaStatusMap = {}; // untuk menyimpan status per NIS
+    let currentTeacher = null;
+    let allMapel = {}, allKelas = [], allSiswa = {}, penugasanList = [];
 
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
-    
-    function parseDMY(dateStr) {
-        if (!dateStr) return null;
-        let parts = dateStr.split('/');
-        if (parts.length === 3) {
-            let d = parseInt(parts[0]), m = parseInt(parts[1])-1, y = parseInt(parts[2]);
-            return new Date(y, m, d);
-        }
-        return null;
-    }
+    function toYMD(date) { return date.toISOString().slice(0,10); }
+    function toDMY(ymd) { if (!ymd) return ''; let [y,m,d] = ymd.split('-'); return `${d}/${m}/${y}`; }
+    function formatDateToDMY(date) { return toDMY(toYMD(date)); }
+    function parseDMY(dateStr) { if(!dateStr) return null; let parts = dateStr.split('/'); if(parts.length===3){ let d=parseInt(parts[0]), m=parseInt(parts[1])-1, y=parseInt(parts[2]); return new Date(y,m,d); } return null; }
 
-    async function loadMuridData() {
+    async function fetchInitialData() {
         try {
-            // 1. Ambil data siswa termasuk status
-            const siswaSnap = await db.ref(`siswa/${nisSiswa}`).once('value');
-            const siswa = siswaSnap.val();
-            if (!siswa) throw new Error("Data siswa tidak ditemukan");
-            namaSiswa = siswa.nama;
-            kelasSiswa = siswa.kelas;
-            const statusSiswa = siswa.status || 'aktif';
-            document.getElementById('infoSiswa').innerHTML = `
-                <i class="fas fa-id-card"></i> 
-                <span class="${statusSiswa === 'tidak_aktif' ? 'text-red-600 font-semibold' : ''}">${escapeHtml(namaSiswa)}</span>
-                · Kelas ${escapeHtml(kelasSiswa)}
-                · NIS <span class="${statusSiswa === 'tidak_aktif' ? 'text-red-600 font-semibold' : ''}">${escapeHtml(nisSiswa)}</span>
-                ${statusSiswa === 'tidak_aktif' ? '<span class="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Tidak Aktif</span>' : ''}
-            `;
-
-            // 2. Ambil semua penugasan, mapel, attendance, penilaian
-            const [penugasanSnap, mapelSnap, attendanceSnap, penilaianSnap] = await Promise.all([
-                db.ref('penugasan').once('value'),
-                db.ref('mapel').once('value'),
-                db.ref('attendance').once('value'),
-                db.ref('penilaian').once('value')
+            const [mapelSnap, kelasSnap, siswaSnap, penugasanSnap] = await Promise.all([
+                db.ref('mapel').once('value'), db.ref('kelas').once('value'), db.ref('siswa').once('value'), db.ref('penugasan').once('value')
             ]);
-
+            allMapel = mapelSnap.val() || {};
+            allKelas = Object.keys(kelasSnap.val() || {});
+            allSiswa = siswaSnap.val() || {};
             const allPenugasan = penugasanSnap.val() || {};
-            const allMapel = mapelSnap.val() || {};
-            const allAttendance = attendanceSnap.val() || {};
-            const allPenilaian = penilaianSnap.val() || {};
-
-            // 3. Filter penugasan yang melibatkan siswa ini
-            const myPenugasan = [];
-            for (let [idPen, pg] of Object.entries(allPenugasan)) {
-                if (pg.siswaList && pg.siswaList.includes(nisSiswa)) {
-                    const mapelData = allMapel[pg.mapelId] || { nama: "Mapel Dihapus", jenis: "inkul" };
-                    myPenugasan.push({
-                        id: idPen,
-                        mapelId: pg.mapelId,
-                        mapelNama: mapelData.nama,
-                        mapelJenis: mapelData.jenis,
-                        guru: pg.guruName,
-                        siswaList: pg.siswaList,
-                        attendance: allAttendance[idPen] || {},
-                        penilaian: allPenilaian[idPen] || {}
+            penugasanList = [];
+            for (let [id, pg] of Object.entries(allPenugasan)) {
+                if (pg.guruName === currentTeacher) {
+                    const mapelData = allMapel[pg.mapelId] || { nama: 'Mapel Dihapus', jenis: 'inkul' };
+                    const kelasSet = new Set();
+                    for (let nis of (pg.siswaList || [])) if (allSiswa[nis]) kelasSet.add(allSiswa[nis].kelas);
+                    penugasanList.push({
+                        id, mapelId: pg.mapelId, guruName: pg.guruName, siswaList: pg.siswaList || [],
+                        mapelNama: mapelData.nama, mapelJenis: mapelData.jenis,
+                        kelasDisplay: kelasSet.size ? Array.from(kelasSet).join(', ') : 'Tanpa Kelas'
                     });
                 }
             }
-
-            // 4. Hitung ringkasan global
-            let totalMapel = myPenugasan.length;
-            let totalSesiGlobal = 0;
-            let totalHadirGlobal = 0;
-            let totalNilaiGlobal = 0;
-            let totalPenilaianGlobal = 0;
-
-            for (let task of myPenugasan) {
-                const sessions = Object.values(task.attendance);
-                for (let ses of sessions) {
-                    totalSesiGlobal++;
-                    const status = ses.records?.[nisSiswa];
-                    if (status === undefined || status === 'H') totalHadirGlobal++;
-                }
-                const assessments = Object.values(task.penilaian);
-                for (let as of assessments) {
-                    const nilai = as.scores?.[nisSiswa];
-                    if (typeof nilai === 'number') {
-                        totalNilaiGlobal += nilai;
-                        totalPenilaianGlobal++;
-                    }
-                }
-            }
-            const persenKehadiranGlobal = totalSesiGlobal === 0 ? 0 : Math.round((totalHadirGlobal / totalSesiGlobal) * 100);
-            const rataNilaiGlobal = totalPenilaianGlobal === 0 ? 0 : Math.round(totalNilaiGlobal / totalPenilaianGlobal);
-
-            document.getElementById('totalMapel').innerText = totalMapel;
-            document.getElementById('totalKehadiran').innerHTML = `${persenKehadiranGlobal}% <span class="text-xs font-normal">(${totalHadirGlobal}/${totalSesiGlobal})</span>`;
-            document.getElementById('rataNilai').innerText = rataNilaiGlobal;
-            document.getElementById('totalSesi').innerText = totalSesiGlobal;
-
-            // 5. Render kartu per mapel
-            renderMapelCards(myPenugasan);
-        } catch (err) {
-            console.error(err);
-            document.getElementById('mapelContainer').innerHTML = `<div class="bg-red-100 text-red-700 p-4 rounded-xl text-center">Gagal memuat data: ${err.message}</div>`;
-        }
+        } catch(e) { console.error(e); alert('Gagal muat data: '+e.message); }
     }
 
-    function renderMapelCards(penugasanList) {
-        const container = document.getElementById('mapelContainer');
-        if (!penugasanList.length) {
-            container.innerHTML = `<div class="bg-white rounded-2xl p-8 text-center text-gray-500"><i class="fas fa-folder-open text-4xl mb-2"></i><p>Belum ada penugasan untuk Anda.</p></div>`;
-            return;
-        }
-
-        let cardsHtml = '';
+    async function renderAllCards() {
+        const container = document.getElementById('assignmentsContainer');
+        if (!penugasanList.length) { container.innerHTML = `<div class="col-span-full bg-white rounded-2xl shadow p-6 text-center"><i class="fas fa-folder-open text-3xl text-gray-300 mb-2"></i><p class="text-gray-500 text-sm">Belum ada penugasan. Klik "+ Penugasan" untuk memulai.</p></div>`; return; }
+        let html = '';
         for (let task of penugasanList) {
-            // Sesi kehadiran
-            const sessions = Object.values(task.attendance);
-            sessions.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
-            // Penilaian
-            const assessments = Object.values(task.penilaian);
-            assessments.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
-
-            // Hitung persentase kehadiran mapel ini
-            let totalSesiMapel = 0, totalHadirMapel = 0;
-            for (let ses of sessions) {
-                totalSesiMapel++;
-                const status = ses.records?.[nisSiswa];
-                if (status === undefined || status === 'H') totalHadirMapel++;
-            }
-            const persenMapel = totalSesiMapel === 0 ? 0 : Math.round((totalHadirMapel / totalSesiMapel) * 100);
-            
-            // Hitung rata-rata nilai mapel ini
-            let totalNilaiMapel = 0, totalAssMapel = 0;
-            for (let as of assessments) {
-                const nilai = as.scores?.[nisSiswa];
-                if (typeof nilai === 'number') {
-                    totalNilaiMapel += nilai;
-                    totalAssMapel++;
-                }
-            }
-            const rataMapel = totalAssMapel === 0 ? 0 : Math.round(totalNilaiMapel / totalAssMapel);
-
-            // Cek status siswa (dari data siswa yang sudah diambil)
-            // Karena kita sudah punya status dari data siswa, kita gunakan variabel global atau ambil dari Firebase
-            // Di sini kita akan ambil dari data yang sudah disimpan di localStorage atau dari fetch ulang, tapi kita bisa gunakan data dari siswaSnap yang sudah diambil.
-            // Untuk efisiensi, kita gunakan data yang sudah ada di variabel global nisSiswa dan status dari siswaSnap.
-            // Namun kita perlu akses status siswa ini. Kita akan ambil dari db.ref sekali lagi? Lebih baik kita simpan di variabel global saat loadMuridData.
-            // Karena kita sudah punya `siswa` dari awal, kita bisa gunakan langsung.
-
-            // Kita gunakan data yang sudah disimpan di `window` atau kita buat fungsi global.
-            // Saya akan gunakan closure dengan menyimpan status di variabel global `globalSiswaStatus`.
-            // Namun untuk kemudahan, kita akan baca status dari database per siswa (tapi sudah dibaca di awal).
-            // Kita asumsikan status siswa sudah tersedia di `siswaStatusMap` atau kita baca ulang.
-            // Karena kita hanya butuh status siswa yang login, kita bisa gunakan `statusSiswa` yang disimpan di variable global.
-            // Saya akan gunakan variable global `currentSiswaStatus` yang di set di `loadMuridData`.
-
-            // Tentukan apakah siswa ini tidak aktif
-            const isTidakAktif = (window.currentSiswaStatus === 'tidak_aktif');
-
-            // Build tabel kehadiran
-            let kehadiranTable = `<div class="table-wrapper mt-2"><table class="min-w-full bg-white border text-sm rounded-lg"><thead class="bg-gray-50"><tr>`;
-            kehadiranTable += `<th class="p-2 border">Tanggal</th><th class="p-2 border">Topik</th><th class="p-2 border">Status</th>`;
-            kehadiranTable += `</tr></thead><tbody>`;
-            if (sessions.length === 0) {
-                kehadiranTable += `<tr><td colspan="3" class="p-4 text-center text-gray-400">Belum ada sesi kehadiran</td></tr>`;
-            } else {
-                for (let ses of sessions) {
-                    let status = ses.records?.[nisSiswa];
-                    if (status === undefined) status = 'H';
-                    let badgeClass = '';
-                    let statusText = '';
-                    if (status === 'H') { badgeClass = 'badge-hadir'; statusText = 'Hadir'; }
-                    else if (status === 'I') { badgeClass = 'badge-izin'; statusText = 'Izin'; }
-                    else if (status === 'S') { badgeClass = 'badge-sakit'; statusText = 'Sakit'; }
-                    else { badgeClass = 'badge-alpha'; statusText = 'Alfa'; }
-                    kehadiranTable += `<tr>
-                                        <td class="p-2 border">${escapeHtml(ses.date)}</td>
-                                        <td class="p-2 border">${escapeHtml(ses.topic || '-')}</td>
-                                        <td class="p-2 border"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${badgeClass}">${statusText}</span></td>
-                                    </tr>`;
-                }
-            }
-            kehadiranTable += `</tbody></table></div>`;
-
-            // Build tabel penilaian
-            let penilaianTable = `<div class="table-wrapper mt-2"><table class="min-w-full bg-white border text-sm"><thead class="bg-gray-50"><tr>`;
-            penilaianTable += `<th class="p-2 border">Tanggal</th><th class="p-2 border">Topik</th><th class="p-2 border">Nilai</th>`;
-            penilaianTable += `</tr></thead><tbody>`;
-            if (assessments.length === 0) {
-                penilaianTable += `<tr><td colspan="3" class="p-4 text-center text-gray-400">Belum ada penilaian</td></tr>`;
-            } else {
-                for (let as of assessments) {
-                    let nilai = as.scores?.[nisSiswa];
-                    nilai = (typeof nilai === 'number') ? nilai : 0;
-                    penilaianTable += `<tr><td class="p-2 border">${escapeHtml(as.date)}</td>
-                                        <td class="p-2 border">${escapeHtml(as.topic || '-')}</td>
-                                        <td class="p-2 border font-bold text-center">${nilai}</td></tr>`;
-                }
-            }
-            penilaianTable += `</tbody></table></div>`;
-
-            // Tambahkan class merah untuk NIS dan Nama jika tidak aktif
-            const nisClass = isTidakAktif ? 'siswa-tidak-aktif' : '';
-            const namaClass = isTidakAktif ? 'siswa-tidak-aktif' : '';
-
-            cardsHtml += `
-                <div class="card-mapel overflow-hidden">
-                    <div class="p-4 md:p-5">
-                        <div class="flex flex-wrap justify-between items-start gap-2 mb-3">
-                            <div>
-                                <h3 class="text-xl font-bold text-indigo-800">${escapeHtml(task.mapelNama)}</h3>
-                                <p class="text-sm text-gray-500">
-                                    <i class="fas fa-id-card"></i> NIS: <span class="${nisClass}">${escapeHtml(nisSiswa)}</span>
-                                    &nbsp;|&nbsp; <i class="fas fa-user"></i> Nama: <span class="${namaClass}">${escapeHtml(namaSiswa)}</span>
-                                </p>
-                                <p class="text-sm text-gray-500"><i class="fas fa-chalkboard-user"></i> Guru: ${escapeHtml(task.guru)}</p>
-                                <p class="text-xs text-gray-400 mt-1">${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p>
-                            </div>
-                            <div class="flex gap-2">
-                                <div class="bg-green-50 rounded-xl px-3 py-1 text-center">
-                                    <p class="text-xs text-gray-500">Kehadiran</p>
-                                    <p class="text-lg font-bold text-green-700">${persenMapel}%</p>
-                                </div>
-                                <div class="bg-blue-50 rounded-xl px-3 py-1 text-center">
-                                    <p class="text-xs text-gray-500">Rata Nilai</p>
-                                    <p class="text-lg font-bold text-blue-700">${rataMapel}</p>
-                                </div>
-                            </div>
+            html += `<div class="card-assignment p-3 cursor-pointer hover:shadow-lg transition" data-id="${task.id}">
+                        <div class="flex justify-between items-start">
+                            <div><h3 class="font-bold text-md text-indigo-800">${escapeHtml(task.mapelNama)}</h3>
+                            <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p></div>
+                            <i class="fas fa-chevron-right text-indigo-400 text-md"></i>
                         </div>
-
-                        <!-- Tab Kehadiran & Nilai (toggle) -->
-                        <div class="flex gap-2 border-b mt-2">
-                            <button class="tab-kehadiran-btn py-1.5 px-3 text-sm font-semibold text-indigo-700 border-b-2 border-indigo-600">📋 Kehadiran</button>
-                            <button class="tab-penilaian-btn py-1.5 px-3 text-sm font-semibold text-gray-500">📝 Penilaian</button>
-                        </div>
-                        <div class="mt-3 kehadiran-pane">
-                            ${kehadiranTable}
-                        </div>
-                        <div class="mt-3 penilaian-pane hidden">
-                            ${penilaianTable}
-                        </div>
-                    </div>
-                </div>
-            `;
+                    </div>`;
         }
-        container.innerHTML = cardsHtml;
-
-        // Attach event toggle untuk setiap card
-        document.querySelectorAll('.card-mapel').forEach((card, idx) => {
-            const btnKehadiran = card.querySelector('.tab-kehadiran-btn');
-            const btnPenilaian = card.querySelector('.tab-penilaian-btn');
-            const paneKehadiran = card.querySelector('.kehadiran-pane');
-            const panePenilaian = card.querySelector('.penilaian-pane');
-            if (btnKehadiran && btnPenilaian) {
-                btnKehadiran.onclick = () => {
-                    btnKehadiran.classList.add('text-indigo-700', 'border-indigo-600', 'border-b-2');
-                    btnKehadiran.classList.remove('text-gray-500', 'border-transparent');
-                    btnPenilaian.classList.remove('text-indigo-700', 'border-indigo-600', 'border-b-2');
-                    btnPenilaian.classList.add('text-gray-500');
-                    paneKehadiran.classList.remove('hidden');
-                    panePenilaian.classList.add('hidden');
-                };
-                btnPenilaian.onclick = () => {
-                    btnPenilaian.classList.add('text-indigo-700', 'border-indigo-600', 'border-b-2');
-                    btnPenilaian.classList.remove('text-gray-500');
-                    btnKehadiran.classList.remove('text-indigo-700', 'border-indigo-600', 'border-b-2');
-                    btnKehadiran.classList.add('text-gray-500');
-                    panePenilaian.classList.remove('hidden');
-                    paneKehadiran.classList.add('hidden');
-                };
-            }
+        container.innerHTML = html;
+        document.querySelectorAll('.card-assignment').forEach(card => {
+            card.addEventListener('click', () => {
+                const selectedTask = penugasanList.find(t => t.id === card.dataset.id);
+                if (selectedTask) showDetailAssignment(selectedTask);
+            });
         });
     }
 
-    // Cek login
-    window.onload = async () => {
-        const siswaLogin = localStorage.getItem('siswaLogin');
-        if (!siswaLogin) {
-            window.location.href = 'index.html';
+    function showDetailAssignment(task) {
+        document.getElementById('assignmentsContainer').classList.add('hidden');
+        document.getElementById('detailContainer').classList.remove('hidden');
+        document.getElementById('detailTitle').innerHTML = `<i class="fas fa-book-open mr-1"></i> ${escapeHtml(task.mapelNama)} · ${escapeHtml(task.kelasDisplay)}`;
+        
+        const printContainer = document.getElementById('printButtonsContainer');
+        printContainer.innerHTML = `
+            <button class="btn-print" id="printAttendanceBtn"><i class="fas fa-print"></i> Hadir</button>
+            <button class="btn-print" id="printGradesBtn"><i class="fas fa-print"></i> Nilai</button>
+        `;
+        document.getElementById('printAttendanceBtn').onclick = () => printAttendance(task);
+        document.getElementById('printGradesBtn').onclick = () => printGrades(task);
+        
+        loadDetailTabs(task);
+    }
+
+    function backToList() {
+        document.getElementById('detailContainer').classList.add('hidden');
+        document.getElementById('assignmentsContainer').classList.remove('hidden');
+    }
+
+    async function loadDetailTabs(task) {
+        const container = document.getElementById('detailContent');
+        container.innerHTML = `<div class="flex gap-1 border-b mb-2"><button class="tab-kehadiran-btn py-1 px-3 rounded-t-lg text-sm font-semibold bg-indigo-600 text-white shadow">📋 Kehadiran</button><button class="tab-penilaian-btn py-1 px-3 rounded-t-lg text-sm font-semibold text-gray-600 bg-gray-100">📝 Penilaian</button></div>
+                                <div class="tab-pane-kehadiran w-full"></div><div class="tab-pane-penilaian hidden w-full"></div>`;
+        const kehadiranPane = container.querySelector('.tab-pane-kehadiran');
+        const penilaianPane = container.querySelector('.tab-pane-penilaian');
+        const btnKehadiran = container.querySelector('.tab-kehadiran-btn');
+        const btnPenilaian = container.querySelector('.tab-penilaian-btn');
+        btnKehadiran.onclick = () => { btnKehadiran.classList.add('bg-indigo-600','text-white'); btnKehadiran.classList.remove('bg-gray-100','text-gray-600'); btnPenilaian.classList.add('bg-gray-100','text-gray-600'); btnPenilaian.classList.remove('bg-indigo-600','text-white'); kehadiranPane.classList.remove('hidden'); penilaianPane.classList.add('hidden'); renderKehadiranTab(kehadiranPane, task); };
+        btnPenilaian.onclick = () => { btnPenilaian.classList.add('bg-indigo-600','text-white'); btnPenilaian.classList.remove('bg-gray-100','text-gray-600'); btnKehadiran.classList.add('bg-gray-100','text-gray-600'); btnKehadiran.classList.remove('bg-indigo-600','text-white'); penilaianPane.classList.remove('hidden'); kehadiranPane.classList.add('hidden'); renderPenilaianTab(penilaianPane, task); };
+        renderKehadiranTab(kehadiranPane, task);
+    }
+
+    async function refreshWithScroll(wrapperElement, refreshFn, ...args) {
+        if (!wrapperElement) { await refreshFn(...args); return; }
+        const oldLeft = wrapperElement.scrollLeft;
+        const oldTop = wrapperElement.scrollTop;
+        await refreshFn(...args);
+        wrapperElement.scrollLeft = oldLeft;
+        wrapperElement.scrollTop = oldTop;
+    }
+
+    // ================= KEHADIRAN =================
+    async function renderKehadiranTab(container, task) {
+        container.innerHTML = `<div class="flex justify-end mb-2"><button class="btn-plus btn-add-kehadiran" title="Tambah sesi kehadiran"><i class="fas fa-plus"></i></button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6 text-sm">Memuat data...</div></div>`;
+        container.querySelector('.btn-add-kehadiran').onclick = () => openAddKehadiranModal(task);
+        await refreshKehadiranTable(container, task);
+    }
+
+    async function deleteAttendanceSession(assignmentId, sessionId) {
+        if (!confirm("Hapus sesi kehadiran ini? Seluruh data status kehadiran akan hilang.")) return;
+        await db.ref(`attendance/${assignmentId}/${sessionId}`).remove();
+    }
+
+    async function refreshKehadiranTable(container, task) {
+        const wrapperDiv = container.querySelector('#kehadiranTableWrapper');
+        if (!wrapperDiv) return;
+        const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
+        const sessions = sessionsSnap.val() || {};
+        let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, topic: val.topic || '', records: val.records || {} }));
+        sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        
+        let html = `<table class="sticky-table">`;
+        html += `<thead><tr>
+                    <th class="sticky-col-first">NIS</th>
+                    <th class="sticky-col-second">Nama</th>`;
+        for (let ses of sessionsList) {
+            let shortDate = ses.date.split('/').slice(0,2).join('/');
+            let shortTopic = ses.topic ? ses.topic.substring(0, 12) : '';
+            html += `<th class="text-center whitespace-nowrap">
+                        <div>${escapeHtml(shortDate)}</div>
+                        <div class="text-gray-500 text-xs" style="font-weight:normal;">${escapeHtml(shortTopic)}</div>
+                        <div class="flex items-center justify-center gap-0.5 mt-0.5">
+                            <button class="icon-btn icon-edit edit-session" data-session-id="${ses.id}" data-current-date="${ses.date}" data-current-topic="${escapeHtml(ses.topic)}"><i class="fas fa-pen fa-xs"></i></button>
+                            <button class="icon-btn icon-delete delete-session" data-session-id="${ses.id}"><i class="fas fa-trash-alt fa-xs"></i></button>
+                        </div>
+                     </th>`;
+        }
+        html += `<th class="bg-gray-50 text-center">Jml H</th>`;
+        html += `</tr></thead><tbody>`;
+        
+        for (let siswa of siswaArray) {
+            let hadirCount = 0;
+            html += `<tr>
+                        <td class="sticky-col-first">${escapeHtml(siswa.nis)}</td>
+                        <td class="sticky-col-second">${escapeHtml(siswa.nama)}</td>`;
+            for (let ses of sessionsList) {
+                let status = ses.records[siswa.nis] || 'H';
+                if (status === 'H') hadirCount++;
+                let statusClass = '';
+                if (status === 'H') statusClass = 'status-h';
+                else if (status === 'I') statusClass = 'status-i';
+                else if (status === 'S') statusClass = 'status-s';
+                else if (status === 'A') statusClass = 'status-a';
+                html += `<td class="text-center">
+                            <div class="status-badge ${statusClass} kehadiran-status" data-session="${ses.id}" data-nis="${siswa.nis}" data-status="${status}">${status}</div>
+                           </td>`;
+            }
+            html += `<td class="font-bold text-center text-sm">${hadirCount}</td>`;
+            html += `</tr>`;
+        }
+        html += `</tbody></table>`;
+        wrapperDiv.innerHTML = html;
+        
+        // Event edit session (tanggal + topik)
+        wrapperDiv.querySelectorAll('.edit-session').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                const sessionId = btn.dataset.sessionId;
+                const currentDate = btn.dataset.currentDate;
+                const currentTopic = btn.dataset.currentTopic || '';
+                openEditSesiModal(task.id, sessionId, currentDate, currentTopic, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
+            };
+        });
+        wrapperDiv.querySelectorAll('.delete-session').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                await deleteAttendanceSession(task.id, btn.dataset.sessionId);
+                await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task);
+            };
+        });
+        wrapperDiv.querySelectorAll('.kehadiran-status').forEach(badge => {
+            badge.onclick = async (e) => {
+                e.stopPropagation();
+                const sessionId = badge.dataset.session;
+                const nis = badge.dataset.nis;
+                const currentStatus = badge.dataset.status;
+                const statusCycle = { 'H': 'I', 'I': 'S', 'S': 'A', 'A': 'H' };
+                const newStatus = statusCycle[currentStatus] || 'H';
+                await db.ref(`attendance/${task.id}/${sessionId}/records/${nis}`).set(newStatus);
+                await refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task);
+            };
+        });
+    }
+
+    async function openAddKehadiranModal(task) {
+        const todayYMD = toYMD(new Date());
+        document.getElementById('kehadiranDate').value = todayYMD;
+        document.getElementById('kehadiranTopik').value = '';
+        const modal = document.getElementById('modalTambahKehadiran');
+        modal.style.display = 'flex';
+        const simpan = document.getElementById('simpanKehadiran');
+        const batal = document.getElementById('batalKehadiran');
+        const onSimpan = async () => {
+            let ymd = document.getElementById('kehadiranDate').value;
+            if (!ymd) return alert("Pilih tanggal");
+            let dateDMY = formatDateToDMY(new Date(ymd));
+            let topic = document.getElementById('kehadiranTopik').value.trim() || '';
+            const newSessionId = Date.now().toString();
+            await db.ref(`attendance/${task.id}/${newSessionId}`).set({ date: dateDMY, topic: topic, records: {} });
+            modal.style.display = 'none';
+            const container = document.querySelector('#detailContent .tab-pane-kehadiran');
+            if (container) {
+                const wrap = container.querySelector('#kehadiranTableWrapper');
+                if(wrap) await refreshWithScroll(wrap, refreshKehadiranTable, container, task);
+                else await refreshKehadiranTable(container, task);
+            }
+            cleanup();
+        };
+        const cleanup = () => { simpan.removeEventListener('click', onSimpan); batal.removeEventListener('click', closeModal); };
+        const closeModal = () => { modal.style.display = 'none'; cleanup(); };
+        simpan.addEventListener('click', onSimpan);
+        batal.addEventListener('click', closeModal);
+    }
+
+    // Fungsi edit sesi (tanggal + topik) - menggantikan openEditTanggalModal
+    async function openEditSesiModal(assignmentId, sessionId, oldDateDMY, oldTopic, callback) {
+        let oldDate = parseDMY(oldDateDMY);
+        let ymd = oldDate ? toYMD(oldDate) : '';
+        const modal = document.getElementById('modalEditSesi');
+        document.getElementById('editTanggalInput').value = ymd;
+        document.getElementById('editTopikInput').value = oldTopic || '';
+        modal.style.display = 'flex';
+        
+        const saveBtn = document.getElementById('saveEditSesi');
+        const cancelBtn = document.getElementById('cancelEditSesi');
+        
+        const onSave = async () => {
+            let newYmd = document.getElementById('editTanggalInput').value;
+            if (!newYmd) return alert("Pilih tanggal");
+            let newDateDMY = formatDateToDMY(new Date(newYmd));
+            let newTopic = document.getElementById('editTopikInput').value.trim() || '';
+            await db.ref(`attendance/${assignmentId}/${sessionId}/date`).set(newDateDMY);
+            await db.ref(`attendance/${assignmentId}/${sessionId}/topic`).set(newTopic);
+            modal.style.display = 'none';
+            if (callback) callback();
+            cleanup();
+        };
+        const onCancel = () => { modal.style.display = 'none'; cleanup(); };
+        const cleanup = () => { saveBtn.removeEventListener('click', onSave); cancelBtn.removeEventListener('click', onCancel); };
+        saveBtn.addEventListener('click', onSave);
+        cancelBtn.addEventListener('click', onCancel);
+    }
+
+    // ================= PENILAIAN =================
+    async function renderPenilaianTab(container, task) {
+        container.innerHTML = `<div class="flex justify-end mb-2"><button class="btn-plus btn-add-penilaian" title="Tambah penilaian"><i class="fas fa-plus"></i></button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6 text-sm">Memuat data...</div></div>`;
+        container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
+        await refreshPenilaianTable(container, task);
+    }
+
+    async function deleteAssessment(assignmentId, assessId) {
+        if (!confirm("Hapus kolom penilaian ini? Semua nilai siswa untuk penilaian ini akan hilang.")) return;
+        await db.ref(`penilaian/${assignmentId}/${assessId}`).remove();
+    }
+
+    async function refreshPenilaianTable(container, task) {
+        const wrapperDiv = container.querySelector('#penilaianTableWrapper');
+        if (!wrapperDiv) return;
+        
+        const assessmentsSnap = await db.ref(`penilaian/${task.id}`).once('value');
+        const assessments = assessmentsSnap.val() || {};
+        let assessList = Object.entries(assessments).map(([id, val]) => ({ id, date: val.date, topic: val.topic, scores: val.scores || {} }));
+        assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        
+        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        
+        if (assessList.length === 0) {
+            wrapperDiv.innerHTML = `<div class="text-center py-8 text-gray-400"><i class="fas fa-clipboard-list text-2xl mb-2"></i><p class="text-sm">Belum ada data penilaian</p><p class="text-xs">Klik tombol + untuk menambah penilaian</p></div>`;
             return;
         }
-        nisSiswa = siswaLogin;
         
-        // Ambil status siswa dari Firebase dan simpan di global
-        try {
-            const snap = await db.ref(`siswa/${nisSiswa}/status`).once('value');
-            window.currentSiswaStatus = snap.val() || 'aktif';
-        } catch(e) {
-            window.currentSiswaStatus = 'aktif';
+        let html = `<table class="sticky-table penilaian-table">`;
+        html += `<thead>`;
+        html += `<tr>
+                    <th rowspan="2" class="sticky-col-first">NIS</th>
+                    <th rowspan="2" class="sticky-col-second">Nama</th>`;
+        for (let i = 0; i < assessList.length; i++) {
+            html += `<th class="text-center">
+                        <div><strong>N${i+1}</strong></div>
+                        <div class="flex items-center justify-center gap-0.5 mt-0.5">
+                            <button class="icon-btn icon-edit edit-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-pen fa-xs"></i></button>
+                            <button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-trash-alt fa-xs"></i></button>
+                        </div>
+                     </th>`;
+        }
+        html += `<th rowspan="2" class="bg-gray-50">Rata</th>`;
+        html += `</tr>`;
+        html += `<tr>`;
+        for (let as of assessList) {
+            html += `<th class="text-center text-xs font-normal bg-gray-50">
+                        <div>${escapeHtml(as.date)}</div>
+                        <div class="text-gray-500 text-xs">${escapeHtml(as.topic ? as.topic.substring(0,10) : '-')}</div>
+                     </th>`;
+        }
+        html += `</tr>`;
+        html += `</thead><tbody>`;
+        
+        for (let siswa of siswaArray) {
+            let totalNilai = 0;
+            let countValid = 0;
+            html += `<tr>
+                        <td class="sticky-col-first">${escapeHtml(siswa.nis)}</td>
+                        <td class="sticky-col-second">${escapeHtml(siswa.nama)}</td>`;
+            for (let as of assessList) {
+                let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
+                if (nilai > 0) { totalNilai += nilai; countValid++; }
+                html += `<td class="text-center">
+                            <input type="number" class="nilai-input nilai-siswa" data-assess="${as.id}" data-nis="${siswa.nis}" value="${nilai}" step="1" min="0" max="100">
+                            </td>`;
+            }
+            let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
+            html += `<td class="font-bold text-center bg-gray-50 text-sm">${rata}</td>`;
+            html += `</tr>`;
+        }
+        html += `</tbody></table>`;
+        wrapperDiv.innerHTML = html;
+        
+        wrapperDiv.querySelectorAll('.edit-assessment').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                const assessId = btn.dataset.assessId;
+                const assessment = assessList.find(a => a.id === assessId);
+                if (assessment) {
+                    let oldYMD = assessment.date?.split('/').reverse().join('-') || '';
+                    let newDate = prompt("Edit Tanggal (yyyy-mm-dd):", oldYMD);
+                    if (newDate) {
+                        let newDateObj = new Date(newDate);
+                        if (!isNaN(newDateObj)) {
+                            let newDateDMY = formatDateToDMY(newDateObj);
+                            let newTopic = prompt("Edit Topik:", assessment.topic);
+                            if (newTopic !== null) {
+                                await db.ref(`penilaian/${task.id}/${assessId}/date`).set(newDateDMY);
+                                await db.ref(`penilaian/${task.id}/${assessId}/topic`).set(newTopic || "Penilaian");
+                                await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
+                            }
+                        } else {
+                            alert("Format tanggal salah!");
+                        }
+                    }
+                }
+            };
+        });
+        
+        wrapperDiv.querySelectorAll('.delete-assessment').forEach(btn => {
+            btn.onclick = async (e) => {
+                e.stopPropagation();
+                await deleteAssessment(task.id, btn.dataset.assessId);
+                await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
+            };
+        });
+        
+        wrapperDiv.querySelectorAll('.nilai-siswa').forEach(inp => {
+            inp.onchange = async () => {
+                let val = parseInt(inp.value, 10);
+                if (isNaN(val)) val = 0;
+                val = Math.min(100, Math.max(0, val));
+                inp.value = val;
+                await db.ref(`penilaian/${task.id}/${inp.dataset.assess}/scores/${inp.dataset.nis}`).set(val);
+                await refreshWithScroll(wrapperDiv, refreshPenilaianTable, container, task);
+            };
+        });
+    }
+
+    async function openAddPenilaianModal(task) {
+        const todayYMD = toYMD(new Date());
+        document.getElementById('penilaianDate').value = todayYMD;
+        document.getElementById('penilaianTopik').value = '';
+        const modal = document.getElementById('modalTambahPenilaian');
+        modal.style.display = 'flex';
+        const simpan = document.getElementById('simpanPenilaian');
+        const batal = document.getElementById('batalPenilaian');
+        const onSimpan = async () => {
+            let ymd = document.getElementById('penilaianDate').value;
+            if (!ymd) return alert("Pilih tanggal");
+            let dateDMY = formatDateToDMY(new Date(ymd));
+            let topic = document.getElementById('penilaianTopik').value.trim() || "Penilaian";
+            let newId = Date.now().toString();
+            await db.ref(`penilaian/${task.id}/${newId}`).set({ date: dateDMY, topic, scores: {} });
+            modal.style.display = 'none';
+            const container = document.querySelector('#detailContent .tab-pane-penilaian');
+            if (container) {
+                const wrap = container.querySelector('#penilaianTableWrapper');
+                if(wrap) await refreshWithScroll(wrap, refreshPenilaianTable, container, task);
+                else await refreshPenilaianTable(container, task);
+            }
+            cleanup();
+        };
+        const cleanup = () => { simpan.removeEventListener('click', onSimpan); batal.removeEventListener('click', onBatal); };
+        const onBatal = () => { modal.style.display = 'none'; cleanup(); };
+        simpan.addEventListener('click', onSimpan);
+        batal.addEventListener('click', onBatal);
+    }
+
+    // ========== FUNGSI CETAK ==========
+    async function printAttendance(task) {
+        const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
+        const sessions = sessionsSnap.val() || {};
+        let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, topic: val.topic || '', records: val.records || {} }));
+        sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        
+        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        
+        let printHtml = `
+            <div class="print-area">
+                <div class="print-header">
+                    <h1 style="font-size: 22px;">LAPORAN DAFTAR HADIR</h1>
+                    <h2>${escapeHtml(task.mapelNama)}</h2>
+                    <p>Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                    <p>Guru: ${escapeHtml(currentTeacher)}</p>
+                    <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+                </div>
+                <table class="print-table">
+                    <thead>
+                        <tr><th>No</th><th>NIS</th><th>Nama</th>`;
+        for (let ses of sessionsList) {
+            printHtml += `<th>${escapeHtml(ses.date)}${ses.topic ? '<br><small>'+escapeHtml(ses.topic)+'</small>' : ''}</th>`;
+        }
+        printHtml += `<th>Total H</th></tr>
+                    </thead>
+                    <tbody>`;
+        
+        let no = 1;
+        for (let siswa of siswaArray) {
+            let hadirCount = 0;
+            printHtml += `<tr>
+                            <td>${no++}</td>
+                            <td>${escapeHtml(siswa.nis)}</td>
+                            <td style="text-align:left">${escapeHtml(siswa.nama)}</td>`;
+            for (let ses of sessionsList) {
+                let status = ses.records[siswa.nis] || 'H';
+                if (status === 'H') hadirCount++;
+                printHtml += `<td>${status}</td>`;
+            }
+            printHtml += `<td><strong>${hadirCount}</strong></td>
+                        </tr>`;
+        }
+        printHtml += `
+                    </tbody>
+                </table>
+                <div class="print-footer">
+                    <p>Mengetahui,</p>
+                    <p style="margin-top: 40px;">(_____________________)</p>
+                </div>
+            </div>`;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Daftar Hadir - ${task.mapelNama}</title>
+                <style>
+                    body { font-family: 'Inter', Arial, sans-serif; margin: 0; padding: 15px; }
+                    .print-header { text-align: center; margin-bottom: 20px; }
+                    .print-table { width: 100%; border-collapse: collapse; }
+                    .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
+                    .print-table th { background: #f3f4f6; }
+                    .print-footer { margin-top: 40px; text-align: right; }
+                    @media print { @page { size: landscape; margin: 1.2cm; } }
+                </style>
+            </head>
+            <body>${printHtml}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+    
+    async function printGrades(task) {
+        const assessmentsSnap = await db.ref(`penilaian/${task.id}`).once('value');
+        const assessments = assessmentsSnap.val() || {};
+        let assessList = Object.entries(assessments).map(([id, val]) => ({ id, date: val.date, topic: val.topic, scores: val.scores || {} }));
+        assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        
+        const siswaArray = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' })).filter(s => s.nama !== '?');
+        
+        if (assessList.length === 0) {
+            alert("Belum ada data penilaian untuk dicetak.");
+            return;
         }
         
-        await loadMuridData();
+        let printHtml = `
+            <div class="print-area">
+                <div class="print-header">
+                    <h1 style="font-size: 22px;">LAPORAN NILAI</h1>
+                    <h2>${escapeHtml(task.mapelNama)}</h2>
+                    <p>Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                    <p>Guru: ${escapeHtml(currentTeacher)}</p>
+                    <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+                </div>
+                <table class="print-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">No</th>
+                            <th rowspan="2">NIS</th>
+                            <th rowspan="2">Nama</th>`;
+        for (let i = 0; i < assessList.length; i++) {
+            printHtml += `<th rowspan="2">N${i+1}</th>`;
+        }
+        printHtml += `<th rowspan="2">Rata-Rata</th>
+                    </tr>
+                    <tr></thead>
+                    <tbody>`;
+        
+        let no = 1;
+        for (let siswa of siswaArray) {
+            let totalNilai = 0;
+            let countValid = 0;
+            printHtml += `<tr>
+                            <td>${no++}</td>
+                            <td>${escapeHtml(siswa.nis)}</td>
+                            <td style="text-align:left">${escapeHtml(siswa.nama)}</td>`;
+            for (let as of assessList) {
+                let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
+                if (nilai > 0) { totalNilai += nilai; countValid++; }
+                printHtml += `<td>${nilai || '-'}</td>`;
+            }
+            let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
+            printHtml += `<td><strong>${rata}</strong></td>
+                        </tr>`;
+        }
+        printHtml += `
+                    </tbody>
+                </table>
+                <div class="print-footer">
+                    <p>Mengetahui,</p>
+                    <p style="margin-top: 40px;">(_____________________)</p>
+                </div>
+            </div>`;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Laporan Nilai - ${task.mapelNama}</title>
+                <style>
+                    body { font-family: 'Inter', Arial, sans-serif; margin: 0; padding: 15px; }
+                    .print-header { text-align: center; margin-bottom: 20px; }
+                    .print-table { width: 100%; border-collapse: collapse; }
+                    .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
+                    .print-table th { background: #f3f4f6; }
+                    .print-table td:nth-child(3) { text-align: left; }
+                    .print-footer { margin-top: 40px; text-align: right; }
+                    @media print {
+                        @page { size: landscape; margin: 1.2cm; }
+                        body { margin: 0; padding: 0; }
+                    }
+                </style>
+            </head>
+            <body>${printHtml}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
+    }
+
+    // ========== TAMBAH PENUGASAN ==========
+    async function prepareModalPenugasan() {
+        const mapelSelect = document.getElementById('modalMapel');
+        mapelSelect.innerHTML = '<option value="">-- Pilih Mapel --</option>';
+        for (let [id, m] of Object.entries(allMapel)) mapelSelect.innerHTML += `<option value="${id}" data-jenis="${m.jenis}">${escapeHtml(m.nama)} (${m.jenis})</option>`;
+        const targetDiv = document.getElementById('modalTargetInput');
+        const updateTarget = () => {
+            let jenis = mapelSelect.options[mapelSelect.selectedIndex]?.dataset?.jenis;
+            if (!jenis) { targetDiv.innerHTML = '<div class="text-gray-500 text-sm">Pilih mata pelajaran dahulu</div>'; return; }
+            if (jenis === 'inkul') {
+                targetDiv.innerHTML = `<p class="text-xs mb-1">Pilih Kelas (bisa lebih dari satu)</p><select multiple size="4" class="w-full border rounded p-1 text-sm" id="targetKelasSelect">${allKelas.map(k=>`<option value="${k}">${escapeHtml(k)}</option>`).join('')}</select>`;
+            } else {
+                targetDiv.innerHTML = `<p class="text-xs mb-1">Pilih Siswa (bisa lebih)</p><select multiple size="5" class="w-full border rounded p-1 text-sm" id="targetSiswaSelect">${Object.entries(allSiswa).map(([nis,s])=>`<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(s.nama)} (${s.kelas})</option>`).join('')}</select>`;
+            }
+        };
+        mapelSelect.onchange = updateTarget;
+        updateTarget();
+    }
+    document.getElementById('btnTambahPenugasan').onclick = async () => { await prepareModalPenugasan(); document.getElementById('modalPenugasan').style.display = 'flex'; };
+    document.getElementById('modalBatalBtn').onclick = () => document.getElementById('modalPenugasan').style.display = 'none';
+    document.getElementById('modalSimpanBtn').onclick = async () => {
+        const mapelSelect = document.getElementById('modalMapel');
+        const mapelId = mapelSelect.value;
+        if (!mapelId) { alert("Pilih Mata Pelajaran"); return; }
+        const jenis = mapelSelect.options[mapelSelect.selectedIndex]?.dataset?.jenis;
+        let siswaList = [];
+        if (jenis === 'inkul') {
+            const kelasSelect = document.getElementById('targetKelasSelect');
+            if (!kelasSelect) return;
+            const selectedKelas = Array.from(kelasSelect.selectedOptions).map(o=>o.value);
+            if (!selectedKelas.length) { alert("Pilih minimal 1 kelas"); return; }
+            for (let k of selectedKelas) for (let [nis,s] of Object.entries(allSiswa)) if (s.kelas === k) siswaList.push(nis);
+            siswaList = [...new Set(siswaList)];
+        } else {
+            const siswaSelect = document.getElementById('targetSiswaSelect');
+            if (!siswaSelect) return;
+            siswaList = Array.from(siswaSelect.selectedOptions).map(o=>o.value);
+            if (!siswaList.length) { alert("Pilih minimal 1 siswa"); return; }
+        }
+        if (!siswaList.length) { alert("Tidak ada siswa yang dipilih"); return; }
+        await db.ref('penugasan').push({ mapelId, guruName: currentTeacher, siswaList });
+        alert("Penugasan berhasil ditambahkan!");
+        document.getElementById('modalPenugasan').style.display = 'none';
+        await fetchInitialData();
+        await renderAllCards();
+    };
+
+    window.onload = async () => {
+        const guruLogin = localStorage.getItem('guruLogin');
+        if (!guruLogin) { window.location.href = 'index.html'; return; }
+        currentTeacher = guruLogin;
+        document.getElementById('greeting').innerHTML = `<i class="fas fa-user-check"></i> ${escapeHtml(currentTeacher)} · Guru Aktif`;
+        await fetchInitialData();
+        await renderAllCards();
+        document.getElementById('backToListBtn').onclick = backToList;
+
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('guruLogin');
+                window.location.href = 'index.html';
+            });
+        }
     };
 </script>
 </body>
