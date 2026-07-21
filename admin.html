@@ -106,8 +106,7 @@
         <div class="bg-white rounded-lg shadow-md p-4 md:p-6">
             <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-3">
                 <h1 class="text-xl md:text-2xl font-bold">Panel Admin</h1>
-                <!-- TOMBOL LOGOUT DIPERBAIKI -->
-                <a href="#" onclick="logoutAdmin(); return false;" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full sm:w-auto text-center"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                <a href="index.html" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full sm:w-auto text-center"><i class="fas fa-sign-out-alt"></i> Logout</a>
             </div>
             
             <!-- Tab Navigation -->
@@ -161,17 +160,6 @@
     </div>
 
     <script>
-        // ===== CEK LOGIN ADMIN =====
-        if (!localStorage.getItem('adminLogin')) {
-            window.location.href = 'index.html';
-        }
-
-        // Fungsi logout admin
-        function logoutAdmin() {
-            localStorage.removeItem('adminLogin');
-            window.location.href = 'index.html';
-        }
-
         // Konfigurasi Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAEUxtP2D26eF5zS2sgR5_bpzK6SNRwQA0",
