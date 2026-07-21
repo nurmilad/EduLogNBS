@@ -99,6 +99,19 @@
             border-radius: 0.375rem;
             width: 100%;
         }
+
+        /* Untuk sorting header */
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        .sortable-header:hover {
+            background-color: #e5e7eb;
+        }
+        .sort-icon {
+            margin-left: 4px;
+            font-size: 0.7rem;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -117,6 +130,8 @@
                     <li class="mr-2"><button class="tab-link inline-block p-2 sm:p-3 hover:text-gray-600" data-tab="guru">Data Guru</button></li>
                     <li class="mr-2"><button class="tab-link inline-block p-2 sm:p-3 hover:text-gray-600" data-tab="mapel">Data Mapel</button></li>
                     <li class="mr-2"><button class="tab-link inline-block p-2 sm:p-3 hover:text-gray-600" data-tab="penugasan">Penugasan</button></li>
+                    <!-- TAB BARU: Riwayat Sesi Mengajar -->
+                    <li class="mr-2"><button class="tab-link inline-block p-2 sm:p-3 hover:text-gray-600" data-tab="riwayat">Riwayat Sesi Mengajar</button></li>
                 </ul>
             </div>
 
@@ -125,10 +140,12 @@
             <div id="guru" class="tab-content hidden">Loading Data Guru...</div>
             <div id="mapel" class="tab-content hidden">Loading Data Mapel...</div>
             <div id="penugasan" class="tab-content hidden">Loading Penugasan...</div>
+            <!-- TAB RIWAYAT -->
+            <div id="riwayat" class="tab-content hidden">Loading Riwayat Sesi Mengajar...</div>
         </div>
     </div>
 
-    <!-- MODAL EDIT PENUGASAN -->
+    <!-- MODAL EDIT PENUGASAN (tetap) -->
     <div id="modalEditPenugasan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print" style="background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);">
         <div class="bg-white rounded-2xl max-w-2xl w-full mx-4 p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-bold mb-3"><i class="fas fa-edit text-indigo-500"></i> Edit Penugasan</h3>
@@ -226,6 +243,7 @@
             else if (tabId === 'guru') loadGuru();
             else if (tabId === 'mapel') loadMapel();
             else if (tabId === 'penugasan') loadPenugasan();
+            else if (tabId === 'riwayat') loadRiwayat();
         }
         
         document.querySelectorAll('.tab-link').forEach(btn => {
@@ -1101,17 +1119,158 @@
                 
             } catch(err) { container.innerHTML = `<p class="text-red-500">Error: ${err.message}</p>`; }
         }
-        
+
+        // ===================== RIWAYAT SESI MENGAJAR =====================
+        let riwayatData = [];
+        let riwayatSort = { key: 'tanggal', asc: false }; // default: descending by tanggal
+
+        async function loadRiwayat() {
+            const container = document.getElementById('riwayat');
+            container.innerHTML = `<div class="text-center py-8"><div class="loading-spinner mx-auto mb-2"></div><p>Memuat riwayat sesi mengajar...</p></div>`;
+            
+            try {
+                // Ambil semua data yang dibutuhkan
+                const [attendanceSnap, penugasanSnap, mapelSnap, siswaSnap] = await Promise.all([
+                    db.ref('attendance').once('value'),
+                    db.ref('penugasan').once('value'),
+                    db.ref('mapel').once('value'),
+                    db.ref('siswa').once('value')
+                ]);
+
+                const attendance = attendanceSnap.val() || {};
+                const penugasan = penugasanSnap.val() || {};
+                const mapel = mapelSnap.val() || {};
+                const siswa = siswaSnap.val() || {};
+
+                // Build data riwayat
+                const rows = [];
+                for (let [penugasanId, pg] of Object.entries(penugasan)) {
+                    const mapelData = mapel[pg.mapelId];
+                    const namaMapel = mapelData?.nama || '❌ Mapel dihapus';
+                    const jenisMapel = mapelData?.jenis || 'inkul';
+                    const guruName = pg.guruName || '❌ Guru dihapus';
+                    
+                    // Ambil daftar kelas unik dari siswaList (untuk inku)
+                    let kelasSet = new Set();
+                    if (jenisMapel === 'inkul' && pg.siswaList) {
+                        for (let nis of pg.siswaList) {
+                            if (siswa[nis] && siswa[nis].kelas) {
+                                kelasSet.add(siswa[nis].kelas);
+                            }
+                        }
+                    }
+                    const kelasDisplay = kelasSet.size ? Array.from(kelasSet).sort().join(', ') : '';
+
+                    // Ambil sesi kehadiran untuk penugasan ini
+                    const sessions = attendance[penugasanId] || {};
+                    for (let [sessionId, ses] of Object.entries(sessions)) {
+                        rows.push({
+                            tanggal: ses.date || '?',
+                            tanggalTimestamp: parseDMY(ses.date) || 0,
+                            guru: guruName,
+                            mapel: namaMapel,
+                            kelas: (jenisMapel === 'inkul') ? kelasDisplay : '', // kosong untuk eskul/pondok
+                            topik: ses.topic || '-',
+                            penugasanId: penugasanId,
+                            sessionId: sessionId
+                        });
+                    }
+                }
+
+                riwayatData = rows;
+                renderRiwayatTable(container);
+
+            } catch (err) {
+                container.innerHTML = `<div class="text-red-500">Error: ${err.message}</div>`;
+            }
+        }
+
+        function renderRiwayatTable(container) {
+            if (!riwayatData.length) {
+                container.innerHTML = `<div class="text-center py-8 text-gray-500"><i class="fas fa-info-circle text-3xl mb-2"></i><p>Belum ada sesi mengajar yang tercatat.</p></div>`;
+                return;
+            }
+
+            // Sort data
+            const sorted = [...riwayatData];
+            const key = riwayatSort.key;
+            const asc = riwayatSort.asc;
+            sorted.sort((a, b) => {
+                let valA = a[key] ?? '';
+                let valB = b[key] ?? '';
+                if (key === 'tanggalTimestamp') {
+                    valA = a.tanggalTimestamp;
+                    valB = b.tanggalTimestamp;
+                } else if (key === 'kelas') {
+                    // Kosongkan dulu untuk perbandingan
+                }
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return asc ? -1 : 1;
+                if (valA > valB) return asc ? 1 : -1;
+                return 0;
+            });
+
+            // Buat header sortable
+            const headers = [
+                { key: 'tanggal', label: 'Tanggal' },
+                { key: 'guru', label: 'Nama Guru' },
+                { key: 'mapel', label: 'Mata Pelajaran' },
+                { key: 'kelas', label: 'Kelas' },
+                { key: 'topik', label: 'Topik / Materi' }
+            ];
+
+            let html = `<div class="overflow-x-auto"><table class="min-w-full border text-sm"><thead class="bg-gray-100">`;
+            html += `<tr>`;
+            for (let h of headers) {
+                const isActive = riwayatSort.key === h.key;
+                const icon = isActive ? (riwayatSort.asc ? '▲' : '▼') : '⇅';
+                html += `<th class="p-2 border sortable-header" data-key="${h.key}">${h.label} <span class="sort-icon">${icon}</span></th>`;
+            }
+            html += `</tr></thead><tbody>`;
+
+            for (let row of sorted) {
+                html += `<tr>
+                    <td class="p-2 border">${escapeHtml(row.tanggal)}</td>
+                    <td class="p-2 border">${escapeHtml(row.guru)}</td>
+                    <td class="p-2 border">${escapeHtml(row.mapel)}</td>
+                    <td class="p-2 border">${escapeHtml(row.kelas)}</td>
+                    <td class="p-2 border">${escapeHtml(row.topik)}</td>
+                </tr>`;
+            }
+            html += `</tbody></table></div>`;
+            html += `<div class="mt-3 text-xs text-gray-500">Total sesi: ${sorted.length}</div>`;
+
+            container.innerHTML = html;
+
+            // Event listener untuk sorting
+            container.querySelectorAll('.sortable-header').forEach(th => {
+                th.addEventListener('click', () => {
+                    const key = th.dataset.key;
+                    if (riwayatSort.key === key) {
+                        riwayatSort.asc = !riwayatSort.asc;
+                    } else {
+                        riwayatSort.key = key;
+                        riwayatSort.asc = false; // default descending for date, ascending for others? We'll set asc false (descending) for date, but for others asc true maybe better.
+                        // Biarkan false agar descending (newest first) untuk tanggal, untuk lainnya tetap descending.
+                    }
+                    renderRiwayatTable(container);
+                });
+            });
+        }
+
+        // ===================== UTILITY =====================
         function escapeHtml(str) {
             if (!str) return '';
             return str.replace(/[&<>]/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;' }[m] || m));
         }
         
-        // Initial load
+        // Initial load (default tab: murid)
         loadMuridListView();
         loadGuru();
         loadMapel();
         loadPenugasan();
+        // Riwayat akan dimuat saat tab diklik
     </script>
 </body>
 </html>
