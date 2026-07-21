@@ -24,7 +24,7 @@
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(4px);
         }
-        select, input[type="number"] {
+        select, input[type="number"], input[type="text"] {
             border-radius: 0.5rem;
             border: 1px solid #e2e8f0;
             padding: 0.25rem 0.5rem;
@@ -416,9 +416,9 @@
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
         <h4 class="text-md font-bold mb-3">Edit Sesi Kehadiran</h4>
         <label class="block font-medium mb-1 text-sm">Tanggal</label>
-        <input type="date" id="editTanggalInput" class="w-full border rounded-xl p-2 mb-3 text-sm">
+        <input type="date" id="editSesiTanggal" class="w-full border rounded-xl p-2 mb-3 text-sm">
         <label class="block font-medium mb-1 text-sm">Topik / Materi</label>
-        <input type="text" id="editTopikInput" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="Masukkan topik pertemuan">
+        <input type="text" id="editSesiTopik" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="Masukkan topik materi">
         <div class="flex justify-end gap-3"><button id="cancelEditSesi" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="saveEditSesi" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
     </div>
 </div>
@@ -430,7 +430,7 @@
         <label class="block font-medium mb-1 text-sm">Tanggal</label>
         <input type="date" id="kehadiranDate" class="w-full border rounded-xl p-2 mb-3 text-sm">
         <label class="block font-medium mb-1 text-sm">Topik / Materi</label>
-        <input type="text" id="kehadiranTopik" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="e.g. Bab 1 Pengenalan">
+        <input type="text" id="kehadiranTopik" class="w-full border rounded-xl p-2 mb-4 text-sm" placeholder="e.g. Bab 1 - Pengenalan">
         <div class="flex justify-end gap-3"><button id="batalKehadiran" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button><button id="simpanKehadiran" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button></div>
     </div>
 </div>
@@ -587,12 +587,11 @@
                     <th class="sticky-col-second">Nama</th>`;
         for (let ses of sessionsList) {
             let shortDate = ses.date.split('/').slice(0,2).join('/');
-            let shortTopic = ses.topic ? ses.topic.substring(0, 12) : '';
             html += `<th class="text-center whitespace-nowrap">
                         <div>${escapeHtml(shortDate)}</div>
-                        <div class="text-gray-500 text-xs" style="font-weight:normal;">${escapeHtml(shortTopic)}</div>
+                        <div class="text-xs text-gray-400 font-light">${escapeHtml(ses.topic.length > 12 ? ses.topic.substring(0,12)+'…' : ses.topic)}</div>
                         <div class="flex items-center justify-center gap-0.5 mt-0.5">
-                            <button class="icon-btn icon-edit edit-session" data-session-id="${ses.id}" data-current-date="${ses.date}" data-current-topic="${escapeHtml(ses.topic)}"><i class="fas fa-pen fa-xs"></i></button>
+                            <button class="icon-btn icon-edit edit-session" data-session-id="${ses.id}" data-current-date="${ses.date}" data-current-topic="${ses.topic}"><i class="fas fa-pen fa-xs"></i></button>
                             <button class="icon-btn icon-delete delete-session" data-session-id="${ses.id}"><i class="fas fa-trash-alt fa-xs"></i></button>
                         </div>
                      </th>`;
@@ -623,14 +622,10 @@
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
         
-        // Event edit session (tanggal + topik)
         wrapperDiv.querySelectorAll('.edit-session').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
-                const sessionId = btn.dataset.sessionId;
-                const currentDate = btn.dataset.currentDate;
-                const currentTopic = btn.dataset.currentTopic || '';
-                openEditSesiModal(task.id, sessionId, currentDate, currentTopic, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
+                openEditSesiModal(task.id, btn.dataset.sessionId, btn.dataset.currentDate, btn.dataset.currentTopic, () => refreshWithScroll(wrapperDiv, refreshKehadiranTable, container, task));
             };
         });
         wrapperDiv.querySelectorAll('.delete-session').forEach(btn => {
@@ -654,6 +649,38 @@
         });
     }
 
+    // ===== MODAL EDIT SESI (Tanggal + Topik) =====
+    async function openEditSesiModal(assignmentId, sessionId, oldDateDMY, oldTopic, callback) {
+        let oldDate = parseDMY(oldDateDMY);
+        let ymd = oldDate ? toYMD(oldDate) : '';
+        const modal = document.getElementById('modalEditSesi');
+        document.getElementById('editSesiTanggal').value = ymd;
+        document.getElementById('editSesiTopik').value = oldTopic || '';
+        modal.style.display = 'flex';
+        
+        const saveBtn = document.getElementById('saveEditSesi');
+        const cancelBtn = document.getElementById('cancelEditSesi');
+        
+        const onSave = async () => {
+            let newYmd = document.getElementById('editSesiTanggal').value;
+            if (!newYmd) { alert("Pilih tanggal"); return; }
+            let newDateDMY = formatDateToDMY(new Date(newYmd));
+            let newTopic = document.getElementById('editSesiTopik').value.trim() || '';
+            await db.ref(`attendance/${assignmentId}/${sessionId}`).update({
+                date: newDateDMY,
+                topic: newTopic
+            });
+            modal.style.display = 'none';
+            if (callback) callback();
+            cleanup();
+        };
+        const onCancel = () => { modal.style.display = 'none'; cleanup(); };
+        const cleanup = () => { saveBtn.removeEventListener('click', onSave); cancelBtn.removeEventListener('click', onCancel); };
+        saveBtn.addEventListener('click', onSave);
+        cancelBtn.addEventListener('click', onCancel);
+    }
+
+    // ===== MODAL TAMBAH KEHADIRAN (dengan topik) =====
     async function openAddKehadiranModal(task) {
         const todayYMD = toYMD(new Date());
         document.getElementById('kehadiranDate').value = todayYMD;
@@ -664,11 +691,16 @@
         const batal = document.getElementById('batalKehadiran');
         const onSimpan = async () => {
             let ymd = document.getElementById('kehadiranDate').value;
-            if (!ymd) return alert("Pilih tanggal");
+            if (!ymd) { alert("Pilih tanggal"); return; }
+            let topik = document.getElementById('kehadiranTopik').value.trim();
+            if (!topik) { alert("Masukkan topik / materi"); return; }
             let dateDMY = formatDateToDMY(new Date(ymd));
-            let topic = document.getElementById('kehadiranTopik').value.trim() || '';
             const newSessionId = Date.now().toString();
-            await db.ref(`attendance/${task.id}/${newSessionId}`).set({ date: dateDMY, topic: topic, records: {} });
+            await db.ref(`attendance/${task.id}/${newSessionId}`).set({
+                date: dateDMY,
+                topic: topik,
+                records: {}
+            });
             modal.style.display = 'none';
             const container = document.querySelector('#detailContent .tab-pane-kehadiran');
             if (container) {
@@ -684,36 +716,7 @@
         batal.addEventListener('click', closeModal);
     }
 
-    // Fungsi edit sesi (tanggal + topik) - menggantikan openEditTanggalModal
-    async function openEditSesiModal(assignmentId, sessionId, oldDateDMY, oldTopic, callback) {
-        let oldDate = parseDMY(oldDateDMY);
-        let ymd = oldDate ? toYMD(oldDate) : '';
-        const modal = document.getElementById('modalEditSesi');
-        document.getElementById('editTanggalInput').value = ymd;
-        document.getElementById('editTopikInput').value = oldTopic || '';
-        modal.style.display = 'flex';
-        
-        const saveBtn = document.getElementById('saveEditSesi');
-        const cancelBtn = document.getElementById('cancelEditSesi');
-        
-        const onSave = async () => {
-            let newYmd = document.getElementById('editTanggalInput').value;
-            if (!newYmd) return alert("Pilih tanggal");
-            let newDateDMY = formatDateToDMY(new Date(newYmd));
-            let newTopic = document.getElementById('editTopikInput').value.trim() || '';
-            await db.ref(`attendance/${assignmentId}/${sessionId}/date`).set(newDateDMY);
-            await db.ref(`attendance/${assignmentId}/${sessionId}/topic`).set(newTopic);
-            modal.style.display = 'none';
-            if (callback) callback();
-            cleanup();
-        };
-        const onCancel = () => { modal.style.display = 'none'; cleanup(); };
-        const cleanup = () => { saveBtn.removeEventListener('click', onSave); cancelBtn.removeEventListener('click', onCancel); };
-        saveBtn.addEventListener('click', onSave);
-        cancelBtn.addEventListener('click', onCancel);
-    }
-
-    // ================= PENILAIAN =================
+    // ================= PENILAIAN (tidak berubah) =================
     async function renderPenilaianTab(container, task) {
         container.innerHTML = `<div class="flex justify-end mb-2"><button class="btn-plus btn-add-penilaian" title="Tambah penilaian"><i class="fas fa-plus"></i></button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6 text-sm">Memuat data...</div></div>`;
         container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
@@ -885,7 +888,7 @@
                     <thead>
                         <tr><th>No</th><th>NIS</th><th>Nama</th>`;
         for (let ses of sessionsList) {
-            printHtml += `<th>${escapeHtml(ses.date)}${ses.topic ? '<br><small>'+escapeHtml(ses.topic)+'</small>' : ''}</th>`;
+            printHtml += `<th>${escapeHtml(ses.date)}<br><span style="font-weight:normal;font-size:8pt;">${escapeHtml(ses.topic)}</span></th>`;
         }
         printHtml += `<th>Total H</th></tr>
                     </thead>
