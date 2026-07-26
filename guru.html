@@ -429,7 +429,7 @@
             <div>
                 <label class="block font-medium mb-1 text-sm">Siswa</label>
                 <select id="editCatatanSiswaSelect" class="w-full border rounded-xl p-2 text-sm">
-                    <option value="">-- Pilih Siswa --</option>
+                    <option value="">-- Pilih Murid --</option>
                 </select>
             </div>
             <div>
@@ -1112,7 +1112,7 @@
         document.getElementById('catatanTanggal').value = today;
 
         const selectSiswa = document.getElementById('catatanSiswaSelect');
-        selectSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>';
+        selectSiswa.innerHTML = '<option value="">-- Pilih Murid --</option>';
         const siswaList = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' }))
             .filter(s => s.nama !== '?')
             .sort((a,b) => a.nama.localeCompare(b.nama));
@@ -1134,7 +1134,7 @@
             const tanggal = document.getElementById('catatanTanggal').value;
             if (!tanggal) { alert("Pilih tanggal"); return; }
             const nis = selectSiswa.value;
-            if (!nis) { alert("Pilih siswa"); return; }
+            if (!nis) { alert("Pilih murid"); return; }
             const jenis = document.getElementById('catatanJenis').value;
             const keterangan = document.getElementById('catatanKeterangan').value.trim();
             const nilai = document.getElementById('catatanNilai').value.trim();
