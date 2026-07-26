@@ -127,6 +127,11 @@
             background-color: #fee2e2;
             color: #b91c1c;
         }
+        /* Warna merah untuk siswa tidak aktif */
+        .siswa-tidak-aktif {
+            color: #dc2626 !important;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -632,7 +637,7 @@
             } catch(err){ detailDiv.innerHTML=`<div class="text-red-500 p-4">Error: ${err.message}</div>`; }
         }
 
-        // ========= MODAL NILAI MURID =========
+        // ========= MODAL NILAI MURID (dengan warna merah untuk tidak aktif) =========
         async function showNilaiMuridModal(kelas) {
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
@@ -651,7 +656,7 @@
                 const penilaian = penilaianSnap.val() || {};
                 const siswaKelas = Object.entries(semuaMurid)
                     .filter(([_, data]) => data.kelas === kelas)
-                    .map(([nis, data]) => ({ nis, nama: data.nama }));
+                    .map(([nis, data]) => ({ nis, nama: data.nama, status: data.status || 'aktif' }));
                 if (siswaKelas.length === 0) {
                     overlay.innerHTML = `<div class="modal-container p-5"><div class="text-center"><i class="fas fa-exclamation-triangle text-yellow-500 text-3xl mb-2"></i><p>Tidak ada murid di kelas ${escapeHtml(kelas)}</p><button class="mt-4 bg-blue-500 text-white px-4 py-2 rounded closeModalBtn">Tutup</button></div></div>`;
                     attachCloseModal(overlay);
@@ -723,6 +728,9 @@
                 for (let student of siswaKelas) {
                     const nis = student.nis;
                     const nama = student.nama;
+                    const status = student.status;
+                    const isTidakAktif = (status === 'tidak_aktif');
+                    const rowClass = isTidakAktif ? 'siswa-tidak-aktif' : '';
                     const subjectAvgs = {};
                     let totalMapelScore = 0;
                     let countMapelWithScore = 0;
@@ -745,8 +753,8 @@
                     }
                     const overallDisplay = overallAvg === 0 && !hasAnySubject ? '-' : overallAvg;
                     tableHtml += `<tr>
-                        <td class="p-2 border">${escapeHtml(nis)}</td>
-                        <td class="p-2 border">${escapeHtml(nama)}</td>
+                        <td class="p-2 border ${rowClass}">${escapeHtml(nis)}</td>
+                        <td class="p-2 border ${rowClass}">${escapeHtml(nama)}</td>
                         ${hasAnySubject ? mapelIdsWithData.map(mid => `<td class="p-2 border text-center">${subjectAvgs[mid] === '-' ? '-' : subjectAvgs[mid]}</td>`).join('') : ''}
                         <td class="p-2 border text-center font-bold bg-gray-50">${overallDisplay}</td>
                     </tr>`;
@@ -764,7 +772,7 @@
             }
         }
 
-        // ========= REKAP KEHADIRAN =========
+        // ========= REKAP KEHADIRAN (dengan warna merah untuk tidak aktif) =========
         async function showRekapKehadiran(kelas) {
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
@@ -783,7 +791,7 @@
                 const attendanceAll = attendanceSnap.val() || {};
                 const siswaKelas = Object.entries(semuaMurid)
                     .filter(([_, data]) => data.kelas === kelas)
-                    .map(([nis, data]) => ({ nis, nama: data.nama }));
+                    .map(([nis, data]) => ({ nis, nama: data.nama, status: data.status || 'aktif' }));
                 if (siswaKelas.length === 0) {
                     overlay.innerHTML = `<div class="modal-container p-5"><div class="text-center"><i class="fas fa-exclamation-triangle text-yellow-500 text-3xl mb-2"></i><p>Tidak ada murid di kelas ${escapeHtml(kelas)}</p><button class="mt-4 bg-blue-500 text-white px-4 py-2 rounded closeModalBtn">Tutup</button></div></div>`;
                     attachCloseModal(overlay);
@@ -825,7 +833,7 @@
                 mapelIds.sort((a,b) => mapelUnik[a].localeCompare(mapelUnik[b]));
                 const rekap = {};
                 for (let siswa of siswaKelas) {
-                    rekap[siswa.nis] = { nama: siswa.nama };
+                    rekap[siswa.nis] = { nama: siswa.nama, status: siswa.status };
                     for (let mid of mapelIds) {
                         rekap[siswa.nis][mid] = 0;
                     }
@@ -867,11 +875,13 @@
                 for (let siswa of sortedSiswa) {
                     const nis = siswa.nis;
                     const data = rekap[nis];
+                    const isTidakAktif = (data.status === 'tidak_aktif');
+                    const rowClass = isTidakAktif ? 'siswa-tidak-aktif' : '';
                     let totalH = 0;
                     tableHtml += `<tr>
                         <td class="p-2 border text-center">${no++}</td>
-                        <td class="p-2 border">${escapeHtml(nis)}</td>
-                        <td class="p-2 border">${escapeHtml(data.nama)}</td>`;
+                        <td class="p-2 border ${rowClass}">${escapeHtml(nis)}</td>
+                        <td class="p-2 border ${rowClass}">${escapeHtml(data.nama)}</td>`;
                     for (let mid of mapelIds) {
                         const count = data[mid] || 0;
                         totalH += count;
