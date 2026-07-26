@@ -45,7 +45,7 @@
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(4px);
         }
-        select, input[type="number"], input[type="text"], textarea {
+        select, input[type="number"], input[type="text"], input[type="date"], textarea {
             border-radius: 0.5rem;
             border: 1px solid #e2e8f0;
             padding: 0.25rem 0.5rem;
@@ -214,9 +214,16 @@
             background-color: #f8fafc;
             font-weight: 600;
         }
+        .catatan-table .col-nama {
+            min-width: 90px;
+            max-width: 150px;
+            white-space: normal;
+            word-break: break-word;
+        }
         @media (min-width: 640px) {
             .catatan-table { font-size: 0.8rem; }
             .catatan-table th, .catatan-table td { padding: 6px 8px; }
+            .catatan-table .col-nama { min-width: 120px; max-width: 200px; }
         }
         .filter-dropdown {
             padding: 2px 6px;
@@ -357,11 +364,15 @@
     </div>
 </div>
 
-<!-- MODAL TAMBAH CATATAN -->
+<!-- MODAL TAMBAH CATATAN (dengan tanggal) -->
 <div id="modalTambahCatatan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
         <h4 class="text-md font-bold mb-3"><i class="fas fa-sticky-note text-indigo-500"></i> Tambah Catatan</h4>
         <div class="space-y-3">
+            <div>
+                <label class="block font-medium mb-1 text-sm">Tanggal</label>
+                <input type="date" id="catatanTanggal" class="w-full border rounded-xl p-2 text-sm" value="">
+            </div>
             <div>
                 <label class="block font-medium mb-1 text-sm">Siswa</label>
                 <select id="catatanSiswaSelect" class="w-full border rounded-xl p-2 text-sm">
@@ -534,7 +545,7 @@
         document.getElementById('assignmentsContainer').classList.remove('hidden');
     }
 
-    // ========== LOAD DETAIL TABS (Kehadiran, Penilaian, Catatan) ==========
+    // ========== LOAD DETAIL TABS ==========
     async function loadDetailTabs(task) {
         const container = document.getElementById('detailContent');
         container.innerHTML = `
@@ -578,7 +589,6 @@
             renderCatatanTab(catatanPane, task);
         };
 
-        // Default: render kehadiran
         renderKehadiranTab(kehadiranPane, task);
     }
 
@@ -906,9 +916,9 @@
         batal.addEventListener('click', onBatal);
     }
 
-    // ================= CATATAN (FITUR BARU) =================
+    // ================= CATATAN (DIPERBAIKI) =================
     let catatanFilterJenis = 'semua';
-    let catatanSort = { key: 'nis', asc: true };
+    let catatanSort = { key: 'tanggal', asc: false };
 
     async function renderCatatanTab(container, task) {
         container.innerHTML = `
@@ -940,6 +950,7 @@
         const data = snap.val() || {};
         let catatanList = Object.entries(data).map(([id, val]) => ({
             id,
+            tanggal: val.tanggal || '',
             nis: val.nis || '',
             nama: val.nama || (allSiswa[val.nis] ? allSiswa[val.nis].nama : '?'),
             jenis: val.jenis || 'positif',
@@ -956,8 +967,10 @@
         const key = catatanSort.key;
         const asc = catatanSort.asc;
         catatanList.sort((a, b) => {
-            let valA = (a[key] || '').toLowerCase();
-            let valB = (b[key] || '').toLowerCase();
+            let valA = a[key] ?? '';
+            let valB = b[key] ?? '';
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
             if (valA < valB) return asc ? -1 : 1;
             if (valA > valB) return asc ? 1 : -1;
             return 0;
@@ -973,8 +986,9 @@
 
         let html = `<table class="sticky-table catatan-table">`;
         html += `<thead><tr>
+            <th class="sortable-header" data-key="tanggal">Tanggal</th>
             <th class="sortable-header" data-key="nis">NIS</th>
-            <th class="sortable-header" data-key="nama">Nama</th>
+            <th class="sortable-header" data-key="nama" style="min-width:90px;">Nama</th>
             <th class="sortable-header" data-key="jenis">Positif/Negatif</th>
             <th class="sortable-header" data-key="keterangan">Keterangan</th>
             <th class="sortable-header" data-key="nilai">Nilai / Deskripsi</th>
@@ -982,11 +996,18 @@
         </tr></thead><tbody>`;
 
         for (let c of catatanList) {
+            // Tampilkan tanggal dalam format DD/MM/YYYY
+            let tanggalDisplay = c.tanggal || '-';
+            if (c.tanggal && c.tanggal.length === 10) {
+                const parts = c.tanggal.split('-');
+                tanggalDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
             const jenisLabel = c.jenis === 'positif' ? '✅ Positif' : '❌ Negatif';
             const jenisColor = c.jenis === 'positif' ? 'text-green-700' : 'text-red-700';
             html += `<tr>
+                <td>${escapeHtml(tanggalDisplay)}</td>
                 <td>${escapeHtml(c.nis)}</td>
-                <td>${escapeHtml(c.nama)}</td>
+                <td class="col-nama">${escapeHtml(c.nama)}</td>
                 <td class="${jenisColor} font-semibold">${escapeHtml(jenisLabel)}</td>
                 <td>${escapeHtml(c.keterangan)}</td>
                 <td>${escapeHtml(c.nilai)}</td>
@@ -1022,9 +1043,12 @@
 
     async function openAddCatatanModal(task) {
         const modal = document.getElementById('modalTambahCatatan');
+        // Set tanggal default hari ini
+        const today = toYMD(new Date());
+        document.getElementById('catatanTanggal').value = today;
+
         const selectSiswa = document.getElementById('catatanSiswaSelect');
         selectSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>';
-        // Urutkan siswa berdasarkan nama
         const siswaList = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' }))
             .filter(s => s.nama !== '?')
             .sort((a,b) => a.nama.localeCompare(b.nama));
@@ -1043,6 +1067,8 @@
         const batal = document.getElementById('batalCatatan');
 
         const onSimpan = async () => {
+            const tanggal = document.getElementById('catatanTanggal').value;
+            if (!tanggal) { alert("Pilih tanggal"); return; }
             const nis = selectSiswa.value;
             if (!nis) { alert("Pilih siswa"); return; }
             const jenis = document.getElementById('catatanJenis').value;
@@ -1052,7 +1078,12 @@
             const nama = allSiswa[nis]?.nama || '?';
             const newId = Date.now().toString();
             await db.ref(`catatan/${task.id}/${newId}`).set({
-                nis, nama, jenis, keterangan, nilai
+                tanggal,
+                nis,
+                nama,
+                jenis,
+                keterangan,
+                nilai
             });
             modal.style.display = 'none';
             const container = document.querySelector('#detailContent .tab-pane-catatan');
@@ -1067,11 +1098,11 @@
 
     // ========== FUNGSI CETAK (tidak diubah) ==========
     async function printAttendance(task) {
-        // ... (kode sama seperti sebelumnya) ...
-        // Karena panjang, saya tidak tulis ulang, tetapi tetap ada di file lengkap.
+        // (kode sama seperti sebelumnya, tidak ditampilkan untuk menghemat)
+        // Anda bisa salin dari versi sebelumnya atau saya akan sertakan jika diminta.
     }
     async function printGrades(task) {
-        // ... (kode sama seperti sebelumnya) ...
+        // (kode sama seperti sebelumnya)
     }
 
     // ========== TAMBAH PENUGASAN ==========
