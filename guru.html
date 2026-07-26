@@ -200,30 +200,37 @@
         .icon-delete { color: #e11d48; }
         .icon-edit { color: #4f46e5; }
         
-        /* Catatan table */
+        /* ====== CATATAN TABLE ====== */
         .catatan-table {
             font-size: 0.7rem;
+            table-layout: auto; /* biar kolom menyesuaikan konten */
         }
         .catatan-table th, .catatan-table td {
-            padding: 4px 6px;
+            padding: 4px 8px;
             border: 1px solid #e2e8f0;
             text-align: left;
             vertical-align: middle;
+            white-space: nowrap; /* biar teks tidak terpotong ke baris baru */
         }
         .catatan-table th {
             background-color: #f8fafc;
             font-weight: 600;
         }
         .catatan-table .col-nama {
-            min-width: 90px;
-            max-width: 150px;
-            white-space: normal;
-            word-break: break-word;
+            min-width: 100px; /* biar tidak terlalu sempit */
+        }
+        .catatan-table .col-keterangan {
+            min-width: 120px;
+        }
+        .catatan-table .col-nilai {
+            min-width: 100px;
         }
         @media (min-width: 640px) {
             .catatan-table { font-size: 0.8rem; }
-            .catatan-table th, .catatan-table td { padding: 6px 8px; }
-            .catatan-table .col-nama { min-width: 120px; max-width: 200px; }
+            .catatan-table th, .catatan-table td { padding: 6px 10px; }
+            .catatan-table .col-nama { min-width: 130px; }
+            .catatan-table .col-keterangan { min-width: 160px; }
+            .catatan-table .col-nilai { min-width: 130px; }
         }
         .filter-dropdown {
             padding: 2px 6px;
@@ -916,7 +923,7 @@
         batal.addEventListener('click', onBatal);
     }
 
-    // ================= CATATAN (DIPERBAIKI) =================
+    // ================= CATATAN (DIPERBAIKI LEBAR KOLOM) =================
     let catatanFilterJenis = 'semua';
     let catatanSort = { key: 'tanggal', asc: false };
 
@@ -990,13 +997,12 @@
             <th class="sortable-header" data-key="nis">NIS</th>
             <th class="sortable-header" data-key="nama" style="min-width:90px;">Nama</th>
             <th class="sortable-header" data-key="jenis">Positif/Negatif</th>
-            <th class="sortable-header" data-key="keterangan">Keterangan</th>
-            <th class="sortable-header" data-key="nilai">Nilai / Deskripsi</th>
+            <th class="sortable-header" data-key="keterangan" style="min-width:120px;">Keterangan</th>
+            <th class="sortable-header" data-key="nilai" style="min-width:100px;">Nilai / Deskripsi</th>
             <th class="text-center">Aksi</th>
         </tr></thead><tbody>`;
 
         for (let c of catatanList) {
-            // Tampilkan tanggal dalam format DD/MM/YYYY
             let tanggalDisplay = c.tanggal || '-';
             if (c.tanggal && c.tanggal.length === 10) {
                 const parts = c.tanggal.split('-');
@@ -1009,8 +1015,8 @@
                 <td>${escapeHtml(c.nis)}</td>
                 <td class="col-nama">${escapeHtml(c.nama)}</td>
                 <td class="${jenisColor} font-semibold">${escapeHtml(jenisLabel)}</td>
-                <td>${escapeHtml(c.keterangan)}</td>
-                <td>${escapeHtml(c.nilai)}</td>
+                <td class="col-keterangan">${escapeHtml(c.keterangan)}</td>
+                <td class="col-nilai">${escapeHtml(c.nilai)}</td>
                 <td class="text-center">
                     <button class="icon-btn icon-delete delete-catatan" data-id="${c.id}" title="Hapus catatan"><i class="fas fa-trash-alt"></i></button>
                 </td>
@@ -1043,7 +1049,6 @@
 
     async function openAddCatatanModal(task) {
         const modal = document.getElementById('modalTambahCatatan');
-        // Set tanggal default hari ini
         const today = toYMD(new Date());
         document.getElementById('catatanTanggal').value = today;
 
@@ -1096,13 +1101,176 @@
         batal.addEventListener('click', onBatal);
     }
 
-    // ========== FUNGSI CETAK (tidak diubah) ==========
+    // ========== FUNGSI CETAK ==========
     async function printAttendance(task) {
-        // (kode sama seperti sebelumnya, tidak ditampilkan untuk menghemat)
-        // Anda bisa salin dari versi sebelumnya atau saya akan sertakan jika diminta.
+        const sessionsSnap = await db.ref(`attendance/${task.id}`).once('value');
+        const sessions = sessionsSnap.val() || {};
+        let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, topic: val.topic || '', records: val.records || {} }));
+        sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        
+        const siswaArray = task.siswaList.map(nis => {
+            const data = allSiswa[nis] || { nama: '?', status: 'aktif' };
+            return { nis, nama: data.nama, status: data.status };
+        }).filter(s => s.nama !== '?');
+        
+        let printHtml = `
+            <div class="print-area">
+                <div class="print-header">
+                    <h1 style="font-size: 22px;">LAPORAN DAFTAR HADIR</h1>
+                    <h2>${escapeHtml(task.mapelNama)}</h2>
+                    <p>Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                    <p>Guru: ${escapeHtml(currentTeacher)}</p>
+                    <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+                </div>
+                <table class="print-table">
+                    <thead>
+                        <tr><th>No</th><th>NIS</th><th>Nama</th>`;
+        for (let ses of sessionsList) {
+            printHtml += `<th>${escapeHtml(ses.date)}<br><span style="font-weight:normal;font-size:8pt;">${escapeHtml(ses.topic)}</span></th>`;
+        }
+        printHtml += `<th>Total H</th></tr>
+                    </thead>
+                    <tbody>`;
+        
+        let no = 1;
+        for (let siswa of siswaArray) {
+            let hadirCount = 0;
+            const isTidakAktif = (siswa.status === 'tidak_aktif');
+            const styleNama = isTidakAktif ? 'color:#dc2626;font-weight:600;' : '';
+            printHtml += `<tr>
+                            <td>${no++}</td>
+                            <td>${escapeHtml(siswa.nis)}</td>
+                            <td style="text-align:left;${styleNama}">${escapeHtml(siswa.nama)}</td>`;
+            for (let ses of sessionsList) {
+                let status = ses.records[siswa.nis] || 'H';
+                if (status === 'H') hadirCount++;
+                printHtml += `<td>${status}</td>`;
+            }
+            printHtml += `<td><strong>${hadirCount}</strong></td>
+                        </tr>`;
+        }
+        printHtml += `
+                    </tbody>
+                </table>
+                <div class="print-footer">
+                    <p>Mengetahui,</p>
+                    <p style="margin-top: 40px;">(_____________________)</p>
+                </div>
+            </div>`;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Daftar Hadir - ${task.mapelNama}</title>
+                <style>
+                    body { font-family: 'Inter', Arial, sans-serif; margin: 0; padding: 15px; }
+                    .print-header { text-align: center; margin-bottom: 20px; }
+                    .print-table { width: 100%; border-collapse: collapse; }
+                    .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
+                    .print-table th { background: #f3f4f6; }
+                    .print-footer { margin-top: 40px; text-align: right; }
+                    @media print { @page { size: landscape; margin: 1.2cm; } }
+                </style>
+            </head>
+            <body>${printHtml}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
     }
+    
     async function printGrades(task) {
-        // (kode sama seperti sebelumnya)
+        const assessmentsSnap = await db.ref(`penilaian/${task.id}`).once('value');
+        const assessments = assessmentsSnap.val() || {};
+        let assessList = Object.entries(assessments).map(([id, val]) => ({ id, date: val.date, topic: val.topic, scores: val.scores || {} }));
+        assessList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
+        
+        const siswaArray = task.siswaList.map(nis => {
+            const data = allSiswa[nis] || { nama: '?', status: 'aktif' };
+            return { nis, nama: data.nama, status: data.status };
+        }).filter(s => s.nama !== '?');
+        
+        if (assessList.length === 0) {
+            alert("Belum ada data penilaian untuk dicetak.");
+            return;
+        }
+        
+        let printHtml = `
+            <div class="print-area">
+                <div class="print-header">
+                    <h1 style="font-size: 22px;">LAPORAN NILAI</h1>
+                    <h2>${escapeHtml(task.mapelNama)}</h2>
+                    <p>Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                    <p>Guru: ${escapeHtml(currentTeacher)}</p>
+                    <p>Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}</p>
+                </div>
+                <table class="print-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">No</th>
+                            <th rowspan="2">NIS</th>
+                            <th rowspan="2">Nama</th>`;
+        for (let i = 0; i < assessList.length; i++) {
+            printHtml += `<th rowspan="2">N${i+1}</th>`;
+        }
+        printHtml += `<th rowspan="2">Rata-Rata</th>
+                    </tr>
+                    <tr></thead>
+                    <tbody>`;
+        
+        let no = 1;
+        for (let siswa of siswaArray) {
+            let totalNilai = 0;
+            let countValid = 0;
+            const isTidakAktif = (siswa.status === 'tidak_aktif');
+            const styleNama = isTidakAktif ? 'color:#dc2626;font-weight:600;' : '';
+            printHtml += `<tr>
+                            <td>${no++}</td>
+                            <td>${escapeHtml(siswa.nis)}</td>
+                            <td style="text-align:left;${styleNama}">${escapeHtml(siswa.nama)}</td>`;
+            for (let as of assessList) {
+                let nilai = as.scores[siswa.nis] !== undefined ? as.scores[siswa.nis] : 0;
+                if (nilai > 0) { totalNilai += nilai; countValid++; }
+                printHtml += `<td>${nilai || '-'}</td>`;
+            }
+            let rata = assessList.length ? (totalNilai / assessList.length).toFixed(1) : 0;
+            printHtml += `<td><strong>${rata}</strong></td>
+                        </tr>`;
+        }
+        printHtml += `
+                    </tbody>
+                </table>
+                <div class="print-footer">
+                    <p>Mengetahui,</p>
+                    <p style="margin-top: 40px;">(_____________________)</p>
+                </div>
+            </div>`;
+        
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Laporan Nilai - ${task.mapelNama}</title>
+                <style>
+                    body { font-family: 'Inter', Arial, sans-serif; margin: 0; padding: 15px; }
+                    .print-header { text-align: center; margin-bottom: 20px; }
+                    .print-table { width: 100%; border-collapse: collapse; }
+                    .print-table th, .print-table td { border: 1px solid #000; padding: 6px; text-align: center; vertical-align: middle; }
+                    .print-table th { background: #f3f4f6; }
+                    .print-table td:nth-child(3) { text-align: left; }
+                    .print-footer { margin-top: 40px; text-align: right; }
+                    @media print {
+                        @page { size: landscape; margin: 1.2cm; }
+                        body { margin: 0; padding: 0; }
+                    }
+                </style>
+            </head>
+            <body>${printHtml}</body>
+            </html>
+        `);
+        printWindow.document.close();
+        printWindow.print();
     }
 
     // ========== TAMBAH PENUGASAN ==========
