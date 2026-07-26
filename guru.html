@@ -201,19 +201,20 @@
         .icon-edit { color: #4f46e5; }
         .icon-edit-green { color: #16a34a; }
         
-        /* ====== CATATAN TABLE ====== */
+        /* ====== CATATAN TABLE - DIPERBAIKI ====== */
         .catatan-table {
             font-size: 0.7rem;
             width: 100%;
             border-collapse: collapse;
-            table-layout: auto;
+            table-layout: fixed; /* kunci utama agar kolom stabil */
         }
-        .catatan-table th, .catatan-table td {
+        .catatan-table th,
+        .catatan-table td {
             padding: 4px 6px;
             border: 1px solid #e2e8f0;
             text-align: left;
             vertical-align: middle;
-            white-space: normal;
+            overflow: hidden;
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
@@ -221,25 +222,91 @@
             background-color: #f8fafc;
             font-weight: 600;
         }
-        .catatan-table .col-nama { min-width: 80px; }
-        .catatan-table .col-keterangan { min-width: 100px; }
-        .catatan-table .col-nilai { min-width: 70px; }
-        .catatan-table .col-aksi { text-align: center; white-space: nowrap; }
+        /* Lebar kolom - desktop */
+        .catatan-table .col-tanggal {
+            width: 90px;
+            min-width: 70px;
+            max-width: 100px;
+        }
+        .catatan-table .col-nis {
+            width: 80px;
+            min-width: 60px;
+            max-width: 100px;
+        }
+        .catatan-table .col-nama {
+            width: 220px;
+            min-width: 100px;
+            max-width: 280px;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+        .catatan-table .col-jenis {
+            width: 120px;
+            min-width: 90px;
+            max-width: 150px;
+        }
+        .catatan-table .col-keterangan {
+            width: auto; /* fleksibel mengisi sisa */
+            min-width: 100px;
+        }
+        .catatan-table .col-nilai {
+            width: 140px;
+            min-width: 80px;
+            max-width: 180px;
+        }
+        .catatan-table .col-aksi {
+            width: 70px;
+            min-width: 60px;
+            max-width: 80px;
+            text-align: center;
+            white-space: nowrap;
+        }
 
+        /* Responsif untuk HP */
         @media (max-width: 640px) {
             .catatan-table {
-                font-size: 0.65rem;
-                table-layout: fixed;
+                font-size: 0.6rem;
             }
-            .catatan-table th, .catatan-table td { padding: 3px 4px; }
-            .catatan-table .col-tanggal { width: 12%; }
-            .catatan-table .col-nis { width: 12%; }
-            .catatan-table .col-nama { width: 20%; }
-            .catatan-table .col-jenis { width: 14%; }
-            .catatan-table .col-keterangan { width: 22%; }
-            .catatan-table .col-nilai { width: 14%; }
-            .catatan-table .col-aksi { width: 8%; }
+            .catatan-table th,
+            .catatan-table td {
+                padding: 3px 4px;
+            }
+            .catatan-table .col-tanggal {
+                width: 60px;
+                min-width: 50px;
+                max-width: 70px;
+            }
+            .catatan-table .col-nis {
+                width: 55px;
+                min-width: 45px;
+                max-width: 65px;
+            }
+            .catatan-table .col-nama {
+                width: 110px;
+                min-width: 80px;
+                max-width: 140px;
+            }
+            .catatan-table .col-jenis {
+                width: 80px;
+                min-width: 60px;
+                max-width: 100px;
+            }
+            .catatan-table .col-keterangan {
+                min-width: 70px;
+            }
+            .catatan-table .col-nilai {
+                width: 80px;
+                min-width: 60px;
+                max-width: 100px;
+            }
+            .catatan-table .col-aksi {
+                width: 50px;
+                min-width: 40px;
+                max-width: 60px;
+            }
         }
+
         .filter-dropdown {
             padding: 2px 6px;
             border-radius: 6px;
@@ -1058,7 +1125,7 @@
             html += `<tr>
                 <td class="col-tanggal">${escapeHtml(tanggalDisplay)}</td>
                 <td class="col-nis">${escapeHtml(c.nis)}</td>
-                <td class="col-nama">${escapeHtml(c.nama)}</td>
+                <td class="col-nama" title="${escapeHtml(c.nama)}">${escapeHtml(c.nama)}</td>
                 <td class="col-jenis ${jenisColor} font-semibold">${escapeHtml(jenisLabel)}</td>
                 <td class="col-keterangan">${escapeHtml(c.keterangan)}</td>
                 <td class="col-nilai">${escapeHtml(c.nilai)}</td>
