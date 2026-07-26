@@ -199,38 +199,38 @@
         .icon-btn:hover { background-color: rgba(0,0,0,0.05); }
         .icon-delete { color: #e11d48; }
         .icon-edit { color: #4f46e5; }
+        .icon-edit-green { color: #16a34a; } /* hijau untuk edit catatan */
         
         /* ====== CATATAN TABLE ====== */
         .catatan-table {
             font-size: 0.7rem;
-            table-layout: auto; /* biar kolom menyesuaikan konten */
+            table-layout: fixed; /* agar kolom bisa wrap dan lebar diatur */
+            width: 100%;
         }
         .catatan-table th, .catatan-table td {
-            padding: 4px 8px;
+            padding: 4px 6px;
             border: 1px solid #e2e8f0;
             text-align: left;
             vertical-align: middle;
-            white-space: nowrap; /* biar teks tidak terpotong ke baris baru */
+            word-wrap: break-word;       /* wrap teks */
+            overflow-wrap: break-word;
         }
         .catatan-table th {
             background-color: #f8fafc;
             font-weight: 600;
         }
-        .catatan-table .col-nama {
-            min-width: 100px; /* biar tidak terlalu sempit */
-        }
-        .catatan-table .col-keterangan {
-            min-width: 120px;
-        }
-        .catatan-table .col-nilai {
-            min-width: 100px;
-        }
+        /* Lebar kolom (fixed) */
+        .catatan-table .col-tanggal { width: 10%; }
+        .catatan-table .col-nis { width: 10%; }
+        .catatan-table .col-nama { width: 20%; }
+        .catatan-table .col-jenis { width: 12%; }
+        .catatan-table .col-keterangan { width: 25%; }
+        .catatan-table .col-nilai { width: 15%; }
+        .catatan-table .col-aksi { width: 8%; text-align: center; }
+
         @media (min-width: 640px) {
             .catatan-table { font-size: 0.8rem; }
-            .catatan-table th, .catatan-table td { padding: 6px 10px; }
-            .catatan-table .col-nama { min-width: 130px; }
-            .catatan-table .col-keterangan { min-width: 160px; }
-            .catatan-table .col-nilai { min-width: 130px; }
+            .catatan-table th, .catatan-table td { padding: 6px 8px; }
         }
         .filter-dropdown {
             padding: 2px 6px;
@@ -371,14 +371,14 @@
     </div>
 </div>
 
-<!-- MODAL TAMBAH CATATAN (dengan tanggal) -->
+<!-- MODAL TAMBAH CATATAN -->
 <div id="modalTambahCatatan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
         <h4 class="text-md font-bold mb-3"><i class="fas fa-sticky-note text-indigo-500"></i> Tambah Catatan</h4>
         <div class="space-y-3">
             <div>
                 <label class="block font-medium mb-1 text-sm">Tanggal</label>
-                <input type="date" id="catatanTanggal" class="w-full border rounded-xl p-2 text-sm" value="">
+                <input type="date" id="catatanTanggal" class="w-full border rounded-xl p-2 text-sm">
             </div>
             <div>
                 <label class="block font-medium mb-1 text-sm">Siswa</label>
@@ -404,6 +404,44 @@
             <div class="flex justify-end gap-3 mt-3">
                 <button id="batalCatatan" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button>
                 <button id="simpanCatatan" class="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL EDIT CATATAN -->
+<div id="modalEditCatatan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
+        <h4 class="text-md font-bold mb-3"><i class="fas fa-edit text-green-600"></i> Edit Catatan</h4>
+        <div class="space-y-3">
+            <div>
+                <label class="block font-medium mb-1 text-sm">Tanggal</label>
+                <input type="date" id="editCatatanTanggal" class="w-full border rounded-xl p-2 text-sm">
+            </div>
+            <div>
+                <label class="block font-medium mb-1 text-sm">Siswa</label>
+                <select id="editCatatanSiswaSelect" class="w-full border rounded-xl p-2 text-sm">
+                    <option value="">-- Pilih Siswa --</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-medium mb-1 text-sm">Jenis</label>
+                <select id="editCatatanJenis" class="w-full border rounded-xl p-2 text-sm">
+                    <option value="positif">Positif</option>
+                    <option value="negatif">Negatif</option>
+                </select>
+            </div>
+            <div>
+                <label class="block font-medium mb-1 text-sm">Keterangan</label>
+                <input type="text" id="editCatatanKeterangan" class="w-full border rounded-xl p-2 text-sm" placeholder="e.g. Mengerjakan soal di papan">
+            </div>
+            <div>
+                <label class="block font-medium mb-1 text-sm">Nilai / Deskripsi</label>
+                <input type="text" id="editCatatanNilai" class="w-full border rounded-xl p-2 text-sm" placeholder="e.g. 100 atau 'Sangat Baik'">
+            </div>
+            <div class="flex justify-end gap-3 mt-3">
+                <button id="batalEditCatatan" class="px-3 py-1.5 border rounded-lg text-sm">Batal</button>
+                <button id="simpanEditCatatan" class="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm">Simpan</button>
             </div>
         </div>
     </div>
@@ -608,7 +646,7 @@
         wrapperElement.scrollTop = oldTop;
     }
 
-    // ================= KEHADIRAN (tidak diubah) =================
+    // ================= KEHADIRAN =================
     async function renderKehadiranTab(container, task) {
         container.innerHTML = `<div class="flex justify-end mb-2"><button class="btn-plus btn-add-kehadiran" title="Tambah sesi kehadiran"><i class="fas fa-plus"></i></button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6 text-sm">Memuat data...</div></div>`;
         container.querySelector('.btn-add-kehadiran').onclick = () => openAddKehadiranModal(task);
@@ -768,7 +806,7 @@
         batal.addEventListener('click', closeModal);
     }
 
-    // ================= PENILAIAN (tidak diubah) =================
+    // ================= PENILAIAN =================
     async function renderPenilaianTab(container, task) {
         container.innerHTML = `<div class="flex justify-end mb-2"><button class="btn-plus btn-add-penilaian" title="Tambah penilaian"><i class="fas fa-plus"></i></button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6 text-sm">Memuat data...</div></div>`;
         container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
@@ -923,9 +961,10 @@
         batal.addEventListener('click', onBatal);
     }
 
-    // ================= CATATAN (DIPERBAIKI LEBAR KOLOM) =================
+    // ================= CATATAN =================
     let catatanFilterJenis = 'semua';
     let catatanSort = { key: 'tanggal', asc: false };
+    let currentEditTask = null;
 
     async function renderCatatanTab(container, task) {
         container.innerHTML = `
@@ -965,12 +1004,10 @@
             nilai: val.nilai || ''
         }));
 
-        // Filter
         if (catatanFilterJenis !== 'semua') {
             catatanList = catatanList.filter(c => c.jenis === catatanFilterJenis);
         }
 
-        // Sort
         const key = catatanSort.key;
         const asc = catatanSort.asc;
         catatanList.sort((a, b) => {
@@ -993,13 +1030,13 @@
 
         let html = `<table class="sticky-table catatan-table">`;
         html += `<thead><tr>
-            <th class="sortable-header" data-key="tanggal">Tanggal</th>
-            <th class="sortable-header" data-key="nis">NIS</th>
-            <th class="sortable-header" data-key="nama" style="min-width:90px;">Nama</th>
-            <th class="sortable-header" data-key="jenis">Positif/Negatif</th>
-            <th class="sortable-header" data-key="keterangan" style="min-width:120px;">Keterangan</th>
-            <th class="sortable-header" data-key="nilai" style="min-width:100px;">Nilai / Deskripsi</th>
-            <th class="text-center">Aksi</th>
+            <th class="sortable-header col-tanggal" data-key="tanggal">Tanggal</th>
+            <th class="sortable-header col-nis" data-key="nis">NIS</th>
+            <th class="sortable-header col-nama" data-key="nama">Nama</th>
+            <th class="sortable-header col-jenis" data-key="jenis">Positif/Negatif</th>
+            <th class="sortable-header col-keterangan" data-key="keterangan">Keterangan</th>
+            <th class="sortable-header col-nilai" data-key="nilai">Nilai / Deskripsi</th>
+            <th class="col-aksi">Aksi</th>
         </tr></thead><tbody>`;
 
         for (let c of catatanList) {
@@ -1011,13 +1048,14 @@
             const jenisLabel = c.jenis === 'positif' ? '✅ Positif' : '❌ Negatif';
             const jenisColor = c.jenis === 'positif' ? 'text-green-700' : 'text-red-700';
             html += `<tr>
-                <td>${escapeHtml(tanggalDisplay)}</td>
-                <td>${escapeHtml(c.nis)}</td>
+                <td class="col-tanggal">${escapeHtml(tanggalDisplay)}</td>
+                <td class="col-nis">${escapeHtml(c.nis)}</td>
                 <td class="col-nama">${escapeHtml(c.nama)}</td>
-                <td class="${jenisColor} font-semibold">${escapeHtml(jenisLabel)}</td>
+                <td class="col-jenis ${jenisColor} font-semibold">${escapeHtml(jenisLabel)}</td>
                 <td class="col-keterangan">${escapeHtml(c.keterangan)}</td>
                 <td class="col-nilai">${escapeHtml(c.nilai)}</td>
-                <td class="text-center">
+                <td class="col-aksi text-center">
+                    <button class="icon-btn icon-edit-green edit-catatan" data-id="${c.id}" data-task-id="${task.id}" title="Edit catatan"><i class="fas fa-pen"></i></button>
                     <button class="icon-btn icon-delete delete-catatan" data-id="${c.id}" title="Hapus catatan"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>`;
@@ -1025,7 +1063,7 @@
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
 
-        // Sort header events
+        // Event sort
         wrapperDiv.querySelectorAll('.sortable-header').forEach(th => {
             th.addEventListener('click', () => {
                 const key = th.dataset.key;
@@ -1035,7 +1073,7 @@
             });
         });
 
-        // Delete events
+        // Event delete
         wrapperDiv.querySelectorAll('.delete-catatan').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -1045,8 +1083,21 @@
                 refreshCatatanTable(container, task);
             });
         });
+
+        // Event edit
+        wrapperDiv.querySelectorAll('.edit-catatan').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const catatan = catatanList.find(c => c.id === id);
+                if (catatan) {
+                    openEditCatatanModal(task, catatan);
+                }
+            });
+        });
     }
 
+    // ===== MODAL TAMBAH CATATAN =====
     async function openAddCatatanModal(task) {
         const modal = document.getElementById('modalTambahCatatan');
         const today = toYMD(new Date());
@@ -1083,6 +1134,61 @@
             const nama = allSiswa[nis]?.nama || '?';
             const newId = Date.now().toString();
             await db.ref(`catatan/${task.id}/${newId}`).set({
+                tanggal,
+                nis,
+                nama,
+                jenis,
+                keterangan,
+                nilai
+            });
+            modal.style.display = 'none';
+            const container = document.querySelector('#detailContent .tab-pane-catatan');
+            if (container) await refreshCatatanTable(container, task);
+            cleanup();
+        };
+        const onBatal = () => { modal.style.display = 'none'; cleanup(); };
+        const cleanup = () => { simpan.removeEventListener('click', onSimpan); batal.removeEventListener('click', onBatal); };
+        simpan.addEventListener('click', onSimpan);
+        batal.addEventListener('click', onBatal);
+    }
+
+    // ===== MODAL EDIT CATATAN =====
+    async function openEditCatatanModal(task, catatan) {
+        const modal = document.getElementById('modalEditCatatan');
+        currentEditTask = task;
+        // Isi data
+        document.getElementById('editCatatanTanggal').value = catatan.tanggal || '';
+        const selectSiswa = document.getElementById('editCatatanSiswaSelect');
+        selectSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>';
+        const siswaList = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' }))
+            .filter(s => s.nama !== '?')
+            .sort((a,b) => a.nama.localeCompare(b.nama));
+        for (let s of siswaList) {
+            const opt = document.createElement('option');
+            opt.value = s.nis;
+            opt.textContent = `${s.nis} - ${s.nama}`;
+            selectSiswa.appendChild(opt);
+        }
+        selectSiswa.value = catatan.nis;
+        document.getElementById('editCatatanJenis').value = catatan.jenis || 'positif';
+        document.getElementById('editCatatanKeterangan').value = catatan.keterangan || '';
+        document.getElementById('editCatatanNilai').value = catatan.nilai || '';
+        modal.style.display = 'flex';
+
+        const simpan = document.getElementById('simpanEditCatatan');
+        const batal = document.getElementById('batalEditCatatan');
+
+        const onSimpan = async () => {
+            const tanggal = document.getElementById('editCatatanTanggal').value;
+            if (!tanggal) { alert("Pilih tanggal"); return; }
+            const nis = selectSiswa.value;
+            if (!nis) { alert("Pilih siswa"); return; }
+            const jenis = document.getElementById('editCatatanJenis').value;
+            const keterangan = document.getElementById('editCatatanKeterangan').value.trim();
+            const nilai = document.getElementById('editCatatanNilai').value.trim();
+            if (!keterangan && !nilai) { alert("Isi keterangan atau nilai"); return; }
+            const nama = allSiswa[nis]?.nama || '?';
+            await db.ref(`catatan/${task.id}/${catatan.id}`).update({
                 tanggal,
                 nis,
                 nama,
