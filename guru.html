@@ -18,8 +18,31 @@
             border-left: 6px solid #4f46e5;
             transition: all 0.2s ease;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            position: relative;
         }
         .card-assignment:active { transform: scale(0.98); }
+        .btn-delete-card {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: transparent;
+            border: none;
+            color: #ef4444;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.15s;
+            padding: 4px 6px;
+            border-radius: 6px;
+            opacity: 0.6;
+            z-index: 5;
+        }
+        .btn-delete-card:hover {
+            opacity: 1;
+            background-color: #fee2e2;
+        }
+        .btn-delete-card:active {
+            transform: scale(0.9);
+        }
         .modal-bg {
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(4px);
@@ -55,7 +78,6 @@
             font-size: 0.7rem;
             padding: 0.15rem 0;
         }
-        /* Tambahan untuk siswa tidak aktif */
         .siswa-tidak-aktif {
             color: #dc2626 !important;
             font-weight: 600;
@@ -331,6 +353,24 @@
     function formatDateToDMY(date) { return toDMY(toYMD(date)); }
     function parseDMY(dateStr) { if(!dateStr) return null; let parts = dateStr.split('/'); if(parts.length===3){ let d=parseInt(parts[0]), m=parseInt(parts[1])-1, y=parseInt(parts[2]); return new Date(y,m,d); } return null; }
 
+    // === FUNGSI HAPUS PENUGASAN ===
+    async function deleteAssignment(penugasanId) {
+        if (!confirm("Yakin ingin menghapus penugasan ini? Semua data kehadiran dan penilaian akan ikut terhapus.")) return;
+        try {
+            // Hapus data attendance dan penilaian terkait
+            await db.ref(`attendance/${penugasanId}`).remove();
+            await db.ref(`penilaian/${penugasanId}`).remove();
+            // Hapus penugasan itu sendiri
+            await db.ref(`penugasan/${penugasanId}`).remove();
+            alert("Penugasan berhasil dihapus.");
+            // Refresh data
+            await fetchInitialData();
+            await renderAllCards();
+        } catch (err) {
+            alert("Gagal menghapus penugasan: " + err.message);
+        }
+    }
+
     async function fetchInitialData() {
         try {
             const [mapelSnap, kelasSnap, siswaSnap, penugasanSnap] = await Promise.all([
@@ -341,7 +381,6 @@
             ]);
             allMapel = mapelSnap.val() || {};
             allKelas = Object.keys(kelasSnap.val() || {});
-            // Ambil data siswa termasuk status
             const siswaData = siswaSnap.val() || {};
             allSiswa = {};
             for (let [nis, data] of Object.entries(siswaData)) {
@@ -372,31 +411,50 @@
 
     async function renderAllCards() {
         const container = document.getElementById('assignmentsContainer');
-        if (!penugasanList.length) { container.innerHTML = `<div class="col-span-full bg-white rounded-2xl shadow p-6 text-center"><i class="fas fa-folder-open text-3xl text-gray-300 mb-2"></i><p class="text-gray-500 text-sm">Belum ada penugasan. Klik "+ Penugasan" untuk memulai.</p></div>`; return; }
+        if (!penugasanList.length) {
+            container.innerHTML = `<div class="col-span-full bg-white rounded-2xl shadow p-6 text-center"><i class="fas fa-folder-open text-3xl text-gray-300 mb-2"></i><p class="text-gray-500 text-sm">Belum ada penugasan. Klik "+ Penugasan" untuk memulai.</p></div>`;
+            return;
+        }
         let html = '';
         for (let task of penugasanList) {
-            // Hitung jumlah siswa tidak aktif di penugasan ini
             let inactiveCount = 0;
             for (let nis of task.siswaList) {
                 if (allSiswa[nis] && allSiswa[nis].status === 'tidak_aktif') inactiveCount++;
             }
             const inactiveBadge = inactiveCount > 0 ? `<span class="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">${inactiveCount} tidak aktif</span>` : '';
-            html += `<div class="card-assignment p-3 cursor-pointer hover:shadow-lg transition" data-id="${task.id}">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="font-bold text-md text-indigo-800">${escapeHtml(task.mapelNama)} ${inactiveBadge}</h3>
-                                <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
-                                <p class="text-xs text-gray-400 mt-0.5">${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p>
-                            </div>
-                            <i class="fas fa-chevron-right text-indigo-400 text-md"></i>
+            html += `
+                <div class="card-assignment p-3 cursor-pointer hover:shadow-lg transition" data-id="${task.id}">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-md text-indigo-800">${escapeHtml(task.mapelNama)} ${inactiveBadge}</h3>
+                            <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p>
                         </div>
-                    </div>`;
+                        <i class="fas fa-chevron-right text-indigo-400 text-md"></i>
+                    </div>
+                    <!-- Tombol hapus di sudut kanan bawah -->
+                    <button class="btn-delete-card" data-id="${task.id}" title="Hapus penugasan"><i class="fas fa-trash-alt"></i></button>
+                </div>
+            `;
         }
         container.innerHTML = html;
-        document.querySelectorAll('.card-assignment').forEach(card => {
-            card.addEventListener('click', () => {
+
+        // Event listener untuk klik card (buka detail)
+        container.querySelectorAll('.card-assignment').forEach(card => {
+            card.addEventListener('click', (e) => {
+                // Jika yang diklik adalah tombol hapus, jangan buka detail
+                if (e.target.closest('.btn-delete-card')) return;
                 const selectedTask = penugasanList.find(t => t.id === card.dataset.id);
                 if (selectedTask) showDetailAssignment(selectedTask);
+            });
+        });
+
+        // Event listener untuk tombol hapus
+        container.querySelectorAll('.btn-delete-card').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation(); // cegah card click
+                const id = btn.dataset.id;
+                await deleteAssignment(id);
             });
         });
     }
@@ -464,7 +522,6 @@
         let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, topic: val.topic || '', records: val.records || {} }));
         sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         
-        // Ambil data siswa termasuk status
         const siswaArray = task.siswaList.map(nis => {
             const data = allSiswa[nis] || { nama: '?', status: 'aktif' };
             return { nis, nama: data.nama, status: data.status };
