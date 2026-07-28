@@ -155,6 +155,24 @@
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(4px);
         }
+
+        /* ===== GRADASI WARNA NILAI ===== */
+        .nilai-0 { color: #dc2626; font-weight: 700; }
+        .nilai-10 { color: #dc2626; font-weight: 700; }
+        .nilai-20 { color: #ea580c; font-weight: 700; }
+        .nilai-30 { color: #ea580c; font-weight: 700; }
+        .nilai-40 { color: #d97706; font-weight: 700; }
+        .nilai-50 { color: #ca8a04; font-weight: 700; }
+        .nilai-60 { color: #a3a300; font-weight: 700; }
+        .nilai-70 { color: #65a30d; font-weight: 700; }
+        .nilai-80 { color: #16a34a; font-weight: 700; }
+        .nilai-90 { color: #16a34a; font-weight: 700; }
+        .nilai-100 { color: #22c55e; font-weight: 700; }
+        /* Untuk nilai <= 70 (khusus mapel) */
+        .nilai-merah {
+            color: #dc2626 !important;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -302,6 +320,23 @@
             modalEl.addEventListener('click', (e) => {
                 if (e.target === modalEl) modalEl.remove();
             });
+        }
+
+        // ===== FUNGSI WARNA NILAI =====
+        function getWarnaNilai(nilai) {
+            if (nilai === '-' || nilai === null || isNaN(nilai)) return '';
+            const n = parseFloat(nilai);
+            if (n <= 0) return 'nilai-0';
+            if (n <= 10) return 'nilai-10';
+            if (n <= 20) return 'nilai-20';
+            if (n <= 30) return 'nilai-30';
+            if (n <= 40) return 'nilai-40';
+            if (n <= 50) return 'nilai-50';
+            if (n <= 60) return 'nilai-60';
+            if (n <= 70) return 'nilai-70';
+            if (n <= 80) return 'nilai-80';
+            if (n <= 90) return 'nilai-90';
+            return 'nilai-100';
         }
 
         // ===== TAB SWITCHING =====
@@ -684,7 +719,7 @@
             } catch(err){ detailDiv.innerHTML=`<div class="text-red-500 p-4">Error: ${err.message}</div>`; }
         }
 
-        // ========= MODAL NILAI MURID =========
+        // ========= MODAL NILAI MURID (DIPERBAIKI DENGAN WARNA) =========
         async function showNilaiMuridModal(kelas) {
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
@@ -781,6 +816,7 @@
                     const subjectAvgs = {};
                     let totalMapelScore = 0;
                     let countMapelWithScore = 0;
+                    
                     if (hasAnySubject) {
                         for (let mid of mapelIdsWithData) {
                             const avg = studentSubjectAvg[nis]?.[mid];
@@ -792,6 +828,7 @@
                             }
                         }
                     }
+                    
                     let overallAvg = 0;
                     if (hasAnySubject && countMapelWithScore > 0) {
                         overallAvg = Math.round((totalMapelScore / countMapelWithScore) * 10) / 10;
@@ -799,11 +836,26 @@
                         overallAvg = 0;
                     }
                     const overallDisplay = overallAvg === 0 && !hasAnySubject ? '-' : overallAvg;
+                    
                     tableHtml += `<tr>
                         <td class="p-2 border ${rowClass}">${escapeHtml(nis)}</td>
-                        <td class="p-2 border ${rowClass}">${escapeHtml(nama)}</td>
-                        ${hasAnySubject ? mapelIdsWithData.map(mid => `<td class="p-2 border text-center">${subjectAvgs[mid] === '-' ? '-' : subjectAvgs[mid]}</td>`).join('') : ''}
-                        <td class="p-2 border text-center font-bold bg-gray-50">${overallDisplay}</td>
+                        <td class="p-2 border ${rowClass}">${escapeHtml(nama)}</td>`;
+                    
+                    if (hasAnySubject) {
+                        for (let mid of mapelIdsWithData) {
+                            const val = subjectAvgs[mid];
+                            const valNum = parseFloat(val);
+                            const isNumeric = !isNaN(valNum);
+                            const warnaKelas = isNumeric ? getWarnaNilai(valNum) : '';
+                            const classNilai = isNumeric ? (valNum <= 70 ? 'nilai-merah' : '') : '';
+                            tableHtml += `<td class="p-2 border text-center ${warnaKelas} ${classNilai}">${val === '-' ? '-' : val}</td>`;
+                        }
+                    }
+                    
+                    const overallVal = parseFloat(overallDisplay);
+                    const warnaOverall = !isNaN(overallVal) ? getWarnaNilai(overallVal) : '';
+                    tableHtml += `
+                        <td class="p-2 border text-center font-bold bg-gray-50 ${warnaOverall}">${overallDisplay}</td>
                     </tr>`;
                 }
                 tableHtml += `</tbody></table>`;
@@ -811,6 +863,7 @@
                     tableHtml += `<div class="mt-4 text-center text-gray-500"><i class="fas fa-info-circle"></i> Belum ada nilai untuk mata pelajaran apapun di kelas ini. Nilai akan muncul setelah guru melakukan penilaian minimal 1 kali.</div>`;
                 }
                 tableHtml += `</div><div class="p-3 border-t text-right"><button class="closeModalBtn bg-purple-600 text-white px-4 py-2 rounded">Tutup</button></div>`;
+                
                 overlay.innerHTML = `<div class="modal-container max-w-6xl w-full">${tableHtml}</div>`;
                 attachCloseModal(overlay);
             } catch (err) {
@@ -1302,7 +1355,7 @@
         }
 
         // ============================================================
-        // 5. RIWAYAT SESI MENGAJAR (dengan S/I/A dan popup)
+        // 5. RIWAYAT SESI MENGAJAR
         // ============================================================
         let riwayatData = [];
         let riwayatSort = { key: 'tanggal', asc: false };
@@ -1486,7 +1539,6 @@
             html += `<div class="mt-3 text-xs text-gray-500">Total sesi: ${sorted.length}</div>`;
             container.innerHTML = html;
 
-            // Sort header events
             container.querySelectorAll('.sortable-header').forEach(th => {
                 th.addEventListener('click', () => {
                     const key = th.dataset.key;
@@ -1500,7 +1552,6 @@
                 });
             });
 
-            // Click event untuk kolom S/I/A
             container.querySelectorAll('[data-row-index]').forEach(td => {
                 td.addEventListener('click', () => {
                     const idx = parseInt(td.dataset.rowIndex);
@@ -1512,7 +1563,6 @@
             });
         }
 
-        // ===== FUNGSI POP-UP DETAIL RIWAYAT =====
         function showRiwayatDetail(row) {
             const modal = document.getElementById('modalRiwayatDetail');
             const title = document.getElementById('riwayatDetailTitle');
@@ -1529,7 +1579,6 @@
             modal.style.display = 'flex';
         }
 
-        // Tutup modal riwayat detail
         document.getElementById('riwayatDetailClose').addEventListener('click', () => {
             document.getElementById('modalRiwayatDetail').style.display = 'none';
         });
