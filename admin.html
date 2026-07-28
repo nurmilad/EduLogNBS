@@ -168,10 +168,20 @@
         .nilai-80 { color: #16a34a; font-weight: 700; }
         .nilai-90 { color: #16a34a; font-weight: 700; }
         .nilai-100 { color: #22c55e; font-weight: 700; }
-        /* Untuk nilai <= 70 (khusus mapel) */
         .nilai-merah {
             color: #dc2626 !important;
             font-weight: 600;
+        }
+        /* Password toggle */
+        .password-cell {
+            cursor: pointer;
+            user-select: none;
+        }
+        .password-cell:hover {
+            background-color: #f3f4f6;
+        }
+        .password-cell:active {
+            transform: scale(0.95);
         }
     </style>
 </head>
@@ -719,7 +729,7 @@
             } catch(err){ detailDiv.innerHTML=`<div class="text-red-500 p-4">Error: ${err.message}</div>`; }
         }
 
-        // ========= MODAL NILAI MURID (DIPERBAIKI DENGAN WARNA) =========
+        // ========= MODAL NILAI MURID =========
         async function showNilaiMuridModal(kelas) {
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
@@ -1006,7 +1016,7 @@
         }
 
         // ============================================================
-        // 2. DATA GURU
+        // 2. DATA GURU (DIPERBAIKI: PASSWORD DISEMBUNYIKAN)
         // ============================================================
         async function loadGuru() {
             const container = document.getElementById('guru');
@@ -1045,6 +1055,20 @@
                 `;
                 container.innerHTML = html;
                 
+                // Event delegation untuk toggle password (hanya sekali)
+                document.getElementById('guruTbody').addEventListener('click', function(e) {
+                    const cell = e.target.closest('.password-cell');
+                    if (cell) {
+                        const current = cell.textContent;
+                        const password = cell.dataset.password;
+                        if (current === '••••') {
+                            cell.textContent = password;
+                        } else {
+                            cell.textContent = '••••';
+                        }
+                    }
+                });
+                
                 async function hitungKehadiranGuru(guruName, startTimestamp, endTimestamp) {
                     let totalHadir = 0;
                     for (let [idPenugasan, pg] of Object.entries(penugasan)) {
@@ -1076,12 +1100,14 @@
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td class="p-2 border">${escapeHtml(nama)}</td>
-                            <td class="p-2 border">${escapeHtml(val.password)}</td>
+                            <td class="p-2 border password-cell" data-password="${escapeHtml(val.password)}" style="cursor:pointer;">••••</td>
                             <td class="p-2 border text-center font-bold">${jumlahKehadiran}</td>
                             <td class="p-2 border"><button class="editGuruBtn text-blue-500" data-nama="${escapeHtml(nama)}"><i class="fas fa-edit"></i></button> <button class="hapusGuruBtn text-red-500 ml-2" data-nama="${escapeHtml(nama)}"><i class="fas fa-trash"></i></button></td>
                         `;
                         tbody.appendChild(row);
                     }
+                    
+                    // Event listener untuk tombol edit dan hapus (tetap)
                     document.querySelectorAll('.editGuruBtn').forEach(btn => {
                         btn.onclick = async () => {
                             let newPass = prompt('Password baru:');
