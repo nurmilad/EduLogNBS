@@ -183,6 +183,53 @@
         .password-cell:active {
             transform: scale(0.95);
         }
+        /* Toggle switch style */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 26px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #4f46e5;
+        }
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -199,6 +246,7 @@
                     <li class="mr-2"><button class="tab-link inline-block p-2 sm:p-3 hover:text-gray-600" data-tab="mapel">Data Mapel</button></li>
                     <li class="mr-2"><button class="tab-link inline-block p-2 sm:p-3 hover:text-gray-600" data-tab="penugasan">Penugasan</button></li>
                     <li class="mr-2"><button class="tab-link inline-block p-2 sm:p-3 hover:text-gray-600" data-tab="riwayat">Riwayat Sesi Mengajar</button></li>
+                    <li class="mr-2"><button class="tab-link inline-block p-2 sm:p-3 hover:text-gray-600" data-tab="settings"><i class="fas fa-cog"></i> Settings</button></li>
                 </ul>
             </div>
             <div id="murid" class="tab-content">Loading Data Murid...</div>
@@ -206,6 +254,7 @@
             <div id="mapel" class="tab-content hidden">Loading Data Mapel...</div>
             <div id="penugasan" class="tab-content hidden">Loading Penugasan...</div>
             <div id="riwayat" class="tab-content hidden">Loading Riwayat Sesi Mengajar...</div>
+            <div id="settings" class="tab-content hidden">Loading Settings...</div>
         </div>
     </div>
 
@@ -363,11 +412,81 @@
             else if (tabId === 'mapel') loadMapel();
             else if (tabId === 'penugasan') loadPenugasan();
             else if (tabId === 'riwayat') loadRiwayat();
+            else if (tabId === 'settings') loadSettings();
         }
 
         document.querySelectorAll('.tab-link').forEach(btn => {
             btn.onclick = () => showTab(btn.dataset.tab);
         });
+
+        // ============================================================
+        // SETTINGS
+        // ============================================================
+        async function loadSettings() {
+            const container = document.getElementById('settings');
+            try {
+                // Ambil nilai pengaturan dari Firebase
+                const settingsSnap = await db.ref('settings').once('value');
+                const settings = settingsSnap.val() || {};
+                const canDelete = settings.guruCanDelete !== false; // default true jika belum diatur
+
+                container.innerHTML = `
+                    <div class="bg-white rounded-lg border p-6 max-w-2xl">
+                        <h2 class="text-xl font-bold mb-4"><i class="fas fa-sliders-h text-indigo-600"></i> Pengaturan Sistem</h2>
+                        <p class="text-sm text-gray-500 mb-6">Atur izin dan pengaturan aplikasi di sini. Perubahan akan langsung berlaku.</p>
+                        
+                        <div class="border-t pt-4">
+                            <h3 class="font-semibold text-md mb-3">Izin Guru</h3>
+                            <div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
+                                <div>
+                                    <p class="font-medium">Hapus Penugasan oleh Guru</p>
+                                    <p class="text-xs text-gray-500">Jika dinonaktifkan, tombol hapus penugasan tidak akan muncul di halaman guru.</p>
+                                </div>
+                                <label class="toggle-label">
+                                    <span class="text-sm font-medium ${canDelete ? 'text-green-600' : 'text-red-600'} mr-2" id="deleteStatusLabel">${canDelete ? 'Aktif' : 'Nonaktif'}</span>
+                                    <div class="toggle-switch">
+                                        <input type="checkbox" id="toggleGuruDelete" ${canDelete ? 'checked' : ''}>
+                                        <span class="toggle-slider"></span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4 text-xs text-gray-400 border-t pt-4">
+                            <i class="fas fa-info-circle"></i> Pengaturan disimpan secara otomatis di database.
+                        </div>
+                    </div>
+                `;
+
+                // Event listener toggle
+                const toggle = document.getElementById('toggleGuruDelete');
+                const statusLabel = document.getElementById('deleteStatusLabel');
+                toggle.addEventListener('change', async function() {
+                    const isChecked = this.checked;
+                    try {
+                        await db.ref('settings/guruCanDelete').set(isChecked);
+                        statusLabel.textContent = isChecked ? 'Aktif' : 'Nonaktif';
+                        statusLabel.className = `text-sm font-medium mr-2 ${isChecked ? 'text-green-600' : 'text-red-600'}`;
+                        // Tampilkan notifikasi sederhana
+                        const notif = document.createElement('div');
+                        notif.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white ${isChecked ? 'bg-green-500' : 'bg-red-500'} z-50 transition-opacity duration-300`;
+                        notif.textContent = isChecked ? '✅ Izin hapus penugasan diaktifkan' : '❌ Izin hapus penugasan dinonaktifkan';
+                        document.body.appendChild(notif);
+                        setTimeout(() => {
+                            notif.style.opacity = '0';
+                            setTimeout(() => notif.remove(), 300);
+                        }, 2500);
+                    } catch (err) {
+                        showError('Gagal menyimpan pengaturan: ' + err.message);
+                        // Kembalikan toggle ke posisi semula
+                        this.checked = !isChecked;
+                    }
+                });
+
+            } catch (err) {
+                container.innerHTML = `<div class="text-red-500">Gagal memuat pengaturan: ${err.message}</div>`;
+            }
+        }
 
         // ============================================================
         // 1. DATA MURID
@@ -1016,7 +1135,7 @@
         }
 
         // ============================================================
-        // 2. DATA GURU (DIPERBAIKI: PASSWORD DISEMBUNYIKAN)
+        // 2. DATA GURU
         // ============================================================
         async function loadGuru() {
             const container = document.getElementById('guru');
@@ -1055,7 +1174,7 @@
                 `;
                 container.innerHTML = html;
                 
-                // Event delegation untuk toggle password (hanya sekali)
+                // Event delegation untuk toggle password
                 document.getElementById('guruTbody').addEventListener('click', function(e) {
                     const cell = e.target.closest('.password-cell');
                     if (cell) {
@@ -1107,7 +1226,6 @@
                         tbody.appendChild(row);
                     }
                     
-                    // Event listener untuk tombol edit dan hapus (tetap)
                     document.querySelectorAll('.editGuruBtn').forEach(btn => {
                         btn.onclick = async () => {
                             let newPass = prompt('Password baru:');
@@ -1621,6 +1739,7 @@
         loadGuru();
         loadMapel();
         loadPenugasan();
+        // Settings akan dimuat saat tab diklik
     </script>
 </body>
 </html>
