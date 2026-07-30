@@ -241,6 +241,11 @@
         }
         .riwayat-harian-table th {
             background-color: #f9fafb;
+            cursor: pointer;
+            user-select: none;
+        }
+        .riwayat-harian-table th:hover {
+            background-color: #e5e7eb;
         }
         .badge-status {
             display: inline-block;
@@ -312,7 +317,7 @@
         </div>
     </div>
 
-    <!-- MODAL DETAIL RIWAYAT (POPUP S/I/A) - DIPERBAHARUI -->
+    <!-- MODAL DETAIL RIWAYAT (POPUP S/I/A) - DIPERBAHARUI DENGAN SORTING -->
     <div id="modalRiwayatDetail" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print" style="background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);">
         <div class="bg-white rounded-2xl max-w-2xl w-full mx-4 p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-bold mb-3" id="riwayatDetailTitle">Siswa Tidak Hadir</h3>
@@ -342,9 +347,9 @@
                         <table class="riwayat-harian-table">
                             <thead>
                                 <tr>
-                                    <th>Nama Siswa</th>
-                                    <th>Mata Pelajaran</th>
-                                    <th>Status</th>
+                                    <th data-sort="nama" class="sortable-th">Nama Siswa <span class="sort-icon">⇅</span></th>
+                                    <th data-sort="mapel" class="sortable-th">Mata Pelajaran <span class="sort-icon">⇅</span></th>
+                                    <th data-sort="status" class="sortable-th">Status <span class="sort-icon">⇅</span></th>
                                 </tr>
                             </thead>
                             <tbody id="riwayatDetailAllDateBody">
@@ -1539,12 +1544,13 @@
         }
 
         // ============================================================
-        // 5. RIWAYAT SESI MENGAJAR (DIPERBAHARUI)
+        // 5. RIWAYAT SESI MENGAJAR (DIPERBAHARUI DENGAN SORTING)
         // ============================================================
         let riwayatData = [];
         let riwayatSort = { key: 'tanggal', asc: false };
-        // Tambahkan variabel global untuk menyimpan data ketidakhadiran per tanggal
         window.riwayatByDate = {};
+        // State sorting untuk tabel harian
+        window.riwayatHarianSort = { key: 'nama', asc: true };
 
         function getWarnaPersentase(persen) {
             if (persen <= 0) return 'persen-0';
@@ -1558,6 +1564,51 @@
             if (persen <= 80) return 'persen-80';
             if (persen <= 90) return 'persen-90';
             return 'persen-100';
+        }
+
+        // Fungsi untuk merender tabel harian dengan sorting
+        function renderRiwayatHarian(data, sortKey, sortAsc) {
+            const tbody = document.getElementById('riwayatDetailAllDateBody');
+            if (!tbody) return;
+
+            // Urutkan data
+            const sorted = [...data];
+            sorted.sort((a, b) => {
+                let valA = a[sortKey] || '';
+                let valB = b[sortKey] || '';
+                if (typeof valA === 'string') valA = valA.toLowerCase();
+                if (typeof valB === 'string') valB = valB.toLowerCase();
+                if (valA < valB) return sortAsc ? -1 : 1;
+                if (valA > valB) return sortAsc ? 1 : -1;
+                return 0;
+            });
+
+            if (sorted.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-gray-400 text-sm">Tidak ada data ketidakhadiran lain pada tanggal ini</td></tr>`;
+                return;
+            }
+
+            let html = '';
+            sorted.forEach(item => {
+                const badgeClass = item.status === 'S' ? 'badge-s' : (item.status === 'I' ? 'badge-i' : 'badge-a');
+                html += `<tr>
+                    <td>${escapeHtml(item.nama)}</td>
+                    <td>${escapeHtml(item.mapel)}</td>
+                    <td><span class="badge-status ${badgeClass}">${item.status}</span></td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+
+            // Update ikon sort pada header
+            document.querySelectorAll('.riwayat-harian-table .sortable-th').forEach(th => {
+                const key = th.dataset.sort;
+                const iconSpan = th.querySelector('.sort-icon');
+                if (key === sortKey) {
+                    iconSpan.textContent = sortAsc ? ' ▲' : ' ▼';
+                } else {
+                    iconSpan.textContent = ' ⇅';
+                }
+            });
         }
 
         async function loadRiwayat() {
@@ -1580,7 +1631,6 @@
                     statusMap[nis] = data.status || 'aktif';
                 }
 
-                // Reset data per tanggal
                 window.riwayatByDate = {};
 
                 const rows = [];
@@ -1611,7 +1661,6 @@
                         let jumlahS = 0, jumlahI = 0, jumlahA = 0;
                         let detailS = [], detailI = [], detailA = [];
 
-                        // Inisialisasi data per tanggal jika belum ada
                         if (!window.riwayatByDate[tanggal]) {
                             window.riwayatByDate[tanggal] = [];
                         }
@@ -1624,7 +1673,6 @@
                             } else if (status === 'S') {
                                 jumlahS++;
                                 detailS.push(nama);
-                                // Tambahkan ke data per tanggal
                                 window.riwayatByDate[tanggal].push({ nama, mapel: namaMapel, status: 'S' });
                             } else if (status === 'I') {
                                 jumlahI++;
@@ -1768,31 +1816,30 @@
             const aList = document.getElementById('riwayatDetailAList');
             const allDateBody = document.getElementById('riwayatDetailAllDateBody');
 
-            // Set judul
             title.textContent = `Siswa Tidak Hadir - ${row.tanggal} (${row.mapel})`;
 
-            // Bagian mapel tertentu
             sList.innerHTML = row.detailS.length ? row.detailS.map(n => `<div class="riwayat-detail-item">${escapeHtml(n)}</div>`).join('') : '<span class="text-gray-400">-</span>';
             iList.innerHTML = row.detailI.length ? row.detailI.map(n => `<div class="riwayat-detail-item">${escapeHtml(n)}</div>`).join('') : '<span class="text-gray-400">-</span>';
             aList.innerHTML = row.detailA.length ? row.detailA.map(n => `<div class="riwayat-detail-item">${escapeHtml(n)}</div>`).join('') : '<span class="text-gray-400">-</span>';
 
-            // Bagian semua ketidakhadiran pada tanggal yang sama
             const dataPerTanggal = window.riwayatByDate[row.tanggal] || [];
-            if (dataPerTanggal.length === 0) {
-                allDateBody.innerHTML = `<tr><td colspan="3" class="text-center text-gray-400 text-sm">Tidak ada data ketidakhadiran lain pada tanggal ini</td></tr>`;
-            } else {
-                // Kelompokkan berdasarkan siswa (opsional, tapi kita tampilkan per baris agar bisa muncul dobel)
-                let htmlRows = '';
-                dataPerTanggal.forEach(item => {
-                    const badgeClass = item.status === 'S' ? 'badge-s' : (item.status === 'I' ? 'badge-i' : 'badge-a');
-                    htmlRows += `<tr>
-                        <td>${escapeHtml(item.nama)}</td>
-                        <td>${escapeHtml(item.mapel)}</td>
-                        <td><span class="badge-status ${badgeClass}">${item.status}</span></td>
-                    </tr>`;
-                });
-                allDateBody.innerHTML = htmlRows;
-            }
+            // Reset sorting ke default saat modal dibuka
+            window.riwayatHarianSort = { key: 'nama', asc: true };
+            renderRiwayatHarian(dataPerTanggal, window.riwayatHarianSort.key, window.riwayatHarianSort.asc);
+
+            // Attach event listener untuk sorting header
+            document.querySelectorAll('.riwayat-harian-table .sortable-th').forEach(th => {
+                th.onclick = () => {
+                    const key = th.dataset.sort;
+                    if (window.riwayatHarianSort.key === key) {
+                        window.riwayatHarianSort.asc = !window.riwayatHarianSort.asc;
+                    } else {
+                        window.riwayatHarianSort.key = key;
+                        window.riwayatHarianSort.asc = true;
+                    }
+                    renderRiwayatHarian(dataPerTanggal, window.riwayatHarianSort.key, window.riwayatHarianSort.asc);
+                };
+            });
 
             modal.style.display = 'flex';
         }
