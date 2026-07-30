@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* ... semua style yang sudah ada, tidak diubah ... */
         .tab-content { transition: all 0.2s; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         .table-wrapper { overflow-x: auto; border-radius: 0.75rem; }
@@ -156,7 +157,6 @@
             backdrop-filter: blur(4px);
         }
 
-        /* ===== GRADASI WARNA NILAI ===== */
         .nilai-0 { color: #dc2626; font-weight: 700; }
         .nilai-10 { color: #dc2626; font-weight: 700; }
         .nilai-20 { color: #ea580c; font-weight: 700; }
@@ -172,7 +172,6 @@
             color: #dc2626 !important;
             font-weight: 600;
         }
-        /* Password toggle */
         .password-cell {
             cursor: pointer;
             user-select: none;
@@ -183,7 +182,6 @@
         .password-cell:active {
             transform: scale(0.95);
         }
-        /* Toggle switch style */
         .toggle-switch {
             position: relative;
             display: inline-block;
@@ -230,6 +228,30 @@
             gap: 10px;
             cursor: pointer;
         }
+        /* Tambahan untuk tabel riwayat harian di modal */
+        .riwayat-harian-table {
+            font-size: 0.8rem;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .riwayat-harian-table th, .riwayat-harian-table td {
+            padding: 4px 8px;
+            border: 1px solid #e5e7eb;
+            text-align: left;
+        }
+        .riwayat-harian-table th {
+            background-color: #f9fafb;
+        }
+        .badge-status {
+            display: inline-block;
+            padding: 0.1rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        .badge-s { background: #fecaca; color: #991b1b; }
+        .badge-i { background: #fed7aa; color: #9a3412; }
+        .badge-a { background: #e5e7eb; color: #4b5563; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -290,22 +312,46 @@
         </div>
     </div>
 
-    <!-- MODAL DETAIL RIWAYAT (POPUP S/I/A) -->
+    <!-- MODAL DETAIL RIWAYAT (POPUP S/I/A) - DIPERBAHARUI -->
     <div id="modalRiwayatDetail" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print" style="background:rgba(0,0,0,0.5); backdrop-filter:blur(4px);">
-        <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <div class="bg-white rounded-2xl max-w-2xl w-full mx-4 p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h3 class="text-lg font-bold mb-3" id="riwayatDetailTitle">Siswa Tidak Hadir</h3>
-            <div id="riwayatDetailContent" class="space-y-2">
-                <div id="riwayatDetailS" class="border-l-4 border-red-500 pl-3">
-                    <h4 class="font-semibold text-red-600">Sakit (S)</h4>
-                    <div id="riwayatDetailSList" class="text-sm text-gray-700">-</div>
+            <div id="riwayatDetailContent" class="space-y-4">
+                <!-- Bagian untuk mapel tertentu -->
+                <div>
+                    <h4 class="font-semibold text-gray-700 mb-2">📘 Tidak Hadir pada Mapel Ini</h4>
+                    <div id="riwayatDetailMapel" class="space-y-2">
+                        <div id="riwayatDetailS" class="border-l-4 border-red-500 pl-3">
+                            <h5 class="font-semibold text-red-600 text-sm">Sakit (S)</h5>
+                            <div id="riwayatDetailSList" class="text-sm text-gray-700">-</div>
+                        </div>
+                        <div id="riwayatDetailI" class="border-l-4 border-yellow-500 pl-3">
+                            <h5 class="font-semibold text-yellow-600 text-sm">Izin (I)</h5>
+                            <div id="riwayatDetailIList" class="text-sm text-gray-700">-</div>
+                        </div>
+                        <div id="riwayatDetailA" class="border-l-4 border-gray-500 pl-3">
+                            <h5 class="font-semibold text-gray-600 text-sm">Alfa (A)</h5>
+                            <div id="riwayatDetailAList" class="text-sm text-gray-700">-</div>
+                        </div>
+                    </div>
                 </div>
-                <div id="riwayatDetailI" class="border-l-4 border-yellow-500 pl-3">
-                    <h4 class="font-semibold text-yellow-600">Izin (I)</h4>
-                    <div id="riwayatDetailIList" class="text-sm text-gray-700">-</div>
-                </div>
-                <div id="riwayatDetailA" class="border-l-4 border-gray-500 pl-3">
-                    <h4 class="font-semibold text-gray-600">Alfa (A)</h4>
-                    <div id="riwayatDetailAList" class="text-sm text-gray-700">-</div>
+                <!-- Bagian untuk semua ketidakhadiran pada tanggal yang sama -->
+                <div>
+                    <h4 class="font-semibold text-gray-700 mb-2">📅 Semua Ketidakhadiran pada Tanggal Ini</h4>
+                    <div id="riwayatDetailAllDate" class="overflow-x-auto">
+                        <table class="riwayat-harian-table">
+                            <thead>
+                                <tr>
+                                    <th>Nama Siswa</th>
+                                    <th>Mata Pelajaran</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="riwayatDetailAllDateBody">
+                                <tr><td colspan="3" class="text-center text-gray-400 text-sm">Tidak ada data</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
             <div class="flex justify-end mt-4">
@@ -381,7 +427,6 @@
             });
         }
 
-        // ===== FUNGSI WARNA NILAI =====
         function getWarnaNilai(nilai) {
             if (nilai === '-' || nilai === null || isNaN(nilai)) return '';
             const n = parseFloat(nilai);
@@ -420,15 +465,14 @@
         });
 
         // ============================================================
-        // SETTINGS
+        // SETTINGS (tidak diubah)
         // ============================================================
         async function loadSettings() {
             const container = document.getElementById('settings');
             try {
-                // Ambil nilai pengaturan dari Firebase
                 const settingsSnap = await db.ref('settings').once('value');
                 const settings = settingsSnap.val() || {};
-                const canDelete = settings.guruCanDelete !== false; // default true jika belum diatur
+                const canDelete = settings.guruCanDelete !== false;
 
                 container.innerHTML = `
                     <div class="bg-white rounded-lg border p-6 max-w-2xl">
@@ -458,7 +502,6 @@
                     </div>
                 `;
 
-                // Event listener toggle
                 const toggle = document.getElementById('toggleGuruDelete');
                 const statusLabel = document.getElementById('deleteStatusLabel');
                 toggle.addEventListener('change', async function() {
@@ -467,7 +510,6 @@
                         await db.ref('settings/guruCanDelete').set(isChecked);
                         statusLabel.textContent = isChecked ? 'Aktif' : 'Nonaktif';
                         statusLabel.className = `text-sm font-medium mr-2 ${isChecked ? 'text-green-600' : 'text-red-600'}`;
-                        // Tampilkan notifikasi sederhana
                         const notif = document.createElement('div');
                         notif.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white ${isChecked ? 'bg-green-500' : 'bg-red-500'} z-50 transition-opacity duration-300`;
                         notif.textContent = isChecked ? '✅ Izin hapus penugasan diaktifkan' : '❌ Izin hapus penugasan dinonaktifkan';
@@ -478,7 +520,6 @@
                         }, 2500);
                     } catch (err) {
                         showError('Gagal menyimpan pengaturan: ' + err.message);
-                        // Kembalikan toggle ke posisi semula
                         this.checked = !isChecked;
                     }
                 });
@@ -489,7 +530,7 @@
         }
 
         // ============================================================
-        // 1. DATA MURID
+        // 1. DATA MURID (tidak diubah)
         // ============================================================
         async function hitungSemuaStatistikSiswa() {
             const [penugasanSnap, attendanceSnap, penilaianSnap] = await Promise.all([
@@ -1135,7 +1176,7 @@
         }
 
         // ============================================================
-        // 2. DATA GURU
+        // 2. DATA GURU (tidak diubah)
         // ============================================================
         async function loadGuru() {
             const container = document.getElementById('guru');
@@ -1174,7 +1215,6 @@
                 `;
                 container.innerHTML = html;
                 
-                // Event delegation untuk toggle password
                 document.getElementById('guruTbody').addEventListener('click', function(e) {
                     const cell = e.target.closest('.password-cell');
                     if (cell) {
@@ -1258,7 +1298,7 @@
         }
 
         // ============================================================
-        // 3. DATA MAPEL
+        // 3. DATA MAPEL (tidak diubah)
         // ============================================================
         async function loadMapel() {
             const container = document.getElementById('mapel');
@@ -1325,7 +1365,7 @@
         }
 
         // ============================================================
-        // 4. PENUGASAN
+        // 4. PENUGASAN (tidak diubah)
         // ============================================================
         async function loadPenugasan() {
             const container = document.getElementById('penugasan');
@@ -1499,10 +1539,12 @@
         }
 
         // ============================================================
-        // 5. RIWAYAT SESI MENGAJAR
+        // 5. RIWAYAT SESI MENGAJAR (DIPERBAHARUI)
         // ============================================================
         let riwayatData = [];
         let riwayatSort = { key: 'tanggal', asc: false };
+        // Tambahkan variabel global untuk menyimpan data ketidakhadiran per tanggal
+        window.riwayatByDate = {};
 
         function getWarnaPersentase(persen) {
             if (persen <= 0) return 'persen-0';
@@ -1538,6 +1580,9 @@
                     statusMap[nis] = data.status || 'aktif';
                 }
 
+                // Reset data per tanggal
+                window.riwayatByDate = {};
+
                 const rows = [];
                 for (let [penugasanId, pg] of Object.entries(penugasan)) {
                     const mapelData = mapel[pg.mapelId];
@@ -1561,26 +1606,34 @@
 
                     const sessions = attendance[penugasanId] || {};
                     for (let [sessionId, ses] of Object.entries(sessions)) {
+                        const tanggal = ses.date || '?';
                         let jumlahHadir = 0;
                         let jumlahS = 0, jumlahI = 0, jumlahA = 0;
                         let detailS = [], detailI = [], detailA = [];
 
+                        // Inisialisasi data per tanggal jika belum ada
+                        if (!window.riwayatByDate[tanggal]) {
+                            window.riwayatByDate[tanggal] = [];
+                        }
+
                         for (let nis of siswaAktif) {
                             const status = ses.records?.[nis];
+                            const nama = siswaData[nis]?.nama || nis;
                             if (status === undefined || status === 'H') {
                                 jumlahHadir++;
                             } else if (status === 'S') {
                                 jumlahS++;
-                                const nama = siswaData[nis]?.nama || nis;
                                 detailS.push(nama);
+                                // Tambahkan ke data per tanggal
+                                window.riwayatByDate[tanggal].push({ nama, mapel: namaMapel, status: 'S' });
                             } else if (status === 'I') {
                                 jumlahI++;
-                                const nama = siswaData[nis]?.nama || nis;
                                 detailI.push(nama);
+                                window.riwayatByDate[tanggal].push({ nama, mapel: namaMapel, status: 'I' });
                             } else if (status === 'A') {
                                 jumlahA++;
-                                const nama = siswaData[nis]?.nama || nis;
                                 detailA.push(nama);
+                                window.riwayatByDate[tanggal].push({ nama, mapel: namaMapel, status: 'A' });
                             }
                         }
 
@@ -1588,8 +1641,8 @@
                         const persentaseBulat = Math.round(persentase * 10) / 10;
 
                         rows.push({
-                            tanggal: ses.date || '?',
-                            tanggalTimestamp: parseDMY(ses.date) || 0,
+                            tanggal: tanggal,
+                            tanggalTimestamp: parseDMY(tanggal) || 0,
                             guru: guruName,
                             mapel: namaMapel,
                             kelas: (jenisMapel === 'inkul') ? kelasDisplay : '',
@@ -1713,12 +1766,33 @@
             const sList = document.getElementById('riwayatDetailSList');
             const iList = document.getElementById('riwayatDetailIList');
             const aList = document.getElementById('riwayatDetailAList');
+            const allDateBody = document.getElementById('riwayatDetailAllDateBody');
 
+            // Set judul
             title.textContent = `Siswa Tidak Hadir - ${row.tanggal} (${row.mapel})`;
 
+            // Bagian mapel tertentu
             sList.innerHTML = row.detailS.length ? row.detailS.map(n => `<div class="riwayat-detail-item">${escapeHtml(n)}</div>`).join('') : '<span class="text-gray-400">-</span>';
             iList.innerHTML = row.detailI.length ? row.detailI.map(n => `<div class="riwayat-detail-item">${escapeHtml(n)}</div>`).join('') : '<span class="text-gray-400">-</span>';
             aList.innerHTML = row.detailA.length ? row.detailA.map(n => `<div class="riwayat-detail-item">${escapeHtml(n)}</div>`).join('') : '<span class="text-gray-400">-</span>';
+
+            // Bagian semua ketidakhadiran pada tanggal yang sama
+            const dataPerTanggal = window.riwayatByDate[row.tanggal] || [];
+            if (dataPerTanggal.length === 0) {
+                allDateBody.innerHTML = `<tr><td colspan="3" class="text-center text-gray-400 text-sm">Tidak ada data ketidakhadiran lain pada tanggal ini</td></tr>`;
+            } else {
+                // Kelompokkan berdasarkan siswa (opsional, tapi kita tampilkan per baris agar bisa muncul dobel)
+                let htmlRows = '';
+                dataPerTanggal.forEach(item => {
+                    const badgeClass = item.status === 'S' ? 'badge-s' : (item.status === 'I' ? 'badge-i' : 'badge-a');
+                    htmlRows += `<tr>
+                        <td>${escapeHtml(item.nama)}</td>
+                        <td>${escapeHtml(item.mapel)}</td>
+                        <td><span class="badge-status ${badgeClass}">${item.status}</span></td>
+                    </tr>`;
+                });
+                allDateBody.innerHTML = htmlRows;
+            }
 
             modal.style.display = 'flex';
         }
