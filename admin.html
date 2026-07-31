@@ -1186,7 +1186,7 @@
         }
 
         // ============================================================
-        // 2. DATA GURU (DENGAN OTOMATIS RANGE TANPA TOMBOL TERAPKAN)
+        // 2. DATA GURU (DENGAN TOMBOL TERAPKAN)
         // ============================================================
         async function loadGuru() {
             const container = document.getElementById('guru');
@@ -1214,6 +1214,7 @@
                             <label class="block text-sm font-semibold">Tanggal Akhir</label>
                             <input type="date" id="endDate" class="border p-1 rounded" value="${endDefault.toISOString().slice(0,10)}">
                         </div>
+                        <button id="applyRangeBtn" class="bg-blue-600 text-white px-3 py-1 rounded"><i class="fas fa-sync-alt"></i> Terapkan</button>
                         <button id="tambahGuruBtn" class="bg-green-500 text-white px-3 py-1 rounded"><i class="fas fa-plus"></i> Tambah Guru</button>
                         <button id="copypasteGuruBtn" class="bg-gray-500 text-white px-3 py-1 rounded"><i class="fas fa-paste"></i> Import Data Guru</button>
                         <button id="toggleHonorBtn" class="bg-indigo-500 text-white px-3 py-1 rounded"><i class="fas fa-eye"></i> Sembunyikan Honor</button>
@@ -1342,20 +1343,19 @@
                     }
                 }
                 
-                // ===== EVENT LISTENER OTOMATIS SAAT TANGGAL BERUBAH =====
-                const startInput = document.getElementById('startDate');
-                const endInput = document.getElementById('endDate');
-                
-                function handleDateChange() {
-                    const start = startInput.value;
-                    const end = endInput.value;
-                    if (start && end) {
-                        renderGuruTable(start, end);
-                    }
+                // ===== EVENT LISTENER TOMBOL TERAPKAN =====
+                const applyBtn = document.getElementById('applyRangeBtn');
+                if (applyBtn) {
+                    applyBtn.onclick = function() {
+                        const start = document.getElementById('startDate').value;
+                        const end = document.getElementById('endDate').value;
+                        if (start && end) {
+                            renderGuruTable(start, end);
+                        } else {
+                            alert("Pilih rentang tanggal terlebih dahulu.");
+                        }
+                    };
                 }
-                
-                startInput.addEventListener('change', handleDateChange);
-                endInput.addEventListener('change', handleDateChange);
                 
                 // ===== EVENT LISTENER TOGGLE HONOR =====
                 const toggleBtn = document.getElementById('toggleHonorBtn');
@@ -1420,7 +1420,7 @@
                     Promise.all(promises).then(() => loadGuru()).catch(showError);
                 };
                 
-                // ===== RENDER PERTAMA KALI =====
+                // ===== RENDER PERTAMA KALI (dengan range default) =====
                 const startDefaultVal = document.getElementById('startDate').value;
                 const endDefaultVal = document.getElementById('endDate').value;
                 await renderGuruTable(startDefaultVal, endDefaultVal);
@@ -1990,4 +1990,4 @@
         // Settings akan dimuat saat tab diklik
     </script>
 </body>
-</html>                                
+</html>
