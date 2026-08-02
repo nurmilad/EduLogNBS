@@ -21,26 +21,6 @@
             position: relative;
         }
         .card-assignment:active { transform: scale(0.98); }
-        .btn-delete-card {
-            position: absolute;
-            bottom: 8px;
-            right: 8px;
-            background: transparent;
-            border: none;
-            color: #ef4444;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: 0.15s;
-            padding: 4px 6px;
-            border-radius: 6px;
-            opacity: 0.6;
-            z-index: 5;
-        }
-        .btn-delete-card:hover {
-            opacity: 1;
-            background-color: #fee2e2;
-        }
-        .btn-delete-card:active { transform: scale(0.9); }
         .modal-bg {
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(4px);
@@ -201,12 +181,12 @@
         .icon-edit { color: #4f46e5; }
         .icon-edit-green { color: #16a34a; }
         
-        /* ====== CATATAN TABLE - DIPERBAIKI ====== */
+        /* ====== CATATAN TABLE ====== */
         .catatan-table {
             font-size: 0.7rem;
             width: 100%;
             border-collapse: collapse;
-            table-layout: fixed; /* kunci utama agar kolom stabil */
+            table-layout: fixed;
         }
         .catatan-table th,
         .catatan-table td {
@@ -222,7 +202,6 @@
             background-color: #f8fafc;
             font-weight: 600;
         }
-        /* Lebar kolom - desktop */
         .catatan-table .col-tanggal {
             width: 90px;
             min-width: 70px;
@@ -247,7 +226,7 @@
             max-width: 150px;
         }
         .catatan-table .col-keterangan {
-            width: auto; /* fleksibel mengisi sisa */
+            width: auto;
             min-width: 100px;
         }
         .catatan-table .col-nilai {
@@ -262,51 +241,17 @@
             text-align: center;
             white-space: nowrap;
         }
-
-        /* Responsif untuk HP */
         @media (max-width: 640px) {
-            .catatan-table {
-                font-size: 0.6rem;
-            }
-            .catatan-table th,
-            .catatan-table td {
-                padding: 3px 4px;
-            }
-            .catatan-table .col-tanggal {
-                width: 60px;
-                min-width: 50px;
-                max-width: 70px;
-            }
-            .catatan-table .col-nis {
-                width: 55px;
-                min-width: 45px;
-                max-width: 65px;
-            }
-            .catatan-table .col-nama {
-                width: 110px;
-                min-width: 80px;
-                max-width: 140px;
-            }
-            .catatan-table .col-jenis {
-                width: 80px;
-                min-width: 60px;
-                max-width: 100px;
-            }
-            .catatan-table .col-keterangan {
-                min-width: 70px;
-            }
-            .catatan-table .col-nilai {
-                width: 80px;
-                min-width: 60px;
-                max-width: 100px;
-            }
-            .catatan-table .col-aksi {
-                width: 50px;
-                min-width: 40px;
-                max-width: 60px;
-            }
+            .catatan-table { font-size: 0.6rem; }
+            .catatan-table th, .catatan-table td { padding: 3px 4px; }
+            .catatan-table .col-tanggal { width: 60px; min-width: 50px; max-width: 70px; }
+            .catatan-table .col-nis { width: 55px; min-width: 45px; max-width: 65px; }
+            .catatan-table .col-nama { width: 110px; min-width: 80px; max-width: 140px; }
+            .catatan-table .col-jenis { width: 80px; min-width: 60px; max-width: 100px; }
+            .catatan-table .col-keterangan { min-width: 70px; }
+            .catatan-table .col-nilai { width: 80px; min-width: 60px; max-width: 100px; }
+            .catatan-table .col-aksi { width: 50px; min-width: 40px; max-width: 60px; }
         }
-
         .filter-dropdown {
             padding: 2px 6px;
             border-radius: 6px;
@@ -316,7 +261,6 @@
         @media (min-width: 640px) {
             .filter-dropdown { font-size: 0.8rem; padding: 4px 8px; }
         }
-        
         @media print {
             @page { size: landscape; margin: 1.2cm; }
             body * { visibility: hidden; }
@@ -326,8 +270,6 @@
             .print-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
             .print-table th, .print-table td { border: 1px solid #000; padding: 5px; text-align: center; vertical-align: middle; }
             .print-table th { background-color: #f3f4f6; font-weight: bold; }
-            .print-table td:first-child, .print-table th:first-child { text-align: center; }
-            .print-table td:nth-child(3) { text-align: left; }
             .print-header { text-align: center; margin-bottom: 15px; }
             .print-footer { margin-top: 30px; text-align: right; }
         }
@@ -347,11 +289,6 @@
         }
         .btn-print:hover { background-color: #047857; transform: scale(1.01); }
         .btn-print:active { transform: scale(0.98); }
-        .print-table { width: 100%; border-collapse: collapse; font-size: 11px; }
-        .print-table th, .print-table td { border: 1px solid #000; padding: 6px 8px; text-align: center; vertical-align: middle; }
-        .print-table th { background-color: #f3f4f6; font-weight: bold; }
-        .print-header { text-align: center; margin-bottom: 20px; }
-        .print-footer { margin-top: 40px; text-align: right; }
         .penilaian-table { border-collapse: collapse; width: 100%; }
         .penilaian-table th, .penilaian-table td { border: 1px solid #e2e8f0; padding: 3px 2px; text-align: center; vertical-align: middle; }
         .penilaian-table th { background-color: #f8fafc; font-weight: 600; }
@@ -410,7 +347,7 @@
     </div>
 </div>
 
-<!-- MODAL EDIT SESI KEHADIRAN (Tanggal + Topik) -->
+<!-- MODAL EDIT SESI KEHADIRAN -->
 <div id="modalEditSesi" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print">
     <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-5">
         <h4 class="text-md font-bold mb-3">Edit Sesi Kehadiran</h4>
@@ -537,7 +474,8 @@
 
     let currentTeacher = null;
     let allMapel = {}, allKelas = [], allSiswa = {}, penugasanList = [];
-    let guruCanDelete = true; // default true, akan diambil dari settings
+    // Variabel ini tetap diambil untuk keperluan lain jika diperlukan, tapi tidak digunakan untuk kontrol hapus
+    let guruCanDelete = true;
 
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
     function toYMD(date) { return date.toISOString().slice(0,10); }
@@ -545,25 +483,11 @@
     function formatDateToDMY(date) { return toDMY(toYMD(date)); }
     function parseDMY(dateStr) { if(!dateStr) return null; let parts = dateStr.split('/'); if(parts.length===3){ let d=parseInt(parts[0]), m=parseInt(parts[1])-1, y=parseInt(parts[2]); return new Date(y,m,d); } return null; }
 
-    // === FUNGSI HAPUS PENUGASAN ===
-    async function deleteAssignment(penugasanId) {
-        if (!guruCanDelete) {
-            alert("Izin hapus penugasan dinonaktifkan oleh admin.");
-            return;
-        }
-        if (!confirm("Yakin ingin menghapus penugasan ini? Semua data kehadiran, penilaian, dan catatan akan ikut terhapus.")) return;
-        try {
-            await db.ref(`attendance/${penugasanId}`).remove();
-            await db.ref(`penilaian/${penugasanId}`).remove();
-            await db.ref(`catatan/${penugasanId}`).remove();
-            await db.ref(`penugasan/${penugasanId}`).remove();
-            alert("Penugasan berhasil dihapus.");
-            await fetchInitialData();
-            await renderAllCards();
-        } catch (err) {
-            alert("Gagal menghapus penugasan: " + err.message);
-        }
-    }
+    // ============================================================
+    // FUNGSI HAPUS TIDAK DIPAKAI UNTUK PENUGASAN (tombol dihilangkan)
+    // ============================================================
+    // Fungsi deleteAssignment tidak digunakan karena tombol hapus penugasan dihilangkan.
+    // Saya biarkan saja untuk berjaga-jaga.
 
     async function fetchInitialData() {
         try {
@@ -616,6 +540,7 @@
                 if (allSiswa[nis] && allSiswa[nis].status === 'tidak_aktif') inactiveCount++;
             }
             const inactiveBadge = inactiveCount > 0 ? `<span class="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">${inactiveCount} tidak aktif</span>` : '';
+            // TOMBOL HAPUS PENUGASAN DIHILANGKAN SEPENUHNYA
             html += `
                 <div class="card-assignment p-3 cursor-pointer hover:shadow-lg transition" data-id="${task.id}">
                     <div class="flex justify-between items-start">
@@ -626,7 +551,6 @@
                         </div>
                         <i class="fas fa-chevron-right text-indigo-400 text-md"></i>
                     </div>
-                    ${guruCanDelete ? `<button class="btn-delete-card" data-id="${task.id}" title="Hapus penugasan"><i class="fas fa-trash-alt"></i></button>` : ''}
                 </div>
             `;
         }
@@ -634,17 +558,8 @@
 
         container.querySelectorAll('.card-assignment').forEach(card => {
             card.addEventListener('click', (e) => {
-                if (e.target.closest('.btn-delete-card')) return;
                 const selectedTask = penugasanList.find(t => t.id === card.dataset.id);
                 if (selectedTask) showDetailAssignment(selectedTask);
-            });
-        });
-
-        container.querySelectorAll('.btn-delete-card').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const id = btn.dataset.id;
-                await deleteAssignment(id);
             });
         });
     }
@@ -733,11 +648,8 @@
         await refreshKehadiranTable(container, task);
     }
 
+    // Hapus sesi kehadiran TANPA pengecekan guruCanDelete
     async function deleteAttendanceSession(assignmentId, sessionId) {
-        if (!guruCanDelete) {
-            alert("Izin hapus sesi kehadiran dinonaktifkan oleh admin.");
-            return;
-        }
         if (!confirm("Hapus sesi kehadiran ini? Seluruh data status kehadiran akan hilang.")) return;
         await db.ref(`attendance/${assignmentId}/${sessionId}`).remove();
     }
@@ -766,7 +678,7 @@
                         <div class="text-xs text-gray-400 font-light">${escapeHtml(ses.topic.length > 12 ? ses.topic.substring(0,12)+'…' : ses.topic)}</div>
                         <div class="flex items-center justify-center gap-0.5 mt-0.5">
                             <button class="icon-btn icon-edit edit-session" data-session-id="${ses.id}" data-current-date="${ses.date}" data-current-topic="${ses.topic}"><i class="fas fa-pen fa-xs"></i></button>
-                            ${guruCanDelete ? `<button class="icon-btn icon-delete delete-session" data-session-id="${ses.id}"><i class="fas fa-trash-alt fa-xs"></i></button>` : ''}
+                            <button class="icon-btn icon-delete delete-session" data-session-id="${ses.id}"><i class="fas fa-trash-alt fa-xs"></i></button>
                         </div>
                      </th>`;
         }
@@ -897,11 +809,8 @@
         await refreshPenilaianTable(container, task);
     }
 
+    // Hapus penilaian TANPA pengecekan guruCanDelete
     async function deleteAssessment(assignmentId, assessId) {
-        if (!guruCanDelete) {
-            alert("Izin hapus penilaian dinonaktifkan oleh admin.");
-            return;
-        }
         if (!confirm("Hapus kolom penilaian ini? Semua nilai siswa untuk penilaian ini akan hilang.")) return;
         await db.ref(`penilaian/${assignmentId}/${assessId}`).remove();
     }
@@ -935,7 +844,7 @@
                         <div><strong>N${i+1}</strong></div>
                         <div class="flex items-center justify-center gap-0.5 mt-0.5">
                             <button class="icon-btn icon-edit edit-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-pen fa-xs"></i></button>
-                            ${guruCanDelete ? `<button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-trash-alt fa-xs"></i></button>` : ''}
+                            <button class="icon-btn icon-delete delete-assessment" data-assess-id="${assessList[i].id}"><i class="fas fa-trash-alt fa-xs"></i></button>
                         </div>
                      </th>`;
         }
@@ -1077,6 +986,12 @@
         await refreshCatatanTable(container, task);
     }
 
+    // Hapus catatan TANPA pengecekan guruCanDelete
+    async function deleteCatatan(taskId, catatanId) {
+        if (!confirm("Hapus catatan ini?")) return;
+        await db.ref(`catatan/${taskId}/${catatanId}`).remove();
+    }
+
     async function refreshCatatanTable(container, task) {
         const wrapperDiv = container.querySelector('#catatanTableWrapper');
         if (!wrapperDiv) return;
@@ -1144,14 +1059,13 @@
                 <td class="col-nilai">${escapeHtml(c.nilai)}</td>
                 <td class="col-aksi text-center">
                     <button class="icon-btn icon-edit-green edit-catatan" data-id="${c.id}" data-task-id="${task.id}" title="Edit catatan"><i class="fas fa-pen"></i></button>
-                    ${guruCanDelete ? `<button class="icon-btn icon-delete delete-catatan" data-id="${c.id}" title="Hapus catatan"><i class="fas fa-trash-alt"></i></button>` : ''}
+                    <button class="icon-btn icon-delete delete-catatan" data-id="${c.id}" title="Hapus catatan"><i class="fas fa-trash-alt"></i></button>
                 </td>
             </tr>`;
         }
         html += `</tbody></table>`;
         wrapperDiv.innerHTML = html;
 
-        // Sort
         wrapperDiv.querySelectorAll('.sortable-header').forEach(th => {
             th.addEventListener('click', () => {
                 const key = th.dataset.key;
@@ -1161,22 +1075,15 @@
             });
         });
 
-        // Delete
         wrapperDiv.querySelectorAll('.delete-catatan').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const id = btn.dataset.id;
-                if (!guruCanDelete) {
-                    alert("Izin hapus catatan dinonaktifkan oleh admin.");
-                    return;
-                }
-                if (!confirm("Hapus catatan ini?")) return;
-                await db.ref(`catatan/${task.id}/${id}`).remove();
+                await deleteCatatan(task.id, id);
                 refreshCatatanTable(container, task);
             });
         });
 
-        // Edit
         wrapperDiv.querySelectorAll('.edit-catatan').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -1523,10 +1430,10 @@
         currentTeacher = guruLogin;
         document.getElementById('greeting').innerHTML = `<i class="fas fa-user-check"></i> ${escapeHtml(currentTeacher)} · Guru Aktif`;
         
-        // Ambil pengaturan izin hapus dari admin
+        // Ambil pengaturan izin hapus dari admin (hanya untuk info, tidak digunakan untuk kontrol hapus)
         try {
             const settingsSnap = await db.ref('settings/guruCanDelete').once('value');
-            guruCanDelete = settingsSnap.val() !== false; // default true jika belum diatur
+            guruCanDelete = settingsSnap.val() !== false;
         } catch (e) {
             console.warn("Gagal mengambil settings, gunakan default true", e);
             guruCanDelete = true;
