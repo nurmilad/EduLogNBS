@@ -495,7 +495,7 @@
 
     let currentTeacher = null;
     let allMapel = {}, allKelas = [], allSiswa = {}, penugasanList = [];
-    let guruCanDelete = true; // default true, akan diambil dari settings
+    let guruCanDelete = true;
 
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
     function toYMD(date) { return date.toISOString().slice(0,10); }
@@ -574,7 +574,6 @@
                 if (allSiswa[nis] && allSiswa[nis].status === 'tidak_aktif') inactiveCount++;
             }
             const inactiveBadge = inactiveCount > 0 ? `<span class="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">${inactiveCount} tidak aktif</span>` : '';
-            // TOMBOL HAPUS PENUGASAN: hanya muncul jika guruCanDelete === true
             const deleteBtn = guruCanDelete ? 
                 `<button class="btn-delete-card" data-id="${task.id}" title="Hapus penugasan"><i class="fas fa-trash-alt"></i></button>` : 
                 '';
@@ -695,7 +694,6 @@
         await refreshKehadiranTable(container, task);
     }
 
-    // Hapus sesi kehadiran TANPA pengecekan guruCanDelete
     async function deleteAttendanceSession(assignmentId, sessionId) {
         if (!confirm("Hapus sesi kehadiran ini? Seluruh data status kehadiran akan hilang.")) return;
         await db.ref(`attendance/${assignmentId}/${sessionId}`).remove();
@@ -740,7 +738,11 @@
                         <td class="sticky-col-first ${rowClass}">${escapeHtml(siswa.nis)}</td>
                         <td class="sticky-col-second ${rowClass}">${escapeHtml(siswa.nama)}</td>`;
             for (let ses of sessionsList) {
-                let status = ses.records[siswa.nis] || 'H';
+                let status = ses.records[siswa.nis];
+                // Jika status tidak ada, gunakan default: A untuk tidak aktif, H untuk aktif
+                if (status === undefined) {
+                    status = isTidakAktif ? 'A' : 'H';
+                }
                 if (status === 'H') hadirCount++;
                 let statusClass = '';
                 if (status === 'H') statusClass = 'status-h';
@@ -829,10 +831,18 @@
             if (!topik) { alert("Masukkan topik / materi"); return; }
             let dateDMY = formatDateToDMY(new Date(ymd));
             const newSessionId = Date.now().toString();
+            
+            // Buat records dengan default: aktif = H, tidak aktif = A
+            const records = {};
+            for (let nis of task.siswaList) {
+                const siswa = allSiswa[nis];
+                records[nis] = (siswa && siswa.status === 'tidak_aktif') ? 'A' : 'H';
+            }
+            
             await db.ref(`attendance/${task.id}/${newSessionId}`).set({
                 date: dateDMY,
                 topic: topik,
-                records: {}
+                records: records
             });
             modal.style.display = 'none';
             const container = document.querySelector('#detailContent .tab-pane-kehadiran');
@@ -856,7 +866,6 @@
         await refreshPenilaianTable(container, task);
     }
 
-    // Hapus penilaian TANPA pengecekan guruCanDelete
     async function deleteAssessment(assignmentId, assessId) {
         if (!confirm("Hapus kolom penilaian ini? Semua nilai siswa untuk penilaian ini akan hilang.")) return;
         await db.ref(`penilaian/${assignmentId}/${assessId}`).remove();
@@ -1033,7 +1042,6 @@
         await refreshCatatanTable(container, task);
     }
 
-    // Hapus catatan TANPA pengecekan guruCanDelete
     async function deleteCatatan(taskId, catatanId) {
         if (!confirm("Hapus catatan ini?")) return;
         await db.ref(`catatan/${taskId}/${catatanId}`).remove();
@@ -1293,7 +1301,7 @@
                             <td>${escapeHtml(siswa.nis)}</td>
                             <td style="text-align:left;${styleNama}">${escapeHtml(siswa.nama)}</td>`;
             for (let ses of sessionsList) {
-                let status = ses.records[siswa.nis] || 'H';
+                let status = ses.records[siswa.nis] || (isTidakAktif ? 'A' : 'H');
                 if (status === 'H') hadirCount++;
                 printHtml += `<td>${status}</td>`;
             }
@@ -1477,10 +1485,9 @@
         currentTeacher = guruLogin;
         document.getElementById('greeting').innerHTML = `<i class="fas fa-user-check"></i> ${escapeHtml(currentTeacher)} · Guru Aktif`;
         
-        // Ambil pengaturan izin hapus dari admin
         try {
             const settingsSnap = await db.ref('settings/guruCanDelete').once('value');
-            guruCanDelete = settingsSnap.val() !== false; // default true jika belum diatur
+            guruCanDelete = settingsSnap.val() !== false;
         } catch (e) {
             console.warn("Gagal mengambil settings, gunakan default true", e);
             guruCanDelete = true;
