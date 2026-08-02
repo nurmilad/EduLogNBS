@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        /* ===== SEMUA STYLE SAMA PERSIS (tidak diubah) ===== */
         * { font-family: 'Inter', system-ui, sans-serif; }
         body { background: #f1f5f9; }
         .card-assignment {
@@ -21,6 +22,26 @@
             position: relative;
         }
         .card-assignment:active { transform: scale(0.98); }
+        .btn-delete-card {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: transparent;
+            border: none;
+            color: #ef4444;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.15s;
+            padding: 4px 6px;
+            border-radius: 6px;
+            opacity: 0.6;
+            z-index: 5;
+        }
+        .btn-delete-card:hover {
+            opacity: 1;
+            background-color: #fee2e2;
+        }
+        .btn-delete-card:active { transform: scale(0.9); }
         .modal-bg {
             background: rgba(0,0,0,0.5);
             backdrop-filter: blur(4px);
@@ -474,8 +495,7 @@
 
     let currentTeacher = null;
     let allMapel = {}, allKelas = [], allSiswa = {}, penugasanList = [];
-    // Variabel ini tetap diambil untuk keperluan lain jika diperlukan, tapi tidak digunakan untuk kontrol hapus
-    let guruCanDelete = true;
+    let guruCanDelete = true; // default true, akan diambil dari settings
 
     function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
     function toYMD(date) { return date.toISOString().slice(0,10); }
@@ -483,11 +503,25 @@
     function formatDateToDMY(date) { return toDMY(toYMD(date)); }
     function parseDMY(dateStr) { if(!dateStr) return null; let parts = dateStr.split('/'); if(parts.length===3){ let d=parseInt(parts[0]), m=parseInt(parts[1])-1, y=parseInt(parts[2]); return new Date(y,m,d); } return null; }
 
-    // ============================================================
-    // FUNGSI HAPUS TIDAK DIPAKAI UNTUK PENUGASAN (tombol dihilangkan)
-    // ============================================================
-    // Fungsi deleteAssignment tidak digunakan karena tombol hapus penugasan dihilangkan.
-    // Saya biarkan saja untuk berjaga-jaga.
+    // === FUNGSI HAPUS PENUGASAN (hanya jika guruCanDelete true) ===
+    async function deleteAssignment(penugasanId) {
+        if (!guruCanDelete) {
+            alert("Izin hapus penugasan dinonaktifkan oleh admin.");
+            return;
+        }
+        if (!confirm("Yakin ingin menghapus penugasan ini? Semua data kehadiran, penilaian, dan catatan akan ikut terhapus.")) return;
+        try {
+            await db.ref(`attendance/${penugasanId}`).remove();
+            await db.ref(`penilaian/${penugasanId}`).remove();
+            await db.ref(`catatan/${penugasanId}`).remove();
+            await db.ref(`penugasan/${penugasanId}`).remove();
+            alert("Penugasan berhasil dihapus.");
+            await fetchInitialData();
+            await renderAllCards();
+        } catch (err) {
+            alert("Gagal menghapus penugasan: " + err.message);
+        }
+    }
 
     async function fetchInitialData() {
         try {
@@ -540,7 +574,10 @@
                 if (allSiswa[nis] && allSiswa[nis].status === 'tidak_aktif') inactiveCount++;
             }
             const inactiveBadge = inactiveCount > 0 ? `<span class="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">${inactiveCount} tidak aktif</span>` : '';
-            // TOMBOL HAPUS PENUGASAN DIHILANGKAN SEPENUHNYA
+            // TOMBOL HAPUS PENUGASAN: hanya muncul jika guruCanDelete === true
+            const deleteBtn = guruCanDelete ? 
+                `<button class="btn-delete-card" data-id="${task.id}" title="Hapus penugasan"><i class="fas fa-trash-alt"></i></button>` : 
+                '';
             html += `
                 <div class="card-assignment p-3 cursor-pointer hover:shadow-lg transition" data-id="${task.id}">
                     <div class="flex justify-between items-start">
@@ -551,6 +588,7 @@
                         </div>
                         <i class="fas fa-chevron-right text-indigo-400 text-md"></i>
                     </div>
+                    ${deleteBtn}
                 </div>
             `;
         }
@@ -558,8 +596,17 @@
 
         container.querySelectorAll('.card-assignment').forEach(card => {
             card.addEventListener('click', (e) => {
+                if (e.target.closest('.btn-delete-card')) return;
                 const selectedTask = penugasanList.find(t => t.id === card.dataset.id);
                 if (selectedTask) showDetailAssignment(selectedTask);
+            });
+        });
+
+        container.querySelectorAll('.btn-delete-card').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                await deleteAssignment(id);
             });
         });
     }
@@ -641,7 +688,7 @@
         wrapperElement.scrollTop = oldTop;
     }
 
-    // ================= KEHADIRAN =================
+    // ================= KEHADIRAN (hapus selalu bisa) =================
     async function renderKehadiranTab(container, task) {
         container.innerHTML = `<div class="flex justify-end mb-2"><button class="btn-plus btn-add-kehadiran" title="Tambah sesi kehadiran"><i class="fas fa-plus"></i></button></div><div id="kehadiranTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6 text-sm">Memuat data...</div></div>`;
         container.querySelector('.btn-add-kehadiran').onclick = () => openAddKehadiranModal(task);
@@ -802,7 +849,7 @@
         batal.addEventListener('click', closeModal);
     }
 
-    // ================= PENILAIAN =================
+    // ================= PENILAIAN (hapus selalu bisa) =================
     async function renderPenilaianTab(container, task) {
         container.innerHTML = `<div class="flex justify-end mb-2"><button class="btn-plus btn-add-penilaian" title="Tambah penilaian"><i class="fas fa-plus"></i></button></div><div id="penilaianTableWrapper" class="table-scroll-wrapper"><div class="text-center py-6 text-sm">Memuat data...</div></div>`;
         container.querySelector('.btn-add-penilaian').onclick = () => openAddPenilaianModal(task);
@@ -958,7 +1005,7 @@
         batal.addEventListener('click', onBatal);
     }
 
-    // ================= CATATAN =================
+    // ================= CATATAN (hapus selalu bisa) =================
     let catatanFilterJenis = 'semua';
     let catatanSort = { key: 'tanggal', asc: false };
     let currentEditTask = null;
@@ -1430,10 +1477,10 @@
         currentTeacher = guruLogin;
         document.getElementById('greeting').innerHTML = `<i class="fas fa-user-check"></i> ${escapeHtml(currentTeacher)} · Guru Aktif`;
         
-        // Ambil pengaturan izin hapus dari admin (hanya untuk info, tidak digunakan untuk kontrol hapus)
+        // Ambil pengaturan izin hapus dari admin
         try {
             const settingsSnap = await db.ref('settings/guruCanDelete').once('value');
-            guruCanDelete = settingsSnap.val() !== false;
+            guruCanDelete = settingsSnap.val() !== false; // default true jika belum diatur
         } catch (e) {
             console.warn("Gagal mengambil settings, gunakan default true", e);
             guruCanDelete = true;
