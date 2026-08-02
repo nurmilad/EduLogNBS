@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* ===== SEMUA STYLE TETAP SAMA ===== */
         .tab-content { transition: all 0.2s; }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
         .table-wrapper { overflow-x: auto; border-radius: 0.75rem; }
@@ -259,6 +260,75 @@
         .text-left { text-align: left; }
         .hidden-col { display: none; }
         .show-col { display: table-cell; }
+
+        /* Tambahan untuk filter tanggal */
+        .filter-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .filter-container label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #475569;
+        }
+        .filter-container input[type="date"] {
+            padding: 4px 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            background: white;
+        }
+        .filter-container button {
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: 0.15s;
+        }
+        .filter-container .btn-apply {
+            background: #4f46e5;
+            color: white;
+        }
+        .filter-container .btn-apply:hover {
+            background: #4338ca;
+        }
+        .filter-container .btn-reset {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        .filter-container .btn-reset:hover {
+            background: #cbd5e1;
+        }
+        @media (max-width: 640px) {
+            .filter-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-container .date-group {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+            .filter-container .date-group label {
+                min-width: 60px;
+            }
+            .filter-container .date-group input {
+                flex: 1;
+            }
+            .filter-container .button-group {
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -1639,13 +1709,14 @@
         }
 
         // ============================================================
-        // 5. RIWAYAT SESI MENGAJAR (DIPERBAHARUI - SESUAI PERMINTAAN)
+        // 5. RIWAYAT SESI MENGAJAR (DENGAN FILTER TANGGAL)
         // ============================================================
         let riwayatData = [];
         let riwayatSort = { key: 'tanggal', asc: false };
         window.riwayatByDate = {};
         window.riwayatHarianSort = { key: 'nama', asc: true };
         let mapelDataGlobal = {};
+        let riwayatFilter = { startDate: null, endDate: null };
 
         function getWarnaPersentase(persen) {
             if (persen <= 0) return 'persen-0';
@@ -1741,7 +1812,55 @@
 
         async function loadRiwayat() {
             const container = document.getElementById('riwayat');
-            container.innerHTML = `<div class="text-center py-8"><div class="loading-spinner mx-auto mb-2"></div><p>Memuat riwayat sesi mengajar...</p></div>`;
+            container.innerHTML = `
+                <div class="filter-container no-print" id="riwayatFilterContainer">
+                    <div class="date-group">
+                        <label for="riwayatStartDate">Tanggal Awal</label>
+                        <input type="date" id="riwayatStartDate">
+                        <label for="riwayatEndDate">Tanggal Akhir</label>
+                        <input type="date" id="riwayatEndDate">
+                    </div>
+                    <div class="button-group">
+                        <button class="btn-apply" id="riwayatApplyFilter"><i class="fas fa-check"></i> Terapkan</button>
+                        <button class="btn-reset" id="riwayatResetFilter"><i class="fas fa-undo"></i> Reset</button>
+                    </div>
+                </div>
+                <div id="riwayatTableContainer">
+                    <div class="text-center py-8"><div class="loading-spinner mx-auto mb-2"></div><p>Memuat riwayat sesi mengajar...</p></div>
+                </div>
+            `;
+
+            // Set default filter (bulan berjalan)
+            const now = new Date();
+            const startDefault = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endDefault = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            document.getElementById('riwayatStartDate').value = startDefault.toISOString().slice(0,10);
+            document.getElementById('riwayatEndDate').value = endDefault.toISOString().slice(0,10);
+
+            // Event listener untuk tombol Terapkan
+            document.getElementById('riwayatApplyFilter').addEventListener('click', () => {
+                const startVal = document.getElementById('riwayatStartDate').value;
+                const endVal = document.getElementById('riwayatEndDate').value;
+                if (startVal && endVal) {
+                    riwayatFilter.startDate = new Date(startVal);
+                    riwayatFilter.endDate = new Date(endVal);
+                    riwayatFilter.endDate.setHours(23,59,59,999);
+                } else {
+                    alert("Pilih rentang tanggal yang valid.");
+                }
+                applyRiwayatFilter();
+            });
+
+            // Event listener untuk tombol Reset
+            document.getElementById('riwayatResetFilter').addEventListener('click', () => {
+                riwayatFilter.startDate = null;
+                riwayatFilter.endDate = null;
+                document.getElementById('riwayatStartDate').value = '';
+                document.getElementById('riwayatEndDate').value = '';
+                applyRiwayatFilter();
+            });
+
+            // Ambil data dari Firebase
             try {
                 const [attendanceSnap, penugasanSnap, mapelSnap, siswaSnap] = await Promise.all([
                     db.ref('attendance').once('value'),
@@ -1839,19 +1958,39 @@
                     }
                 }
                 riwayatData = rows;
-                renderRiwayatTable(container);
+                // Set default filter ke bulan berjalan
+                riwayatFilter.startDate = startDefault;
+                riwayatFilter.endDate = endDefault;
+                endDefault.setHours(23,59,59,999);
+                applyRiwayatFilter();
             } catch (err) {
-                container.innerHTML = `<div class="text-red-500">Error: ${err.message}</div>`;
+                container.querySelector('#riwayatTableContainer').innerHTML = `<div class="text-red-500">Error: ${err.message}</div>`;
             }
         }
 
-        function renderRiwayatTable(container) {
-            if (!riwayatData.length) {
-                container.innerHTML = `<div class="text-center py-8 text-gray-500"><i class="fas fa-info-circle text-3xl mb-2"></i><p>Belum ada sesi mengajar yang tercatat.</p></div>`;
+        function applyRiwayatFilter() {
+            const container = document.getElementById('riwayatTableContainer');
+            if (!container) return;
+            let filtered = [...riwayatData];
+            if (riwayatFilter.startDate && riwayatFilter.endDate) {
+                const start = riwayatFilter.startDate.getTime();
+                const end = riwayatFilter.endDate.getTime();
+                filtered = filtered.filter(row => {
+                    if (!row.tanggalTimestamp) return false;
+                    return row.tanggalTimestamp >= start && row.tanggalTimestamp <= end;
+                });
+            }
+            renderRiwayatTable(container, filtered);
+        }
+
+        function renderRiwayatTable(container, dataToRender) {
+            if (!dataToRender) dataToRender = riwayatData;
+            if (!dataToRender.length) {
+                container.innerHTML = `<div class="text-center py-8 text-gray-500"><i class="fas fa-info-circle text-3xl mb-2"></i><p>Tidak ada sesi mengajar dalam rentang tanggal ini.</p></div>`;
                 return;
             }
 
-            const sorted = [...riwayatData];
+            const sorted = [...dataToRender];
             const key = riwayatSort.key;
             const asc = riwayatSort.asc;
             sorted.sort((a, b) => {
@@ -1924,7 +2063,7 @@
                         riwayatSort.key = key;
                         riwayatSort.asc = false;
                     }
-                    renderRiwayatTable(container);
+                    renderRiwayatTable(container, sorted);
                 });
             });
 
