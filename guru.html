@@ -546,13 +546,21 @@
             penugasanList = [];
             for (let [id, pg] of Object.entries(allPenugasan)) {
                 if (pg.guruName === currentTeacher) {
+                    // FILTER: hanya siswa aktif yang masuk ke siswaList
+                    const siswaListAktif = (pg.siswaList || []).filter(nis => {
+                        const siswa = allSiswa[nis];
+                        return siswa && siswa.status !== 'tidak_aktif';
+                    });
+                    if (siswaListAktif.length === 0) continue; // skip penugasan tanpa siswa aktif
+                    
                     const mapelData = allMapel[pg.mapelId] || { nama: 'Mapel Dihapus', jenis: 'inkul' };
                     const kelasSet = new Set();
-                    for (let nis of (pg.siswaList || [])) {
+                    for (let nis of siswaListAktif) {
                         if (allSiswa[nis]) kelasSet.add(allSiswa[nis].kelas);
                     }
                     penugasanList.push({
-                        id, mapelId: pg.mapelId, guruName: pg.guruName, siswaList: pg.siswaList || [],
+                        id, mapelId: pg.mapelId, guruName: pg.guruName, 
+                        siswaList: siswaListAktif, // hanya siswa aktif
                         mapelNama: mapelData.nama, mapelJenis: mapelData.jenis,
                         kelasDisplay: kelasSet.size ? Array.from(kelasSet).join(', ') : 'Tanpa Kelas'
                     });
@@ -569,11 +577,16 @@
         }
         let html = '';
         for (let task of penugasanList) {
+            // hitung jumlah siswa tidak aktif (dari data asli, tapi kita sudah filter, jadi 0)
+            // tapi kita tetap hitung dari allSiswa untuk info
             let inactiveCount = 0;
-            for (let nis of task.siswaList) {
-                if (allSiswa[nis] && allSiswa[nis].status === 'tidak_aktif') inactiveCount++;
-            }
-            const inactiveBadge = inactiveCount > 0 ? `<span class="ml-2 text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">${inactiveCount} tidak aktif</span>` : '';
+            // ambil dari data asli penugasan (sebelum filter) untuk menghitung tidak aktif
+            // kita simpan di variabel terpisah? Lebih baik kita query ulang dari allSiswa
+            // tapi karena kita tidak simpan data asli, kita abaikan saja
+            // atau kita bisa hitung dari allSiswa berdasarkan daftar NIS yang asli? tidak kita punya.
+            // Kita sederhanakan: kita tidak tampilkan badge tidak aktif lagi karena sudah difilter.
+            const inactiveBadge = ''; // tidak perlu
+            
             const deleteBtn = guruCanDelete ? 
                 `<button class="btn-delete-card" data-id="${task.id}" title="Hapus penugasan"><i class="fas fa-trash-alt"></i></button>` : 
                 '';
@@ -581,9 +594,10 @@
                 <div class="card-assignment p-3 cursor-pointer hover:shadow-lg transition" data-id="${task.id}">
                     <div class="flex justify-between items-start">
                         <div>
-                            <h3 class="font-bold text-md text-indigo-800">${escapeHtml(task.mapelNama)} ${inactiveBadge}</h3>
+                            <h3 class="font-bold text-md text-indigo-800">${escapeHtml(task.mapelNama)}</h3>
                             <p class="text-xs text-gray-500 mt-0.5"><i class="fas fa-users"></i> Kelas: ${escapeHtml(task.kelasDisplay)}</p>
                             <p class="text-xs text-gray-400 mt-0.5">${task.mapelJenis === 'inkul' ? 'Intrakurikuler' : (task.mapelJenis === 'eskul' ? 'Ekskul' : 'Pesantren')}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">${task.siswaList.length} murid aktif</p>
                         </div>
                         <i class="fas fa-chevron-right text-indigo-400 text-md"></i>
                     </div>
@@ -707,10 +721,11 @@
         let sessionsList = Object.entries(sessions).map(([sid, val]) => ({ id: sid, date: val.date, topic: val.topic || '', records: val.records || {} }));
         sessionsList.sort((a,b) => (parseDMY(a.date)||0) - (parseDMY(b.date)||0));
         
+        // HANYA siswa aktif
         const siswaArray = task.siswaList.map(nis => {
             const data = allSiswa[nis] || { nama: '?', status: 'aktif' };
             return { nis, nama: data.nama, status: data.status };
-        }).filter(s => s.nama !== '?');
+        }).filter(s => s.nama !== '?' && s.status !== 'tidak_aktif');
         
         let html = `<table class="sticky-table">`;
         html += `<thead><tr>
@@ -732,16 +747,15 @@
         
         for (let siswa of siswaArray) {
             let hadirCount = 0;
-            const isTidakAktif = (siswa.status === 'tidak_aktif');
+            const isTidakAktif = (siswa.status === 'tidak_aktif'); // tidak akan ada karena filter
             const rowClass = isTidakAktif ? 'siswa-tidak-aktif' : '';
             html += `<tr>
                         <td class="sticky-col-first ${rowClass}">${escapeHtml(siswa.nis)}</td>
                         <td class="sticky-col-second ${rowClass}">${escapeHtml(siswa.nama)}</td>`;
             for (let ses of sessionsList) {
                 let status = ses.records[siswa.nis];
-                // Jika status tidak ada, gunakan default: A untuk tidak aktif, H untuk aktif
                 if (status === undefined) {
-                    status = isTidakAktif ? 'A' : 'H';
+                    status = 'H'; // siswa aktif default hadir
                 }
                 if (status === 'H') hadirCount++;
                 let statusClass = '';
@@ -832,11 +846,13 @@
             let dateDMY = formatDateToDMY(new Date(ymd));
             const newSessionId = Date.now().toString();
             
-            // Buat records dengan default: aktif = H, tidak aktif = A
+            // Buat records dengan default: H untuk semua siswa aktif
             const records = {};
             for (let nis of task.siswaList) {
                 const siswa = allSiswa[nis];
-                records[nis] = (siswa && siswa.status === 'tidak_aktif') ? 'A' : 'H';
+                if (siswa && siswa.status !== 'tidak_aktif') {
+                    records[nis] = 'H';
+                }
             }
             
             await db.ref(`attendance/${task.id}/${newSessionId}`).set({
@@ -883,7 +899,7 @@
         const siswaArray = task.siswaList.map(nis => {
             const data = allSiswa[nis] || { nama: '?', status: 'aktif' };
             return { nis, nama: data.nama, status: data.status };
-        }).filter(s => s.nama !== '?');
+        }).filter(s => s.nama !== '?' && s.status !== 'tidak_aktif');
         
         if (assessList.length === 0) {
             wrapperDiv.innerHTML = `<div class="text-center py-8 text-gray-400"><i class="fas fa-clipboard-list text-2xl mb-2"></i><p class="text-sm">Belum ada data penilaian</p><p class="text-xs">Klik tombol + untuk menambah penilaian</p></div>`;
@@ -1052,15 +1068,21 @@
         if (!wrapperDiv) return;
         const snap = await db.ref(`catatan/${task.id}`).once('value');
         const data = snap.val() || {};
-        let catatanList = Object.entries(data).map(([id, val]) => ({
-            id,
-            tanggal: val.tanggal || '',
-            nis: val.nis || '',
-            nama: val.nama || (allSiswa[val.nis] ? allSiswa[val.nis].nama : '?'),
-            jenis: val.jenis || 'positif',
-            keterangan: val.keterangan || '',
-            nilai: val.nilai || ''
-        }));
+        let catatanList = Object.entries(data)
+            .map(([id, val]) => ({
+                id,
+                tanggal: val.tanggal || '',
+                nis: val.nis || '',
+                nama: val.nama || (allSiswa[val.nis] ? allSiswa[val.nis].nama : '?'),
+                jenis: val.jenis || 'positif',
+                keterangan: val.keterangan || '',
+                nilai: val.nilai || ''
+            }))
+            .filter(c => {
+                // hanya tampilkan catatan untuk siswa aktif
+                const siswa = allSiswa[c.nis];
+                return siswa && siswa.status !== 'tidak_aktif';
+            });
 
         if (catatanFilterJenis !== 'semua') {
             catatanList = catatanList.filter(c => c.jenis === catatanFilterJenis);
@@ -1159,8 +1181,9 @@
 
         const selectSiswa = document.getElementById('catatanSiswaSelect');
         selectSiswa.innerHTML = '<option value="">-- Pilih Murid --</option>';
-        const siswaList = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' }))
-            .filter(s => s.nama !== '?')
+        const siswaList = task.siswaList
+            .map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' }))
+            .filter(s => s.nama !== '?' && allSiswa[s.nis]?.status !== 'tidak_aktif')
             .sort((a,b) => a.nama.localeCompare(b.nama));
         for (let s of siswaList) {
             const opt = document.createElement('option');
@@ -1213,8 +1236,9 @@
         document.getElementById('editCatatanTanggal').value = catatan.tanggal || '';
         const selectSiswa = document.getElementById('editCatatanSiswaSelect');
         selectSiswa.innerHTML = '<option value="">-- Pilih Siswa --</option>';
-        const siswaList = task.siswaList.map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' }))
-            .filter(s => s.nama !== '?')
+        const siswaList = task.siswaList
+            .map(nis => ({ nis, nama: allSiswa[nis]?.nama || '?' }))
+            .filter(s => s.nama !== '?' && allSiswa[s.nis]?.status !== 'tidak_aktif')
             .sort((a,b) => a.nama.localeCompare(b.nama));
         for (let s of siswaList) {
             const opt = document.createElement('option');
@@ -1270,7 +1294,7 @@
         const siswaArray = task.siswaList.map(nis => {
             const data = allSiswa[nis] || { nama: '?', status: 'aktif' };
             return { nis, nama: data.nama, status: data.status };
-        }).filter(s => s.nama !== '?');
+        }).filter(s => s.nama !== '?' && s.status !== 'tidak_aktif');
         
         let printHtml = `
             <div class="print-area">
@@ -1301,7 +1325,7 @@
                             <td>${escapeHtml(siswa.nis)}</td>
                             <td style="text-align:left;${styleNama}">${escapeHtml(siswa.nama)}</td>`;
             for (let ses of sessionsList) {
-                let status = ses.records[siswa.nis] || (isTidakAktif ? 'A' : 'H');
+                let status = ses.records[siswa.nis] || 'H';
                 if (status === 'H') hadirCount++;
                 printHtml += `<td>${status}</td>`;
             }
@@ -1348,7 +1372,7 @@
         const siswaArray = task.siswaList.map(nis => {
             const data = allSiswa[nis] || { nama: '?', status: 'aktif' };
             return { nis, nama: data.nama, status: data.status };
-        }).filter(s => s.nama !== '?');
+        }).filter(s => s.nama !== '?' && s.status !== 'tidak_aktif');
         
         if (assessList.length === 0) {
             alert("Belum ada data penilaian untuk dicetak.");
@@ -1444,7 +1468,9 @@
             if (jenis === 'inkul') {
                 targetDiv.innerHTML = `<p class="text-xs mb-1">Pilih Kelas (bisa lebih dari satu)</p><select multiple size="4" class="w-full border rounded p-1 text-sm" id="targetKelasSelect">${allKelas.map(k=>`<option value="${k}">${escapeHtml(k)}</option>`).join('')}</select>`;
             } else {
-                targetDiv.innerHTML = `<p class="text-xs mb-1">Pilih Siswa (bisa lebih)</p><select multiple size="5" class="w-full border rounded p-1 text-sm" id="targetSiswaSelect">${Object.entries(allSiswa).map(([nis,s])=>`<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(s.nama)} (${s.kelas})</option>`).join('')}</select>`;
+                // Untuk eskul/pesantren: hanya tampilkan siswa aktif
+                const siswaAktif = Object.entries(allSiswa).filter(([nis, s]) => s.status !== 'tidak_aktif');
+                targetDiv.innerHTML = `<p class="text-xs mb-1">Pilih Siswa (bisa lebih)</p><select multiple size="5" class="w-full border rounded p-1 text-sm" id="targetSiswaSelect">${siswaAktif.map(([nis,s])=>`<option value="${nis}">${escapeHtml(nis)} - ${escapeHtml(s.nama)} (${s.kelas})</option>`).join('')}</select>`;
             }
         };
         mapelSelect.onchange = updateTarget;
@@ -1463,7 +1489,13 @@
             if (!kelasSelect) return;
             const selectedKelas = Array.from(kelasSelect.selectedOptions).map(o=>o.value);
             if (!selectedKelas.length) { alert("Pilih minimal 1 kelas"); return; }
-            for (let k of selectedKelas) for (let [nis,s] of Object.entries(allSiswa)) if (s.kelas === k) siswaList.push(nis);
+            for (let k of selectedKelas) {
+                for (let [nis,s] of Object.entries(allSiswa)) {
+                    if (s.kelas === k && s.status !== 'tidak_aktif') {
+                        siswaList.push(nis);
+                    }
+                }
+            }
             siswaList = [...new Set(siswaList)];
         } else {
             const siswaSelect = document.getElementById('targetSiswaSelect');
