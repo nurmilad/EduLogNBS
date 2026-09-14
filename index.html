@@ -249,13 +249,30 @@
                 return;
             }
             
-            // ADMIN
+            // ADMIN — password diambil dari Firebase (settings/adminPassword)
             if (selectedRole === 'admin') {
-                if (usernameValue === 'admin' && password === 'admin111') {
-                    localStorage.setItem('adminLogin', 'true'); // <-- PENTING: simpan sesi admin
-                    window.location.href = 'admin.html';
-                } else {
-                    errorMsg.innerText = '❌ Username atau password admin salah!';
+                try {
+                    const snap = await db.ref('settings/adminPassword').once('value');
+                    const adminPassword = snap.val();
+
+                    // Jika belum diatur di Firebase
+                    if (adminPassword === null || adminPassword === undefined || adminPassword === '') {
+                        errorMsg.innerHTML = '⚠️ Password admin belum diatur di Firebase.<br>Tambahkan node <b>settings/adminPassword</b> di Firebase Console.';
+                        errorMsg.classList.remove('hidden');
+                        return;
+                    }
+
+                    // Cek username & password
+                    if (usernameValue === 'admin' && password === String(adminPassword)) {
+                        localStorage.setItem('adminLogin', 'true');
+                        window.location.href = 'admin.html';
+                    } else {
+                        errorMsg.innerText = '❌ Username atau password admin salah!';
+                        errorMsg.classList.remove('hidden');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    errorMsg.innerText = '⚠️ Gagal koneksi database. Coba lagi.';
                     errorMsg.classList.remove('hidden');
                 }
             } 
