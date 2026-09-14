@@ -1613,7 +1613,7 @@
                     btn.onclick = async () => { if(confirm('Hapus penugasan?')){ await db.ref(`penugasan/${btn.dataset.id}`).remove(); loadPenugasan(); } };
                 });
                 
-                // ========== EDIT PENUGASAN (DIPERBAIKI: MULTI-SELECT HAPUS & TAMBAH TANPA TUTUP MODAL) ==========
+                // ========== EDIT PENUGASAN (MULTI-SELECT HAPUS & TAMBAH TANPA TUTUP MODAL) ==========
                 document.querySelectorAll('.editPenugasanBtn').forEach(btn => {
                     btn.onclick = async () => {
                         const penugasanId = btn.dataset.id;
@@ -1644,7 +1644,6 @@
                                 return;
                             }
 
-                            // Toolbar: Pilih Semua + Hapus Terpilih
                             const toolbar = document.createElement('div');
                             toolbar.className = 'flex justify-between items-center mb-2 pb-2 border-b gap-2';
                             toolbar.innerHTML = `
@@ -1658,7 +1657,6 @@
                             `;
                             memberListDiv.appendChild(toolbar);
 
-                            // Daftar murid
                             for (let nis of members) {
                                 const siswa = semuaMurid[nis];
                                 const nama = siswa ? siswa.nama : '❌ (data hilang)';
@@ -1714,10 +1712,6 @@
                                     // Refresh in-place tanpa menutup modal
                                     renderMemberList(currentMembers);
                                     refreshAddMemberSelect();
-
-                                    // Update data di background
-                                    await fetchInitialData();
-                                    await renderAllCards();
                                 } catch (err) {
                                     alert('Gagal menghapus murid: ' + err.message);
                                 }
@@ -1757,8 +1751,6 @@
                                 currentMembers = newList;
                                 renderMemberList(currentMembers);
                                 refreshAddMemberSelect();
-                                await fetchInitialData();
-                                await renderAllCards();
                             } catch (err) {
                                 alert('Gagal menambahkan murid: ' + err.message);
                             }
