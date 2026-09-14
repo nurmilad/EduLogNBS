@@ -434,6 +434,27 @@
         </div>
     </div>
 
+    <!-- MODAL KEHADIRAN BULANAN (BARU) -->
+    <div id="modalKehadiranBulanan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print" style="background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); display: none;">
+        <div class="bg-white rounded-2xl max-w-6xl w-full mx-4 p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold"><i class="fas fa-calendar-alt text-blue-600"></i> Kehadiran Bulanan - Kelas <span id="kbKelasName"></span></h3>
+                <button id="kbCloseBtn" class="text-gray-500 hover:text-gray-800 text-2xl leading-5">&times;</button>
+            </div>
+            <div class="flex flex-wrap gap-3 mb-4 items-center">
+                <label class="font-semibold text-sm">Bulan:</label>
+                <select id="kbMonth" class="border p-1 rounded text-sm"></select>
+                <label class="font-semibold text-sm">Tahun:</label>
+                <select id="kbYear" class="border p-1 rounded text-sm"></select>
+                <button id="kbApplyBtn" class="bg-blue-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-sync-alt"></i> Tampilkan</button>
+            </div>
+            <div id="kbTableContainer" class="overflow-x-auto"></div>
+            <div class="mt-4 text-right">
+                <button id="kbCloseBtn2" class="bg-blue-600 text-white px-4 py-2 rounded">Tutup</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ===== CEK LOGIN ADMIN =====
         if (!localStorage.getItem('adminLogin')) {
@@ -819,6 +840,7 @@
                         <div class="mb-3 flex flex-wrap gap-2">
                             <button id="tambahMuridDetailBtn" class="bg-blue-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-user-plus"></i> Tambah Murid</button>
                             <button id="importMuridDetailBtn" class="bg-gray-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-paste"></i> Import Data Murid</button>
+                            <button id="kehadiranBulananBtn" class="bg-blue-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-calendar-alt"></i> Kehadiran Bulanan</button>
                             <button id="rekapKehadiranBtn" class="bg-green-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-calendar-check"></i> Rekap Kehadiran</button>
                             <button id="nilaiMuridDetailBtn" class="bg-purple-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-chart-line"></i> Daftar Nilai Murid</button>
                         </div>
@@ -943,6 +965,10 @@
                 };
                 document.getElementById('rekapKehadiranBtn').onclick = () => {
                     showRekapKehadiran(kelas);
+                };
+                // === TOMBOL KEHADIRAN BULANAN ===
+                document.getElementById('kehadiranBulananBtn').onclick = () => {
+                    showKehadiranBulanan(kelas);
                 };
                 
                 document.querySelectorAll('.editMuridDetailBtn').forEach(btn=>{
@@ -1247,6 +1273,206 @@
                 overlay.innerHTML = `<div class="modal-container p-5"><div class="text-red-500"><i class="fas fa-exclamation-circle"></i> Gagal memuat rekap: ${err.message}</div><button class="mt-4 closeModalBtn bg-blue-500 text-white px-4 py-2 rounded">Tutup</button></div>`;
                 attachCloseModal(overlay);
             }
+        }
+
+        // ========= KEHADIRAN BULANAN (BARU) =========
+        async function showKehadiranBulanan(kelas) {
+            const modal = document.getElementById('modalKehadiranBulanan');
+            document.getElementById('kbKelasName').textContent = kelas;
+            
+            // Populate month dropdown
+            const monthSelect = document.getElementById('kbMonth');
+            monthSelect.innerHTML = '';
+            const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+            months.forEach((m, i) => {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = m;
+                if (i === new Date().getMonth()) opt.selected = true;
+                monthSelect.appendChild(opt);
+            });
+            
+            // Populate year dropdown
+            const yearSelect = document.getElementById('kbYear');
+            yearSelect.innerHTML = '';
+            const currentYear = new Date().getFullYear();
+            for (let y = currentYear - 2; y <= currentYear + 1; y++) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = y;
+                if (y === currentYear) opt.selected = true;
+                yearSelect.appendChild(opt);
+            }
+            
+            // Fetch data once per class and cache
+            if (!window.kbData) window.kbData = {};
+            if (!window.kbData[kelas]) {
+                const [siswaSnap, penugasanSnap, attendanceSnap] = await Promise.all([
+                    db.ref('siswa').once('value'),
+                    db.ref('penugasan').once('value'),
+                    db.ref('attendance').once('value')
+                ]);
+                const semuaMurid = siswaSnap.val() || {};
+                const penugasan = penugasanSnap.val() || {};
+                const attendance = attendanceSnap.val() || {};
+                
+                const siswaKelas = Object.entries(semuaMurid)
+                    .filter(([_, m]) => m.kelas === kelas)
+                    .map(([nis, m]) => ({ nis, nama: m.nama, status: m.status || 'aktif' }));
+                
+                window.kbData[kelas] = { siswaKelas, penugasan, attendance };
+            }
+            
+            const { siswaKelas, penugasan, attendance } = window.kbData[kelas];
+            
+            // Apply button handler
+            const applyBtn = document.getElementById('kbApplyBtn');
+            const newApplyBtn = applyBtn.cloneNode(true);
+            applyBtn.parentNode.replaceChild(newApplyBtn, applyBtn);
+            newApplyBtn.onclick = () => {
+                const month = parseInt(document.getElementById('kbMonth').value);
+                const year = parseInt(document.getElementById('kbYear').value);
+                renderKehadiranBulananTable(kelas, month, year, siswaKelas, penugasan, attendance);
+            };
+            
+            // Initial render
+            const month = parseInt(document.getElementById('kbMonth').value);
+            const year = parseInt(document.getElementById('kbYear').value);
+            renderKehadiranBulananTable(kelas, month, year, siswaKelas, penugasan, attendance);
+            
+            modal.style.display = 'flex';
+            
+            // Close handlers
+            const closeModal = () => { modal.style.display = 'none'; };
+            document.getElementById('kbCloseBtn').onclick = closeModal;
+            document.getElementById('kbCloseBtn2').onclick = closeModal;
+            modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+        }
+
+        function renderKehadiranBulananTable(kelas, month, year, siswaKelas, penugasan, attendance) {
+            const container = document.getElementById('kbTableContainer');
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            
+            // Build student -> penugasan list
+            const studentPenugasan = {};
+            for (let s of siswaKelas) {
+                studentPenugasan[s.nis] = [];
+            }
+            for (let [penId, pg] of Object.entries(penugasan)) {
+                if (pg.siswaList) {
+                    for (let nis of pg.siswaList) {
+                        if (studentPenugasan[nis]) {
+                            studentPenugasan[nis].push(penId);
+                        }
+                    }
+                }
+            }
+            
+            // Collect statuses: studentStatus[nis][day] = array of statuses
+            const studentStatus = {};
+            for (let s of siswaKelas) {
+                studentStatus[s.nis] = {};
+                for (let d = 1; d <= daysInMonth; d++) {
+                    studentStatus[s.nis][d] = [];
+                }
+            }
+            
+            // Get all relevant penugasan ids
+            const relevantPenIds = new Set();
+            for (let s of siswaKelas) {
+                (studentPenugasan[s.nis] || []).forEach(id => relevantPenIds.add(id));
+            }
+            
+            for (let penId of relevantPenIds) {
+                const sessions = attendance[penId] || {};
+                for (let ses of Object.values(sessions)) {
+                    const dateStr = ses.date;
+                    if (!dateStr) continue;
+                    const parts = dateStr.split('/');
+                    if (parts.length !== 3) continue;
+                    const d = parseInt(parts[0], 10);
+                    const m = parseInt(parts[1], 10) - 1;
+                    const y = parseInt(parts[2], 10);
+                    if (m !== month || y !== year) continue;
+                    if (d < 1 || d > daysInMonth) continue;
+                    
+                    const records = ses.records || {};
+                    for (let nis of Object.keys(records)) {
+                        if (studentStatus[nis] && studentStatus[nis][d]) {
+                            const status = records[nis];
+                            if (status && ['H','S','I','A'].includes(status)) {
+                                studentStatus[nis][d].push(status);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Compute final status per student per day
+            const finalStatus = {};
+            const priority = { 'H':4, 'S':3, 'I':2, 'A':1 };
+            for (let s of siswaKelas) {
+                finalStatus[s.nis] = {};
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const arr = studentStatus[s.nis][d];
+                    if (arr.length === 0) {
+                        finalStatus[s.nis][d] = null;
+                    } else {
+                        const freq = { 'H':0, 'S':0, 'I':0, 'A':0 };
+                        arr.forEach(st => freq[st]++);
+                        let maxFreq = 0;
+                        for (let st in freq) if (freq[st] > maxFreq) maxFreq = freq[st];
+                        let best = null;
+                        let bestPriority = -1;
+                        for (let st in freq) {
+                            if (freq[st] === maxFreq) {
+                                if (priority[st] > bestPriority) {
+                                    bestPriority = priority[st];
+                                    best = st;
+                                }
+                            }
+                        }
+                        finalStatus[s.nis][d] = best;
+                    }
+                }
+            }
+            
+            // Build table
+            let html = `<table class="min-w-full border text-sm"><thead class="bg-gray-100"><tr>
+                <th class="p-1 border">No</th>
+                <th class="p-1 border">NIS</th>
+                <th class="p-1 border">Nama</th>`;
+            for (let d = 1; d <= daysInMonth; d++) {
+                html += `<th class="p-1 border text-center" style="min-width:25px;">${d}</th>`;
+            }
+            html += `<th class="p-1 border text-center bg-gray-200">Jml H</th></tr></thead><tbody>`;
+            
+            let no = 1;
+            for (let s of siswaKelas) {
+                const isTidakAktif = (s.status === 'tidak_aktif');
+                const rowClass = isTidakAktif ? 'siswa-tidak-aktif' : '';
+                let totalH = 0;
+                html += `<tr>
+                    <td class="p-1 border text-center ${rowClass}">${no++}</td>
+                    <td class="p-1 border ${rowClass}">${escapeHtml(s.nis)}</td>
+                    <td class="p-1 border ${rowClass}">${escapeHtml(s.nama)}</td>`;
+                for (let d = 1; d <= daysInMonth; d++) {
+                    const status = finalStatus[s.nis][d];
+                    let display = '-';
+                    let cellClass = '';
+                    if (status) {
+                        display = status;
+                        if (status === 'H') { cellClass = 'text-green-600 font-bold'; totalH++; }
+                        else if (status === 'S') cellClass = 'text-yellow-600 font-bold';
+                        else if (status === 'I') cellClass = 'text-orange-600 font-bold';
+                        else if (status === 'A') cellClass = 'text-red-600 font-bold';
+                    }
+                    html += `<td class="p-1 border text-center ${cellClass}">${display}</td>`;
+                }
+                html += `<td class="p-1 border text-center font-bold bg-gray-50">${totalH}</td></tr>`;
+            }
+            html += `</tbody></table>`;
+            container.innerHTML = html;
         }
 
         // ============================================================
