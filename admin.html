@@ -327,6 +327,42 @@
                 justify-content: flex-end;
             }
         }
+        /* ==== BARIS DUPLIKAT RIWAYAT ==== */
+        tr.row-duplikat td {
+            background-color: #fee2e2 !important;
+            color: #991b1b;
+        }
+        tr.row-duplikat td.persen-cell {
+            background-color: #fecaca !important;
+        }
+        .btn-hapus-sesi {
+            color: #dc2626;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: 0.15s;
+        }
+        .btn-hapus-sesi:hover {
+            background-color: #fee2e2;
+            color: #991b1b;
+        }
+        .btn-hapus-sesi:active {
+            transform: scale(0.92);
+        }
+        .legend-duplikat {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -1275,7 +1311,7 @@
             }
         }
 
-        // ========= KEHADIRAN BULANAN (BARU) =========
+        // ========= KEHADIRAN BULANAN =========
         async function showKehadiranBulanan(kelas) {
             const modal = document.getElementById('modalKehadiranBulanan');
             document.getElementById('kbKelasName').textContent = kelas;
@@ -2001,7 +2037,7 @@
         }
 
         // ============================================================
-        // 5. RIWAYAT SESI MENGAJAR (DENGAN FILTER TANGGAL)
+        // 5. RIWAYAT SESI MENGAJAR (DENGAN FILTER TANGGAL + DUPLIKAT + HAPUS)
         // ============================================================
         let riwayatData = [];
         let riwayatSort = { key: 'tanggal', asc: false };
@@ -2270,6 +2306,46 @@
             renderRiwayatTable(container, filtered);
         }
 
+        // ========== FUNGSI HAPUS SESI RIWAYAT ==========
+        async function deleteSesiRiwayat(penugasanId, sessionId, konfirmasiInfo) {
+            const pesan = `Yakin ingin menghapus sesi ini?\n\n${konfirmasiInfo || ''}\n\n⚠️ Data kehadiran pada halaman guru untuk sesi ini akan ikut terhapus.`;
+            if (!confirm(pesan)) return;
+            try {
+                // Simpan filter & posisi input tanggal
+                const savedStartVal = document.getElementById('riwayatStartDate')?.value || '';
+                const savedEndVal = document.getElementById('riwayatEndDate')?.value || '';
+                const savedStart = riwayatFilter.startDate;
+                const savedEnd = riwayatFilter.endDate;
+
+                // Hapus dari Firebase
+                await db.ref(`attendance/${penugasanId}/${sessionId}`).remove();
+
+                // Reload seluruh riwayat
+                await loadRiwayat();
+
+                // Kembalikan filter yang dipilih user sebelumnya
+                if (savedStartVal && savedEndVal) {
+                    document.getElementById('riwayatStartDate').value = savedStartVal;
+                    document.getElementById('riwayatEndDate').value = savedEndVal;
+                    riwayatFilter.startDate = savedStart;
+                    riwayatFilter.endDate = savedEnd;
+                    applyRiwayatFilter();
+                }
+
+                // Notifikasi
+                const notif = document.createElement('div');
+                notif.className = 'fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white bg-green-500 z-50 transition-opacity duration-300';
+                notif.textContent = '✅ Sesi berhasil dihapus';
+                document.body.appendChild(notif);
+                setTimeout(() => {
+                    notif.style.opacity = '0';
+                    setTimeout(() => notif.remove(), 300);
+                }, 2500);
+            } catch (err) {
+                alert('Gagal menghapus sesi: ' + err.message);
+            }
+        }
+
         function renderRiwayatTable(container, dataToRender) {
             if (!dataToRender) dataToRender = riwayatData;
             if (!dataToRender.length) {
@@ -2300,6 +2376,14 @@
                 return 0;
             });
 
+            // ==== DETEKSI DUPLIKAT (Guru + Tanggal + Kelas + Mapel) ====
+            const keyCount = {};
+            for (let row of sorted) {
+                const k = `${row.guru}|${row.tanggal}|${row.kelas}|${row.mapel}`;
+                keyCount[k] = (keyCount[k] || 0) + 1;
+            }
+            const jumlahDuplikat = Object.values(keyCount).filter(v => v > 1).reduce((a,b)=>a+b,0);
+
             const headers = [
                 { key: 'tanggal', label: 'Tanggal' },
                 { key: 'guru', label: 'Nama Guru' },
@@ -2307,15 +2391,24 @@
                 { key: 'kelas', label: 'Kelas' },
                 { key: 'topik', label: 'Topik / Materi' },
                 { key: 's', label: 'Tidak Hadir (S/I/A)' },
-                { key: 'persentase', label: '% Kehadiran Murid' }
+                { key: 'persentase', label: '% Kehadiran Murid' },
+                { key: 'aksi', label: 'Aksi', sortable: false }
             ];
 
-            let html = `<div class="overflow-x-auto"><table class="min-w-full border text-sm"><thead class="bg-gray-100">`;
+            let html = '';
+            if (jumlahDuplikat > 0) {
+                html += `<div class="legend-duplikat"><i class="fas fa-exclamation-triangle"></i> ${jumlahDuplikat} baris terdeteksi duplikat (Guru, Tanggal, Kelas, Mapel sama) — disarankan hapus salah satunya.</div>`;
+            }
+            html += `<div class="overflow-x-auto"><table class="min-w-full border text-sm"><thead class="bg-gray-100">`;
             html += `<tr>`;
             for (let h of headers) {
-                const isActive = riwayatSort.key === h.key;
-                const icon = isActive ? (riwayatSort.asc ? '▲' : '▼') : '⇅';
-                html += `<th class="p-2 border sortable-header" data-key="${h.key}">${h.label} <span class="sort-icon">${icon}</span></th>`;
+                if (h.sortable === false) {
+                    html += `<th class="p-2 border text-center" style="min-width:60px;">${h.label}</th>`;
+                } else {
+                    const isActive = riwayatSort.key === h.key;
+                    const icon = isActive ? (riwayatSort.asc ? '▲' : '▼') : '⇅';
+                    html += `<th class="p-2 border sortable-header" data-key="${h.key}">${h.label} <span class="sort-icon">${icon}</span></th>`;
+                }
             }
             html += `</tr></thead><tbody>`;
 
@@ -2327,20 +2420,36 @@
                 const hasData = (row.s + row.i + row.a) > 0;
                 const clickClass = hasData ? 'cursor-pointer text-blue-600 hover:underline' : 'text-gray-400';
 
-                html += `<tr>
-                    <td class="p-2 border">${escapeHtml(row.tanggal)}</td>
+                // Cek duplikat
+                const dupKey = `${row.guru}|${row.tanggal}|${row.kelas}|${row.mapel}`;
+                const isDuplicate = keyCount[dupKey] > 1;
+                const rowClass = isDuplicate ? 'row-duplikat' : '';
+
+                // Info untuk konfirmasi hapus
+                const infoKonfirmasi = `Tanggal: ${row.tanggal}\nGuru: ${row.guru}\nMapel: ${row.mapel}${row.kelas ? '\nKelas: ' + row.kelas : ''}\nTopik: ${row.topik}`;
+
+                html += `<tr class="${rowClass}">
+                    <td class="p-2 border">${escapeHtml(row.tanggal)}${isDuplicate ? ' <i class="fas fa-exclamation-circle text-red-600" title="Duplikat"></i>' : ''}</td>
                     <td class="p-2 border">${escapeHtml(row.guru)}</td>
                     <td class="p-2 border">${escapeHtml(row.mapel)}</td>
                     <td class="p-2 border">${escapeHtml(row.kelas)}</td>
                     <td class="p-2 border">${escapeHtml(row.topik)}</td>
                     <td class="p-2 border ${clickClass}" data-row-index="${sorted.indexOf(row)}">${escapeHtml(siaText)}</td>
-                    <td class="p-2 border text-center ${kelasWarna}">${persenDisplay}</td>
+                    <td class="p-2 border text-center persen-cell ${kelasWarna}">${persenDisplay}</td>
+                    <td class="p-2 border text-center">
+                        <button class="btn-hapus-sesi" 
+                                data-penugasan-id="${row.penugasanId}" 
+                                data-session-id="${row.sessionId}"
+                                data-info="${escapeHtml(infoKonfirmasi)}"
+                                title="Hapus sesi ini"><i class="fas fa-trash"></i></button>
+                    </td>
                 </tr>`;
             }
             html += `</tbody></table></div>`;
-            html += `<div class="mt-3 text-xs text-gray-500">Total sesi: ${sorted.length}</div>`;
+            html += `<div class="mt-3 text-xs text-gray-500">Total sesi: ${sorted.length}${jumlahDuplikat > 0 ? ` | <span class="text-red-600 font-semibold">Duplikat: ${jumlahDuplikat}</span>` : ''}</div>`;
             container.innerHTML = html;
 
+            // Event listener sorting
             container.querySelectorAll('.sortable-header').forEach(th => {
                 th.addEventListener('click', () => {
                     const key = th.dataset.key;
@@ -2354,6 +2463,7 @@
                 });
             });
 
+            // Event listener klik baris S/I/A untuk buka detail
             container.querySelectorAll('[data-row-index]').forEach(td => {
                 td.addEventListener('click', () => {
                     const idx = parseInt(td.dataset.rowIndex);
@@ -2361,6 +2471,17 @@
                     if (row && (row.s + row.i + row.a > 0)) {
                         showRiwayatDetail(row);
                     }
+                });
+            });
+
+            // Event listener tombol hapus sesi
+            container.querySelectorAll('.btn-hapus-sesi').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const penId = btn.dataset.penugasanId;
+                    const sessId = btn.dataset.sessionId;
+                    const info = btn.dataset.info || '';
+                    await deleteSesiRiwayat(penId, sessId, info);
                 });
             });
         }
