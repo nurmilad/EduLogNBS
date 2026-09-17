@@ -65,6 +65,15 @@
             .table-wrapper table { font-size: 0.75rem; }
             .card-mapel { padding: 0.75rem; }
         }
+        /* ==== KARTU RINGKASAN NILAI PER JENIS ==== */
+        .ringkasan-nilai-inkul { border-top: 3px solid #4f46e5; }
+        .ringkasan-nilai-eskul { border-top: 3px solid #059669; }
+        .ringkasan-nilai-pesantren { border-top: 3px solid #d97706; }
+        .ringkasan-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+        }
     </style>
 </head>
 <body class="p-4 md:p-6">
@@ -80,11 +89,31 @@
     </div>
 
     <!-- Ringkasan -->
-    <div id="ringkasan" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Total Mapel</p><p id="totalMapel" class="text-2xl font-bold text-indigo-600">-</p></div>
-        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Total Kehadiran</p><p id="totalKehadiran" class="text-2xl font-bold text-green-600">-</p></div>
-        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Rata-rata Nilai</p><p id="rataNilai" class="text-2xl font-bold text-blue-600">-</p></div>
-        <div class="bg-white rounded-xl p-3 shadow text-center"><p class="text-xs text-gray-500">Keseluruhan Sesi</p><p id="totalSesi" class="text-2xl font-bold text-gray-700">-</p></div>
+    <div id="ringkasan" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div class="bg-white rounded-xl p-3 shadow text-center">
+            <p class="text-xs text-gray-500">Total Mapel</p>
+            <p id="totalMapel" class="text-2xl font-bold text-indigo-600">-</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 shadow text-center">
+            <p class="text-xs text-gray-500">Total Kehadiran</p>
+            <p id="totalKehadiran" class="text-2xl font-bold text-green-600">-</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 shadow text-center">
+            <p class="text-xs text-gray-500">Keseluruhan Sesi</p>
+            <p id="totalSesi" class="text-2xl font-bold text-gray-700">-</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 shadow text-center ringkasan-nilai-inkul">
+            <p class="ringkasan-label text-indigo-600">📘 Rata Nilai Inkul</p>
+            <p id="rataNilaiInkul" class="text-2xl font-bold text-indigo-600">-</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 shadow text-center ringkasan-nilai-eskul">
+            <p class="ringkasan-label text-emerald-700">🎯 Rata Nilai Eskul</p>
+            <p id="rataNilaiEskul" class="text-2xl font-bold text-emerald-600">-</p>
+        </div>
+        <div class="bg-white rounded-xl p-3 shadow text-center ringkasan-nilai-pesantren">
+            <p class="ringkasan-label text-amber-700">🕌 Rata Nilai Pesantren</p>
+            <p id="rataNilaiPesantren" class="text-2xl font-bold text-amber-600">-</p>
+        </div>
     </div>
 
     <!-- Daftar Mapel (Card) -->
@@ -174,10 +203,16 @@
                 }
             }
 
-            // 4. Hitung ringkasan global
+            // 4. Hitung ringkasan global (total mapel, kehadiran, sesi) + per jenis
             let totalMapel = myPenugasan.length;
             let totalSesiGlobal = 0, totalHadirGlobal = 0;
-            let totalNilaiGlobal = 0, totalPenilaianGlobal = 0;
+
+            // Akumulator per jenis
+            let nilaiPerJenis = {
+                inkul: { total: 0, jumlah: 0 },
+                eskul: { total: 0, jumlah: 0 },
+                pesantren: { total: 0, jumlah: 0 }
+            };
 
             for (let task of myPenugasan) {
                 const sessions = Object.values(task.attendance);
@@ -186,22 +221,40 @@
                     const status = ses.records?.[nisSiswa];
                     if (status === undefined || status === 'H') totalHadirGlobal++;
                 }
+                
+                // Klasifikasi jenis mapel untuk nilai
+                let jenisKey = task.mapelJenis;
+                if (!nilaiPerJenis[jenisKey]) {
+                    // Fallback: jenis tidak dikenal, masukkan ke inkul
+                    jenisKey = 'inkul';
+                }
+                
                 const assessments = Object.values(task.penilaian);
                 for (let as of assessments) {
                     const nilai = as.scores?.[nisSiswa];
                     if (typeof nilai === 'number') {
-                        totalNilaiGlobal += nilai;
-                        totalPenilaianGlobal++;
+                        nilaiPerJenis[jenisKey].total += nilai;
+                        nilaiPerJenis[jenisKey].jumlah++;
                     }
                 }
             }
             const persenKehadiranGlobal = totalSesiGlobal === 0 ? 0 : Math.round((totalHadirGlobal / totalSesiGlobal) * 100);
-            const rataNilaiGlobal = totalPenilaianGlobal === 0 ? 0 : Math.round(totalNilaiGlobal / totalPenilaianGlobal);
+
+            // Rata-rata per jenis (tampil '-' jika belum ada nilai)
+            function hitungRata(jenisData) {
+                if (jenisData.jumlah === 0) return '-';
+                return Math.round(jenisData.total / jenisData.jumlah);
+            }
+            const rataInkul = hitungRata(nilaiPerJenis.inkul);
+            const rataEskul = hitungRata(nilaiPerJenis.eskul);
+            const rataPesantren = hitungRata(nilaiPerJenis.pesantren);
 
             document.getElementById('totalMapel').innerText = totalMapel;
             document.getElementById('totalKehadiran').innerHTML = `${persenKehadiranGlobal}% <span class="text-xs font-normal">(${totalHadirGlobal}/${totalSesiGlobal})</span>`;
-            document.getElementById('rataNilai').innerText = rataNilaiGlobal;
             document.getElementById('totalSesi').innerText = totalSesiGlobal;
+            document.getElementById('rataNilaiInkul').innerText = rataInkul;
+            document.getElementById('rataNilaiEskul').innerText = rataEskul;
+            document.getElementById('rataNilaiPesantren').innerText = rataPesantren;
 
             // 5. Render kartu per mapel
             renderMapelCards(myPenugasan);
