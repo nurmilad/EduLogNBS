@@ -363,6 +363,40 @@
             font-weight: 600;
             margin-bottom: 8px;
         }
+        /* ==== TAB NILAI DALAM MODAL ==== */
+        .nilai-tab-btn {
+            padding: 6px 14px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64748b;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .nilai-tab-btn:hover {
+            color: #4f46e5;
+            background: #f8fafc;
+        }
+        .nilai-tab-btn.active {
+            color: #4f46e5;
+            border-bottom-color: #4f46e5;
+        }
+        .nilai-pane { display: none; }
+        .nilai-pane.active { display: block; }
+        .nilai-tab-empty {
+            padding: 32px 16px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 0.85rem;
+        }
+        .nilai-tab-empty i {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            display: block;
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -470,7 +504,7 @@
         </div>
     </div>
 
-    <!-- MODAL KEHADIRAN BULANAN (BARU) -->
+    <!-- MODAL KEHADIRAN BULANAN -->
     <div id="modalKehadiranBulanan" class="fixed inset-0 z-50 hidden items-center justify-center modal-bg no-print" style="background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); display: none;">
         <div class="bg-white rounded-2xl max-w-6xl w-full mx-4 p-5 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center mb-4">
@@ -705,6 +739,9 @@
                 }
                 const kehadiranPersen = totalSesi === 0 ? 0 : Math.round((totalHadir / totalSesi) * 100);
                 
+                // Nilai rata-rata tidak lagi dipakai di tabel utama (dihapus),
+                // tapi tetap dihitung supaya tidak merusak struktur data lain
+                // (dibiarkan agar kompatibel).
                 let totalNilai = 0;
                 let jumlahAssessment = 0;
                 for (let idPen of listPen) {
@@ -859,7 +896,6 @@
                         nama: m.nama, 
                         password: m.password,
                         kehadiranGlobal: statsMap[nis]?.kehadiranPersen ?? 0,
-                        nilaiGlobal: statsMap[nis]?.nilaiRata ?? 0,
                         status: m.status || 'aktif'
                     }));
                 
@@ -887,7 +923,6 @@
                                     <th>Nama</th>
                                     <th>Password</th>
                                     <th>Kehadiran (%)</th>
-                                    <th>Rata Nilai</th>
                                     <th>Status</th>
                                     <th>Aksi</th>
                                 </tr></thead>
@@ -900,7 +935,6 @@
                                         <td class="p-2">${escapeHtml(m.nama)}</td>
                                         <td class="p-2">${escapeHtml(m.password)}</td>
                                         <td class="p-2 font-bold ${m.kehadiranGlobal < 50 ? 'text-red-600' : 'text-green-600'}">${m.kehadiranGlobal}%</td>
-                                        <td class="p-2 font-bold">${m.nilaiGlobal}</td>
                                         <td class="p-2">
                                             <span class="status-badge ${statusClass} cursor-pointer" data-nis="${m.nis}" onclick="toggleStatus('${m.nis}', this)">${statusDisplay}</span>
                                         </td>
@@ -1025,7 +1059,7 @@
             } catch(err){ detailDiv.innerHTML=`<div class="text-red-500 p-4">Error: ${err.message}</div>`; }
         }
 
-        // ========= MODAL NILAI MURID =========
+        // ========= MODAL NILAI MURID (DENGAN 3 TAB JENIS) =========
         async function showNilaiMuridModal(kelas) {
             const overlay = document.createElement('div');
             overlay.className = 'modal-overlay';
@@ -1052,8 +1086,10 @@
                 }
                 const mapelInfo = {};
                 for (let [id, m] of Object.entries(mapel)) {
-                    mapelInfo[id] = { kode: m.kode || m.nama.substring(0,5).toUpperCase(), nama: m.nama, jenis: m.jenis };
+                    mapelInfo[id] = { kode: m.kode || m.nama.substring(0,5).toUpperCase(), nama: m.nama, jenis: m.jenis || 'inkul' };
                 }
+                
+                // ===== HITUNG NILAI PER MAPEL (SEMUA JENIS) =====
                 const studentScoresByMapel = {};
                 siswaKelas.forEach(s => { studentScoresByMapel[s.nis] = {}; });
                 for (let [penId, pg] of Object.entries(penugasan)) {
@@ -1074,7 +1110,7 @@
                         }
                     }
                 }
-                const subjectCodesSet = new Set();
+                
                 const studentSubjectAvg = {};
                 for (let s of siswaKelas) {
                     const nis = s.nis;
@@ -1085,92 +1121,140 @@
                             const avg = nilaiArr.reduce((a,b)=>a+b,0) / nilaiArr.length;
                             const rounded = Math.round(avg * 10) / 10;
                             studentSubjectAvg[nis][mapelId] = rounded;
-                            subjectCodesSet.add(mapelId);
                         }
                     }
                 }
-                let mapelIdsWithData = Array.from(subjectCodesSet);
-                mapelIdsWithData.sort((a,b) => {
-                    const kodeA = mapelInfo[a]?.kode || '';
-                    const kodeB = mapelInfo[b]?.kode || '';
-                    return kodeA.localeCompare(kodeB);
-                });
-                const hasAnySubject = mapelIdsWithData.length > 0;
-                let tableHtml = `
-                    <div class="modal-header px-4 py-3 flex justify-between items-center">
-                        <h3 class="text-lg font-bold"><i class="fas fa-chart-simple text-purple-600"></i> Daftar Nilai Murid - Kelas ${escapeHtml(kelas)}</h3>
-                        <button class="closeModalBtn text-gray-500 hover:text-gray-800 text-2xl leading-5">&times;</button>
-                    </div>
-                    <div class="p-4 overflow-x-auto">
-                        <table class="min-w-full border text-sm">
-                            <thead class="bg-gray-100">
-                                <tr>
-                                    <th class="p-2 border">NIS</th>
-                                    <th class="p-2 border">Nama</th>
-                                    ${hasAnySubject ? mapelIdsWithData.map(mid => `<th class="p-2 border">${escapeHtml(mapelInfo[mid]?.kode || '?')}</th>`).join('') : ''}
-                                    <th class="p-2 border bg-gray-200">Rata2</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-                for (let student of siswaKelas) {
-                    const nis = student.nis;
-                    const nama = student.nama;
-                    const status = student.status;
-                    const isTidakAktif = (status === 'tidak_aktif');
-                    const rowClass = isTidakAktif ? 'siswa-tidak-aktif' : '';
-                    const subjectAvgs = {};
-                    let totalMapelScore = 0;
-                    let countMapelWithScore = 0;
+                
+                // ===== KELOMPOKKAN MAPEL BERDASARKAN JENIS =====
+                // Cari mapel ID yang punya nilai di kelas ini, untuk masing-masing jenis
+                const mapelIdsByJenis = { inkul: new Set(), eskul: new Set(), pesantren: new Set() };
+                for (let [nis, scoresMap] of Object.entries(studentSubjectAvg)) {
+                    for (let mapelId of Object.keys(scoresMap)) {
+                        const jenis = mapelInfo[mapelId]?.jenis || 'inkul';
+                        if (mapelIdsByJenis[jenis]) {
+                            mapelIdsByJenis[jenis].add(mapelId);
+                        } else {
+                            // Jika jenis tidak dikenal, masukkan ke inkul sebagai fallback
+                            mapelIdsByJenis.inkul.add(mapelId);
+                        }
+                    }
+                }
+                
+                // Urutkan mapel di tiap jenis berdasarkan kode
+                function sortMapelIds(set) {
+                    return Array.from(set).sort((a,b) => {
+                        const kodeA = mapelInfo[a]?.kode || '';
+                        const kodeB = mapelInfo[b]?.kode || '';
+                        return kodeA.localeCompare(kodeB);
+                    });
+                }
+                const mapelIdsInkul = sortMapelIds(mapelIdsByJenis.inkul);
+                const mapelIdsEskul = sortMapelIds(mapelIdsByJenis.eskul);
+                const mapelIdsPesantren = sortMapelIds(mapelIdsByJenis.pesantren);
+                
+                // ===== FUNGSI BUILD TABEL PER JENIS =====
+                function buildNilaiTableHtml(mapelIds, paneId) {
+                    if (mapelIds.length === 0) {
+                        return `<div class="nilai-tab-empty">
+                            <i class="fas fa-inbox"></i>
+                            Belum ada data nilai untuk kategori ini.
+                            <div class="text-xs mt-2">Nilai akan muncul setelah guru membuat penilaian.</div>
+                        </div>`;
+                    }
                     
-                    if (hasAnySubject) {
-                        for (let mid of mapelIdsWithData) {
+                    let html = `<div class="overflow-x-auto"><table class="min-w-full border text-sm">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="p-2 border">NIS</th>
+                                <th class="p-2 border">Nama</th>`;
+                    for (let mid of mapelIds) {
+                        html += `<th class="p-2 border" title="${escapeHtml(mapelInfo[mid]?.nama || '')}">${escapeHtml(mapelInfo[mid]?.kode || '?')}</th>`;
+                    }
+                    html += `<th class="p-2 border bg-gray-200">Rata2</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                    
+                    for (let student of siswaKelas) {
+                        const nis = student.nis;
+                        const nama = student.nama;
+                        const isTidakAktif = (student.status === 'tidak_aktif');
+                        const rowClass = isTidakAktif ? 'siswa-tidak-aktif' : '';
+                        
+                        let totalMapelScore = 0;
+                        let countMapelWithScore = 0;
+                        
+                        html += `<tr>
+                            <td class="p-2 border ${rowClass}">${escapeHtml(nis)}</td>
+                            <td class="p-2 border ${rowClass}">${escapeHtml(nama)}</td>`;
+                        
+                        for (let mid of mapelIds) {
                             const avg = studentSubjectAvg[nis]?.[mid];
                             const displayVal = (avg !== undefined && !isNaN(avg)) ? avg : '-';
-                            subjectAvgs[mid] = displayVal;
                             if (typeof avg === 'number' && !isNaN(avg)) {
                                 totalMapelScore += avg;
                                 countMapelWithScore++;
                             }
-                        }
-                    }
-                    
-                    let overallAvg = 0;
-                    if (hasAnySubject && countMapelWithScore > 0) {
-                        overallAvg = Math.round((totalMapelScore / countMapelWithScore) * 10) / 10;
-                    } else if (!hasAnySubject) {
-                        overallAvg = 0;
-                    }
-                    const overallDisplay = overallAvg === 0 && !hasAnySubject ? '-' : overallAvg;
-                    
-                    tableHtml += `<tr>
-                        <td class="p-2 border ${rowClass}">${escapeHtml(nis)}</td>
-                        <td class="p-2 border ${rowClass}">${escapeHtml(nama)}</td>`;
-                    
-                    if (hasAnySubject) {
-                        for (let mid of mapelIdsWithData) {
-                            const val = subjectAvgs[mid];
-                            const valNum = parseFloat(val);
+                            const valNum = parseFloat(displayVal);
                             const isNumeric = !isNaN(valNum);
                             const warnaKelas = isNumeric ? getWarnaNilai(valNum) : '';
                             const classNilai = isNumeric ? (valNum <= 70 ? 'nilai-merah' : '') : '';
-                            tableHtml += `<td class="p-2 border text-center ${warnaKelas} ${classNilai}">${val === '-' ? '-' : val}</td>`;
+                            html += `<td class="p-2 border text-center ${warnaKelas} ${classNilai}">${displayVal}</td>`;
                         }
+                        
+                        const overallAvg = countMapelWithScore > 0 ? Math.round((totalMapelScore / countMapelWithScore) * 10) / 10 : '-';
+                        const overallVal = parseFloat(overallAvg);
+                        const warnaOverall = !isNaN(overallVal) ? getWarnaNilai(overallVal) : '';
+                        html += `<td class="p-2 border text-center font-bold bg-gray-50 ${warnaOverall}">${overallAvg}</td>
+                        </tr>`;
                     }
                     
-                    const overallVal = parseFloat(overallDisplay);
-                    const warnaOverall = !isNaN(overallVal) ? getWarnaNilai(overallVal) : '';
-                    tableHtml += `
-                        <td class="p-2 border text-center font-bold bg-gray-50 ${warnaOverall}">${overallDisplay}</td>
-                    </tr>`;
+                    html += `</tbody></table></div>`;
+                    return html;
                 }
-                tableHtml += `</tbody></table>`;
-                if (!hasAnySubject) {
-                    tableHtml += `<div class="mt-4 text-center text-gray-500"><i class="fas fa-info-circle"></i> Belum ada nilai untuk mata pelajaran apapun di kelas ini. Nilai akan muncul setelah guru melakukan penilaian minimal 1 kali.</div>`;
-                }
-                tableHtml += `</div><div class="p-3 border-t text-right"><button class="closeModalBtn bg-purple-600 text-white px-4 py-2 rounded">Tutup</button></div>`;
                 
-                overlay.innerHTML = `<div class="modal-container max-w-6xl w-full">${tableHtml}</div>`;
+                let tableInkul = buildNilaiTableHtml(mapelIdsInkul);
+                let tableEskul = buildNilaiTableHtml(mapelIdsEskul);
+                let tablePesantren = buildNilaiTableHtml(mapelIdsPesantren);
+                
+                let modalHtml = `
+                    <div class="modal-header px-4 py-3 flex justify-between items-center">
+                        <h3 class="text-lg font-bold"><i class="fas fa-chart-simple text-purple-600"></i> Daftar Nilai Murid - Kelas ${escapeHtml(kelas)}</h3>
+                        <button class="closeModalBtn text-gray-500 hover:text-gray-800 text-2xl leading-5">&times;</button>
+                    </div>
+                    <div class="border-b px-4 pt-2">
+                        <div class="flex gap-1 flex-wrap">
+                            <button class="nilai-tab-btn active" data-nilai-tab="inkul">📘 Nilai Inkul</button>
+                            <button class="nilai-tab-btn" data-nilai-tab="eskul">🎯 Nilai Eskul</button>
+                            <button class="nilai-tab-btn" data-nilai-tab="pesantren">🕌 Nilai Pesantren</button>
+                        </div>
+                    </div>
+                    <div class="p-4">
+                        <div class="nilai-pane active" id="nilai-pane-inkul">${tableInkul}</div>
+                        <div class="nilai-pane" id="nilai-pane-eskul">${tableEskul}</div>
+                        <div class="nilai-pane" id="nilai-pane-pesantren">${tablePesantren}</div>
+                    </div>
+                    <div class="p-3 border-t text-right">
+                        <button class="closeModalBtn bg-purple-600 text-white px-4 py-2 rounded">Tutup</button>
+                    </div>
+                `;
+                
+                overlay.innerHTML = `<div class="modal-container max-w-6xl w-full">${modalHtml}</div>`;
+                
+                // === Event listener tab nilai ===
+                overlay.querySelectorAll('.nilai-tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const target = btn.dataset.nilaiTab;
+                        // Update tombol aktif
+                        overlay.querySelectorAll('.nilai-tab-btn').forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        // Update pane aktif
+                        overlay.querySelectorAll('.nilai-pane').forEach(p => p.classList.remove('active'));
+                        const pane = overlay.querySelector(`#nilai-pane-${target}`);
+                        if (pane) pane.classList.add('active');
+                    });
+                });
+                
                 attachCloseModal(overlay);
             } catch (err) {
                 overlay.innerHTML = `<div class="modal-container p-5"><div class="text-red-500"><i class="fas fa-exclamation-circle"></i> Gagal memuat nilai: ${err.message}</div><button class="mt-4 closeModalBtn bg-blue-500 text-white px-4 py-2 rounded">Tutup</button></div>`;
@@ -1316,7 +1400,6 @@
             const modal = document.getElementById('modalKehadiranBulanan');
             document.getElementById('kbKelasName').textContent = kelas;
             
-            // Populate month dropdown
             const monthSelect = document.getElementById('kbMonth');
             monthSelect.innerHTML = '';
             const months = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
@@ -1328,7 +1411,6 @@
                 monthSelect.appendChild(opt);
             });
             
-            // Populate year dropdown
             const yearSelect = document.getElementById('kbYear');
             yearSelect.innerHTML = '';
             const currentYear = new Date().getFullYear();
@@ -1340,7 +1422,6 @@
                 yearSelect.appendChild(opt);
             }
             
-            // Fetch data once per class and cache
             if (!window.kbData) window.kbData = {};
             if (!window.kbData[kelas]) {
                 const [siswaSnap, penugasanSnap, attendanceSnap] = await Promise.all([
@@ -1361,7 +1442,6 @@
             
             const { siswaKelas, penugasan, attendance } = window.kbData[kelas];
             
-            // Apply button handler
             const applyBtn = document.getElementById('kbApplyBtn');
             const newApplyBtn = applyBtn.cloneNode(true);
             applyBtn.parentNode.replaceChild(newApplyBtn, applyBtn);
@@ -1371,14 +1451,12 @@
                 renderKehadiranBulananTable(kelas, month, year, siswaKelas, penugasan, attendance);
             };
             
-            // Initial render
             const month = parseInt(document.getElementById('kbMonth').value);
             const year = parseInt(document.getElementById('kbYear').value);
             renderKehadiranBulananTable(kelas, month, year, siswaKelas, penugasan, attendance);
             
             modal.style.display = 'flex';
             
-            // Close handlers
             const closeModal = () => { modal.style.display = 'none'; };
             document.getElementById('kbCloseBtn').onclick = closeModal;
             document.getElementById('kbCloseBtn2').onclick = closeModal;
@@ -1389,7 +1467,6 @@
             const container = document.getElementById('kbTableContainer');
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             
-            // Build student -> penugasan list
             const studentPenugasan = {};
             for (let s of siswaKelas) {
                 studentPenugasan[s.nis] = [];
@@ -1404,7 +1481,6 @@
                 }
             }
             
-            // Collect statuses: studentStatus[nis][day] = array of statuses
             const studentStatus = {};
             for (let s of siswaKelas) {
                 studentStatus[s.nis] = {};
@@ -1413,7 +1489,6 @@
                 }
             }
             
-            // Get all relevant penugasan ids
             const relevantPenIds = new Set();
             for (let s of siswaKelas) {
                 (studentPenugasan[s.nis] || []).forEach(id => relevantPenIds.add(id));
@@ -1444,7 +1519,6 @@
                 }
             }
             
-            // Compute final status per student per day
             const finalStatus = {};
             const priority = { 'H':4, 'S':3, 'I':2, 'A':1 };
             for (let s of siswaKelas) {
@@ -1473,7 +1547,6 @@
                 }
             }
             
-            // Build table
             let html = `<table class="min-w-full border text-sm"><thead class="bg-gray-100"><tr>
                 <th class="p-1 border">No</th>
                 <th class="p-1 border">NIS</th>
@@ -1875,7 +1948,6 @@
                     btn.onclick = async () => { if(confirm('Hapus penugasan?')){ await db.ref(`penugasan/${btn.dataset.id}`).remove(); loadPenugasan(); } };
                 });
                 
-                // ========== EDIT PENUGASAN (MULTI-SELECT HAPUS & TAMBAH TANPA TUTUP MODAL) ==========
                 document.querySelectorAll('.editPenugasanBtn').forEach(btn => {
                     btn.onclick = async () => {
                         const penugasanId = btn.dataset.id;
@@ -1898,7 +1970,6 @@
                         const memberListDiv = document.getElementById('editMemberList');
                         const selectAdd = document.getElementById('editAddMemberSelect');
 
-                        // === Render daftar murid dengan checkbox multi-select ===
                         function renderMemberList(members) {
                             memberListDiv.innerHTML = '';
                             if (members.length === 0) {
@@ -1953,7 +2024,6 @@
                                 updateSelection();
                             });
 
-                            // === HAPUS TERPILIH (bisa banyak sekaligus, tanpa tutup modal) ===
                             deleteBtn.onclick = async () => {
                                 const checked = Array.from(memberListDiv.querySelectorAll('.member-checkbox:checked'));
                                 const toDelete = checked.map(cb => cb.dataset.nis);
@@ -1971,7 +2041,6 @@
                                     await db.ref(`penugasan/${penugasanId}/siswaList`).set(newList);
                                     currentMembers = newList;
 
-                                    // Refresh in-place tanpa menutup modal
                                     renderMemberList(currentMembers);
                                     refreshAddMemberSelect();
                                 } catch (err) {
@@ -1980,7 +2049,6 @@
                             };
                         }
 
-                        // === Dropdown "Tambah Murid" ===
                         function refreshAddMemberSelect() {
                             selectAdd.innerHTML = '<option value="">-- Pilih Murid --</option>';
                             const allNis = Object.keys(semuaMurid);
@@ -2002,7 +2070,6 @@
                         renderMemberList(currentMembers);
                         refreshAddMemberSelect();
 
-                        // === TAMBAH MURID (tanpa tutup modal) ===
                         document.getElementById('editAddMemberBtn').onclick = async () => {
                             const nis = selectAdd.value;
                             if (!nis) { alert('Pilih murid yang akan ditambahkan'); return; }
@@ -2037,7 +2104,7 @@
         }
 
         // ============================================================
-        // 5. RIWAYAT SESI MENGAJAR (DENGAN FILTER TANGGAL + DUPLIKAT + HAPUS)
+        // 5. RIWAYAT SESI MENGAJAR
         // ============================================================
         let riwayatData = [];
         let riwayatSort = { key: 'tanggal', asc: false };
@@ -2306,24 +2373,19 @@
             renderRiwayatTable(container, filtered);
         }
 
-        // ========== FUNGSI HAPUS SESI RIWAYAT ==========
         async function deleteSesiRiwayat(penugasanId, sessionId, konfirmasiInfo) {
             const pesan = `Yakin ingin menghapus sesi ini?\n\n${konfirmasiInfo || ''}\n\n⚠️ Data kehadiran pada halaman guru untuk sesi ini akan ikut terhapus.`;
             if (!confirm(pesan)) return;
             try {
-                // Simpan filter & posisi input tanggal
                 const savedStartVal = document.getElementById('riwayatStartDate')?.value || '';
                 const savedEndVal = document.getElementById('riwayatEndDate')?.value || '';
                 const savedStart = riwayatFilter.startDate;
                 const savedEnd = riwayatFilter.endDate;
 
-                // Hapus dari Firebase
                 await db.ref(`attendance/${penugasanId}/${sessionId}`).remove();
 
-                // Reload seluruh riwayat
                 await loadRiwayat();
 
-                // Kembalikan filter yang dipilih user sebelumnya
                 if (savedStartVal && savedEndVal) {
                     document.getElementById('riwayatStartDate').value = savedStartVal;
                     document.getElementById('riwayatEndDate').value = savedEndVal;
@@ -2332,7 +2394,6 @@
                     applyRiwayatFilter();
                 }
 
-                // Notifikasi
                 const notif = document.createElement('div');
                 notif.className = 'fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg text-white bg-green-500 z-50 transition-opacity duration-300';
                 notif.textContent = '✅ Sesi berhasil dihapus';
@@ -2376,7 +2437,6 @@
                 return 0;
             });
 
-            // ==== DETEKSI DUPLIKAT (Guru + Tanggal + Kelas + Mapel) ====
             const keyCount = {};
             for (let row of sorted) {
                 const k = `${row.guru}|${row.tanggal}|${row.kelas}|${row.mapel}`;
@@ -2420,12 +2480,10 @@
                 const hasData = (row.s + row.i + row.a) > 0;
                 const clickClass = hasData ? 'cursor-pointer text-blue-600 hover:underline' : 'text-gray-400';
 
-                // Cek duplikat
                 const dupKey = `${row.guru}|${row.tanggal}|${row.kelas}|${row.mapel}`;
                 const isDuplicate = keyCount[dupKey] > 1;
                 const rowClass = isDuplicate ? 'row-duplikat' : '';
 
-                // Info untuk konfirmasi hapus
                 const infoKonfirmasi = `Tanggal: ${row.tanggal}\nGuru: ${row.guru}\nMapel: ${row.mapel}${row.kelas ? '\nKelas: ' + row.kelas : ''}\nTopik: ${row.topik}`;
 
                 html += `<tr class="${rowClass}">
@@ -2449,7 +2507,6 @@
             html += `<div class="mt-3 text-xs text-gray-500">Total sesi: ${sorted.length}${jumlahDuplikat > 0 ? ` | <span class="text-red-600 font-semibold">Duplikat: ${jumlahDuplikat}</span>` : ''}</div>`;
             container.innerHTML = html;
 
-            // Event listener sorting
             container.querySelectorAll('.sortable-header').forEach(th => {
                 th.addEventListener('click', () => {
                     const key = th.dataset.key;
@@ -2463,7 +2520,6 @@
                 });
             });
 
-            // Event listener klik baris S/I/A untuk buka detail
             container.querySelectorAll('[data-row-index]').forEach(td => {
                 td.addEventListener('click', () => {
                     const idx = parseInt(td.dataset.rowIndex);
@@ -2474,7 +2530,6 @@
                 });
             });
 
-            // Event listener tombol hapus sesi
             container.querySelectorAll('.btn-hapus-sesi').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     e.stopPropagation();
@@ -2538,7 +2593,6 @@
         loadGuru();
         loadMapel();
         loadPenugasan();
-        // Settings akan dimuat saat tab diklik
     </script>
 </body>
 </html>
